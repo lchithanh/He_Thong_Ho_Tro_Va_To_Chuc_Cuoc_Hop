@@ -1,0 +1,185 @@
+package com.example.demo.controller;
+
+import java.util.List;
+import java.util.Map;
+import com.example.demo.dto.request.XuLyBienBanRequest;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import com.example.demo.dto.request.LuuBienBanRequest;
+import com.example.demo.dto.request.TrinhBienBanRequest;
+import com.example.demo.dto.response.BienBanChoDuyetResponse;
+import com.example.demo.dto.response.BienBanResponse;
+import com.example.demo.dto.response.PhienBanBienBanResponse;
+import com.example.demo.service.BienBanService;
+import com.example.demo.service.NguoiDungHienTaiService;
+import com.example.demo.service.QuyTrinhBienBanService;
+
+import lombok.RequiredArgsConstructor;
+
+@RestController
+@RequestMapping("/api/bien-ban")
+@RequiredArgsConstructor
+public class BienBanController {
+
+    private final BienBanService bienBanService;
+
+    private final NguoiDungHienTaiService nguoiDungHienTaiService;
+    private final QuyTrinhBienBanService quyTrinhBienBanService;
+
+    @PostMapping("/cuoc-hop/{cuocHopId}")
+    public ResponseEntity<BienBanResponse> taoBienBan(
+            @PathVariable("cuocHopId") Integer cuocHopId,
+            @RequestBody LuuBienBanRequest request,
+            Authentication authentication) {
+
+        Integer nguoiDungId = nguoiDungHienTaiService
+                .layNguoiDungId(authentication);
+
+        BienBanResponse response = bienBanService.taoBienBan(
+                cuocHopId,
+                request,
+                nguoiDungId);
+
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(response);
+    }
+
+    @PutMapping("/{bienBanId}")
+    public ResponseEntity<BienBanResponse> capNhatBienBan(
+            @PathVariable("bienBanId") Integer bienBanId,
+            @RequestBody LuuBienBanRequest request,
+            Authentication authentication) {
+
+        Integer nguoiDungId = nguoiDungHienTaiService
+                .layNguoiDungId(authentication);
+
+        BienBanResponse response = bienBanService.capNhatBienBan(
+                bienBanId,
+                request,
+                nguoiDungId);
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/cuoc-hop/{cuocHopId}")
+    public ResponseEntity<BienBanResponse> layBienBanTheoCuocHop(
+            @PathVariable("cuocHopId") Integer cuocHopId,
+            Authentication authentication) {
+
+        Integer nguoiDungId = nguoiDungHienTaiService
+                .layNguoiDungId(authentication);
+
+        BienBanResponse response =
+                bienBanService.layBienBanTheoCuocHop(
+                        cuocHopId,
+                        nguoiDungId);
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{bienBanId}/phien-ban")
+    public ResponseEntity<List<PhienBanBienBanResponse>>
+            layLichSuPhienBan(
+                    @PathVariable("bienBanId") Integer bienBanId,
+                    Authentication authentication) {
+
+        Integer nguoiDungId = nguoiDungHienTaiService
+                .layNguoiDungId(authentication);
+
+        List<PhienBanBienBanResponse> response =
+                bienBanService.layLichSuPhienBan(
+                        bienBanId,
+                        nguoiDungId);
+
+        return ResponseEntity.ok(response);
+    }
+    @PostMapping("/{bienBanId}/trinh-duyet")
+    public ResponseEntity<Map<String, Object>> trinhBienBan(
+            @PathVariable("bienBanId") Integer bienBanId,
+            @RequestBody TrinhBienBanRequest request,
+            Authentication authentication) {
+
+        Integer nguoiDungId = nguoiDungHienTaiService
+                .layNguoiDungId(authentication);
+
+        Integer yeuCauId = quyTrinhBienBanService.trinhBienBan(
+                bienBanId,
+                nguoiDungId,
+                request.getGhiChuTrinh());
+
+        return ResponseEntity.ok(Map.of(
+                "message", "Trình duyệt biên bản thành công",
+                "bienBanId", bienBanId,
+                "yeuCauPheDuyetId", yeuCauId,
+                "trangThai", "CHO_DUYET"));
+    }
+    @PostMapping("/{bienBanId}/phe-duyet")
+    public ResponseEntity<Map<String, Object>> pheDuyetBienBan(
+            @PathVariable("bienBanId") Integer bienBanId,
+            @RequestBody XuLyBienBanRequest request,
+            Authentication authentication) {
+
+        Integer nguoiDungId = nguoiDungHienTaiService
+                .layNguoiDungId(authentication);
+
+        boolean daPheDuyetCuoi = quyTrinhBienBanService.pheDuyetBienBan(
+                bienBanId,
+                request.getYeuCauPheDuyetId(),
+                nguoiDungId,
+                request.getYKien());
+
+        return ResponseEntity.ok(Map.of(
+                "message", daPheDuyetCuoi
+                        ? "Biên bản đã được duyệt cuối và chờ thư ký phát hành"
+                        : "Chủ trì đã duyệt; biên bản đã chuyển lãnh đạo duyệt",
+                "bienBanId", bienBanId,
+                "trangThai", daPheDuyetCuoi ? "DA_PHE_DUYET" : "CHO_DUYET"));
+    }
+
+    @PostMapping("/{bienBanId}/tra-lai")
+    public ResponseEntity<Map<String, Object>> traLaiBienBan(
+            @PathVariable("bienBanId") Integer bienBanId,
+            @RequestBody XuLyBienBanRequest request,
+            Authentication authentication) {
+
+        Integer nguoiDungId = nguoiDungHienTaiService
+                .layNguoiDungId(authentication);
+
+        quyTrinhBienBanService.traLaiBienBan(
+                bienBanId,
+                request.getYeuCauPheDuyetId(),
+                nguoiDungId,
+                request.getYKien());
+
+        return ResponseEntity.ok(Map.of(
+                "message", "Trả lại biên bản để chỉnh sửa thành công",
+                "bienBanId", bienBanId,
+                "trangThai", "BI_TRA_LAI"));
+    }
+    @GetMapping("/cho-toi-duyet")
+    public List<BienBanChoDuyetResponse> layBienBanChoToiDuyet(
+            Authentication authentication) {
+
+        Integer nguoiDungId = nguoiDungHienTaiService.layNguoiDungId(authentication);
+        return quyTrinhBienBanService.layBienBanChoToiDuyet(nguoiDungId);
+    }
+
+    @PostMapping("/cuoc-hop/{cuocHopId}/phat-hanh")
+    public ResponseEntity<BienBanResponse> phatHanhBienBan(
+            @PathVariable("cuocHopId") Integer cuocHopId,
+            Authentication authentication) {
+        Integer nguoiDungId = nguoiDungHienTaiService
+                .layNguoiDungId(authentication);
+        return ResponseEntity.ok(
+                bienBanService.phatHanhBienBan(cuocHopId, nguoiDungId));
+    }
+}

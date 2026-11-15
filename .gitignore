@@ -1,0 +1,12 @@
+.metadata/
+node_modules/
+dist/
+target/
+.env
+.env.*
+!.env.example
+application-local.properties
+application-local.yml
+application-local.yaml
+*.loggit add -- .gitignore BE FE cau_truc_du_an.txt
+git diff --cached --name-only
