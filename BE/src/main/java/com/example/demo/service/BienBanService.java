@@ -36,6 +36,7 @@ public class BienBanService {
     private final CuocHopRepository cuocHopRepository;
     private final ThanhVienCuocHopRepository thanhVienCuocHopRepository;
     private final ThongBaoService thongBaoService;
+    private final PhanCongXuLyKeHoachService phanCongXuLyKeHoachService;
 
     @Transactional
     public BienBanResponse taoBienBan(
@@ -129,36 +130,46 @@ public class BienBanService {
             Integer cuocHopId,
             Integer nguoiDungId) {
 
-        nguoiDungHienTaiService.layTaiKhoanHoatDong(
-                nguoiDungId);
+        return chuyenResponse(layBienBanDuocXem(cuocHopId, nguoiDungId));
+    }
 
+    @Transactional(readOnly = true)
+    public List<BienBanResponse> layBienBanChoPhatHanh(Integer nguoiDungId) {
+        nguoiDungHienTaiService.layTaiKhoanHoatDong(nguoiDungId);
+        return bienBanRepository.findByTrangThaiOrderByBienBanIdDesc("DA_PHE_DUYET").stream()
+                .filter(bienBan -> ThaoTacCuocHop.laNguoiChuTri(bienBan.getCuocHop(), nguoiDungId))
+                .map(this::chuyenResponse)
+                .toList();
+    }
+
+    BienBanCuocHop layBienBanDuocXem(Integer cuocHopId, Integer nguoiDungId) {
+        nguoiDungHienTaiService.layTaiKhoanHoatDong(nguoiDungId);
         kiemTraMaHopLe(cuocHopId, "cuộc họp");
         CuocHop cuocHop = cuocHopRepository.findById(cuocHopId)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "Không tìm thấy cuộc họp"));
-
-        quyenBienBanService.kiemTraQuyenXem(cuocHop, nguoiDungId);
-
-        BienBanCuocHop bienBan = bienBanRepository
-                .findByCuocHop_CuocHopId(cuocHopId)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "Cuộc họp chưa có biên bản"));
-
-        return chuyenResponse(bienBan);
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy cuộc họp"));
+        BienBanCuocHop bienBan = bienBanRepository.findByCuocHop_CuocHopId(cuocHopId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Cuộc họp chưa có biên bản"));
+        boolean thanhVienDocBanPhatHanh = "DA_PHAT_HANH".equals(bienBan.getTrangThai())
+                && thanhVienCuocHopRepository.existsByCuocHop_CuocHopIdAndNguoiDung_NguoiDungId(cuocHopId, nguoiDungId);
+        if (!thanhVienDocBanPhatHanh
+                && !phanCongXuLyKeHoachService.laThuKyToChuc(cuocHop, nguoiDungId)) {
+            quyenBienBanService.kiemTraQuyenXem(cuocHop, nguoiDungId);
+        }
+        return bienBan;
     }
 
     @Transactional
     public BienBanResponse phatHanhBienBan(
             Integer cuocHopId,
             Integer nguoiDungId) {
-        NguoiDung nguoiPhatHanh = nguoiDungHienTaiService
-                .layTaiKhoanHoatDong(nguoiDungId);
+        nguoiDungHienTaiService.layTaiKhoanHoatDong(nguoiDungId);
         CuocHop cuocHop = cuocHopRepository.findByIdForUpdate(cuocHopId)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Không tìm thấy cuộc họp"));
-        quyenBienBanService.kiemTraQuyenSoan(cuocHop, nguoiDungId);
+        if (!ThaoTacCuocHop.laNguoiChuTri(cuocHop, nguoiDungId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Chỉ chủ trì cuộc họp được phát hành biên bản");
+        }
         BienBanCuocHop bienBan = bienBanRepository
                 .findByCuocHop_CuocHopId(cuocHopId)
                 .orElseThrow(() -> new ResponseStatusException(
@@ -288,15 +299,17 @@ public class BienBanService {
     private BienBanResponse chuyenResponse(
             BienBanCuocHop bienBan) {
 
+        NguoiDung nguoiDuyet = "CHO_DUYET".equals(bienBan.getTrangThai())
+                ? bienBan.getCuocHop().getNguoiChuTri() : bienBan.getNguoiDuyet();
         return new BienBanResponse(
                 bienBan.getBienBanId(),
                 bienBan.getCuocHop().getCuocHopId(),
                 bienBan.getNguoiSoan().getNguoiDungId(),
-                bienBan.getNguoiDuyet() != null
-                        ? bienBan.getNguoiDuyet().getNguoiDungId()
+                nguoiDuyet != null
+                        ? nguoiDuyet.getNguoiDungId()
                         : null,
-                bienBan.getNguoiDuyet() != null
-                        ? bienBan.getNguoiDuyet().getHoTen()
+                nguoiDuyet != null
+                        ? nguoiDuyet.getHoTen()
                         : null,
                 bienBan.getTieuDe(),
                 bienBan.getNoiDungGoc(),
@@ -305,7 +318,9 @@ public class BienBanService {
                 bienBan.getYKienPhanHoi(),
                 bienBan.getNgaySoan(),
                 bienBan.getNgayTrinhDuyet(),
-                bienBan.getNgayDuyet());
+                bienBan.getNgayDuyet(),
+                bienBan.getCuocHop().getTieuDe(),
+                bienBan.getNguoiSoan().getHoTen());
     }
 
     private static PhienBanBienBan taoBanChupPhienBan(

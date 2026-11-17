@@ -56,6 +56,20 @@ class QuyTacDuyetKeHoachTest {
     }
 
     @Test
+    void waitingForForwardCanReturnToPlanningForANewSchedule() {
+        CuocHop cuocHop = new CuocHop();
+        cuocHop.setTrangThai("DANG_CHUAN_BI");
+        cuocHop.setBuocXuLyHienTai("CHO_GUI_CAP_TREN");
+
+        ThaoTacCuocHop.moLaiKeHoachChoChuyenCap(cuocHop);
+
+        assertEquals("DANG_CHUAN_BI", cuocHop.getTrangThai());
+        assertEquals("LAP_KE_HOACH", cuocHop.getBuocXuLyHienTai());
+        assertThrows(IllegalStateException.class,
+                () -> ThaoTacCuocHop.guiKeHoachCapTren(cuocHop));
+    }
+
+    @Test
     void approvedMeetingCanReturnToPlanEditingBeforeItStarts() {
         CuocHop cuocHop = new CuocHop();
         cuocHop.setTrangThai("DA_DUYET");

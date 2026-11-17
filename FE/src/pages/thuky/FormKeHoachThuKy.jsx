@@ -14,7 +14,6 @@ export default function FormKeHoachThuKy({
   const [dangLuu, setDangLuu] = useState(false)
   const [loi, setLoi] = useState('')
   const [thongBao, setThongBao] = useState('')
-
   async function xuLyLuu(event) {
     event.preventDefault()
     if (dangLuu) return

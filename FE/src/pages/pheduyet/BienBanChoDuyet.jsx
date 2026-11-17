@@ -1,3 +1,6 @@
+import TaiLieuKetLuan from '../thuky/TaiLieuKetLuan.jsx'
+import BanXemTruocVanBan from '../thuky/BanXemTruocVanBan.jsx'
+import KhongGianVanBan from '../thuky/KhongGianVanBan.jsx'
 import { useEffect, useState } from 'react'
 import { LichCuaHoSo } from '../thuky/DanhSachDeXuatThuKy.jsx'
 import {
@@ -81,18 +84,18 @@ export default function BienBanChoDuyet({ token }) {
             {bienBan.tieuDeCuocHop || bienBan.tieuDe}
           </summary>
 
+          <KhongGianVanBan banXem={dangMo[bienBan.yeuCauPheDuyetId] && (
+            <BanXemTruocVanBan tenLoai="Biên bản cuộc họp" tieuDe={bienBan.tieuDe}
+              noiDung={bienBan.noiDung} trangThai="Chờ chủ trì duyệt"
+              thongTin={bienBan.soPhienBan == null ? [] : [['Phiên bản trình', bienBan.soPhienBan]]} />
+          )}>
           <p className="mt-3 text-xs text-slate-500">{bienBan.cuocHopId && `Cuộc họp #${bienBan.cuocHopId}`}</p>
           {dangMo[bienBan.yeuCauPheDuyetId] && bienBan.cuocHopId && (
-            <LichCuaHoSo cuocHopId={bienBan.cuocHopId} token={token} />
+            <>
+              <LichCuaHoSo cuocHopId={bienBan.cuocHopId} token={token} />
+              <TaiLieuKetLuan loai="bien-ban" cuocHopId={bienBan.cuocHopId} token={token} />
+            </>
           )}
-          <article className="mt-3 rounded-xl bg-slate-50 p-4">
-            <h3 className="font-semibold">{bienBan.tieuDe}</h3>
-            <p className="mt-1 text-xs text-slate-600">
-              Phiên bản {bienBan.soPhienBan}
-              {bienBan.capPheDuyet && ` · Cấp duyệt: ${bienBan.capPheDuyet === 'LANH_DAO' ? 'Lãnh đạo' : 'Chủ trì'}`}
-            </p>
-            <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-6">{bienBan.noiDung}</p>
-          </article>
           {bienBan.ghiChuTrinh && (
             <p className="mt-2 text-sm text-slate-600">
               Ghi chú của thư ký: {bienBan.ghiChuTrinh}
@@ -129,6 +132,7 @@ export default function BienBanChoDuyet({ token }) {
               </button>
             </div>
           </form>
+          </KhongGianVanBan>
         </details>
       ))}
     </section>

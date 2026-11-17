@@ -2,11 +2,12 @@ import { useEffect, useState } from 'react'
 import {
   capNhatKetLuanNhap,
   layKetLuanTheoCuocHop,
-  phatHanhKetLuan,
   trinhDuyetKetLuan,
   taoKetLuanNhap,
 } from '../../api/ketLuanCuocHopApi.js'
 import TaiLieuKetLuan from './TaiLieuKetLuan.jsx'
+import BanXemTruocVanBan from './BanXemTruocVanBan.jsx'
+import KhongGianVanBan from './KhongGianVanBan.jsx'
 
 const LOP_TRUONG = 'mt-1 w-full rounded-lg border border-slate-300 px-3 py-2'
 
@@ -14,16 +15,17 @@ const TEN_TRANG_THAI = {
   NHAP: 'Bản nháp',
   BI_TRA_LAI: 'Cần chỉnh sửa',
   CHO_DUYET: 'Đang chờ phê duyệt',
-  DA_DUYET: 'Đã duyệt · chờ thư ký cuộc họp phát hành',
+  DA_DUYET: 'Đã duyệt · chờ chủ trì phát hành',
   DA_PHAT_HANH: 'Đã phát hành',
 }
 
-export default function KetLuanThuKy({ cuocHopId, tieuDeCuocHop, token, onPhatHanh }) {
+export default function KetLuanThuKy({ cuocHopId, tieuDeCuocHop, token, tenChuTri }) {
   const [ketLuan, setKetLuan] = useState(undefined)
+  const [banNhapXemTruoc, setBanNhapXemTruoc] = useState(null)
   const [loiTai, setLoiTai] = useState('')
   const [loiLuu, setLoiLuu] = useState('')
   const [dangLuu, setDangLuu] = useState(false)
-  const [loiTrinh, setLoiTrinh] = useState('')
+  const [lanTai, setLanTai] = useState(0)
   const [thongBao, setThongBao] = useState('')
   const coTheSua = ketLuan === null
     || ['NHAP', 'BI_TRA_LAI'].includes(ketLuan?.trangThai)
@@ -33,14 +35,19 @@ export default function KetLuanThuKy({ cuocHopId, tieuDeCuocHop, token, onPhatHa
 
     layKetLuanTheoCuocHop(cuocHopId, token, controller.signal)
       .then((duLieu) => {
-        if (!controller.signal.aborted) setKetLuan(duLieu)
+        if (!controller.signal.aborted) { setKetLuan(duLieu); setLoiTai('') }
       })
       .catch((loi) => {
         if (!controller.signal.aborted) setLoiTai(loi.message)
       })
 
     return () => controller.abort()
-  }, [cuocHopId, token])
+  }, [cuocHopId, token, lanTai])
+
+  function capNhatBanXemTruoc(event) {
+    const duLieu = new FormData(event.currentTarget)
+    setBanNhapXemTruoc({ tieuDe: duLieu.get('tieuDe'), noiDung: duLieu.get('noiDung') })
+  }
 
   async function xuLyLuu(event) {
     event.preventDefault()
@@ -53,7 +60,6 @@ export default function KetLuanThuKy({ cuocHopId, tieuDeCuocHop, token, onPhatHa
     const thaoTac = event.nativeEvent.submitter?.value
 
     setLoiLuu('')
-    setLoiTrinh('')
     setThongBao('')
 
     if (!tieuDe) {
@@ -69,6 +75,7 @@ export default function KetLuanThuKy({ cuocHopId, tieuDeCuocHop, token, onPhatHa
         ? await capNhatKetLuanNhap(cuocHopId, duLieu, token)
         : await taoKetLuanNhap(cuocHopId, duLieu, token)
       setKetLuan(ketLuanMoi)
+      setBanNhapXemTruoc(null)
       if (thaoTac === 'trinh') {
         const ketQuaTrinh = await trinhDuyetKetLuan(cuocHopId, ghiChuTrinh, token)
         setKetLuan((hienTai) => ({
@@ -78,6 +85,7 @@ export default function KetLuanThuKy({ cuocHopId, tieuDeCuocHop, token, onPhatHa
           capPheDuyet: 'CHU_TRI',
         }))
         setThongBao(ketQuaTrinh.message)
+        setLanTai((lan) => lan + 1)
       } else {
         setThongBao('Đã lưu kết luận.')
       }
@@ -89,30 +97,42 @@ export default function KetLuanThuKy({ cuocHopId, tieuDeCuocHop, token, onPhatHa
 
   }
 
-  async function xuLyPhatHanh() {
-    if (dangLuu) return
-    setDangLuu(true)
-    setLoiLuu('')
-    try {
-      setKetLuan(await phatHanhKetLuan(cuocHopId, token))
-      onPhatHanh?.()
-    } catch (loi) {
-      setLoiLuu(loi.message)
-    } finally {
-      setDangLuu(false)
-    }
-  }
 
   return (
     <section className="space-y-4 border-t border-slate-200 pt-5">
-      <h3 className="font-semibold">Kết luận cuộc họp</h3>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="font-semibold">Kết luận cuộc họp</h3>
+        {!coTheSua && <button type="button" className="rounded-md border px-3 py-1.5 text-sm font-semibold"
+          disabled={dangLuu} onClick={() => setLanTai((lan) => lan + 1)}>Làm mới trạng thái</button>}
+      </div>
+      {ketLuan && (
+        <dl className="grid gap-3 rounded-lg bg-slate-50 p-3 text-sm sm:grid-cols-2">
+          {[
+            ['Người soạn', ketLuan.tenNguoiSoan || 'Chưa có thông tin'],
+            ['Người duyệt', ketLuan.tenNguoiDuyet || 'Chưa phân công duyệt'],
+            ['Lần trình', ketLuan.yeuCauPheDuyetId == null ? 'Chưa trình duyệt' : `Yêu cầu #${ketLuan.yeuCauPheDuyetId}`],
+            ['Thời điểm trình', ketLuan.ngayTrinhDuyet ? new Date(ketLuan.ngayTrinhDuyet).toLocaleString('vi-VN') : 'Chưa trình duyệt'],
+            ['Người phát hành', ketLuan.tenNguoiPhatHanh || 'Chưa phát hành'],
+            ['Ngày phát hành', ketLuan.ngayPhatHanh ? new Date(ketLuan.ngayPhatHanh).toLocaleString('vi-VN') : 'Chưa phát hành'],
+          ].map(([nhan, giaTri]) => (
+            <div key={nhan}><dt className="font-medium">{nhan}</dt><dd>{giaTri}</dd></div>
+          ))}
+        </dl>
+      )}
 
+      <KhongGianVanBan banXem={!loiTai && ketLuan !== undefined && (
+        <BanXemTruocVanBan tenLoai="Kết luận cuộc họp" tenNguoiKy={tenChuTri}
+          tieuDe={banNhapXemTruoc?.tieuDe ?? ketLuan?.tieuDe ?? tieuDeCuocHop}
+          noiDung={banNhapXemTruoc?.noiDung ?? ketLuan?.noiDung}
+          trangThai={TEN_TRANG_THAI[ketLuan?.trangThai] || 'Bản nháp'}
+          ngayPhatHanh={ketLuan?.ngayPhatHanh} />
+      )}>
       {loiTai ? (
         <p role="alert" className="text-sm text-red-800">{loiTai}</p>
       ) : ketLuan === undefined ? (
         <p role="status" className="text-sm text-slate-600">Đang tải kết luận…</p>
       ) : coTheSua ? (
-        <form onSubmit={xuLyLuu} className="space-y-4">
+        <form onSubmit={xuLyLuu} onChange={capNhatBanXemTruoc} className="space-y-4">
           {ketLuan?.trangThai === 'BI_TRA_LAI' && ketLuan.ghiChuPhanHoi && (
             <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-950">
               Lý do trả lại: {ketLuan.ghiChuPhanHoi}
@@ -143,7 +163,6 @@ export default function KetLuanThuKy({ cuocHopId, tieuDeCuocHop, token, onPhatHa
           </label>
 
           {loiLuu && <p role="alert" className="text-sm text-red-800">{loiLuu}</p>}
-          {loiTrinh && <p role="alert" className="text-sm text-red-800">{loiTrinh}</p>}
           {thongBao && <p role="status" className="text-sm text-emerald-800">{thongBao}</p>}
 
           {ketLuan && (
@@ -174,12 +193,11 @@ export default function KetLuanThuKy({ cuocHopId, tieuDeCuocHop, token, onPhatHa
         </form>
       ) : (
         <div className="space-y-3 rounded-lg border border-slate-200 p-4">
-          <h4 className="font-semibold">{ketLuan.tieuDe}</h4>
           <p className="text-sm text-slate-600">
             Kết luận #{ketLuan.ketLuanId} ·{' '}
             {TEN_TRANG_THAI[ketLuan.trangThai] ?? ketLuan.trangThai}
             {ketLuan.capPheDuyet && ketLuan.trangThai === 'CHO_DUYET'
-              ? ` · Chờ ${ketLuan.capPheDuyet === 'CHU_TRI' ? 'chủ trì' : 'lãnh đạo'}${ketLuan.tenNguoiDuyet ? ` ${ketLuan.tenNguoiDuyet}` : ''}`
+              ? ` · Chờ chủ trì${ketLuan.tenNguoiDuyet ? ` ${ketLuan.tenNguoiDuyet}` : ''}`
               : ''}
           </p>
 
@@ -188,9 +206,6 @@ export default function KetLuanThuKy({ cuocHopId, tieuDeCuocHop, token, onPhatHa
               Lý do trả lại: {ketLuan.ghiChuPhanHoi}
             </p>
           )}
-          <p className="whitespace-pre-wrap text-sm">
-            {ketLuan.noiDung || 'Chưa có nội dung văn bản.'}
-          </p>
 
           {ketLuan.hanPhatHanh && (
             <p className="text-sm text-slate-600">
@@ -199,18 +214,11 @@ export default function KetLuanThuKy({ cuocHopId, tieuDeCuocHop, token, onPhatHa
             </p>
           )}
           {thongBao && <p role="status" className="text-sm text-emerald-800">{thongBao}</p>}
-          {ketLuan.trangThai === 'DA_DUYET' && (
-            <button type="button" disabled={dangLuu} onClick={xuLyPhatHanh}
-              className="rounded-lg bg-emerald-800 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">Phát hành kết luận</button>
-          )}
           {loiLuu && <p role="alert" className="text-sm text-red-800">{loiLuu}</p>}
-          <TaiLieuKetLuan
-            cuocHopId={cuocHopId}
-            token={token}
-            choPhepTaiLen={['NHAP', 'BI_TRA_LAI'].includes(ketLuan.trangThai)}
-            />
         </div>
       )}
+      {ketLuan && <TaiLieuKetLuan cuocHopId={cuocHopId} token={token} choPhepTaiLen={coTheSua && !dangLuu} />}
+      </KhongGianVanBan>
     </section>
   )
 }

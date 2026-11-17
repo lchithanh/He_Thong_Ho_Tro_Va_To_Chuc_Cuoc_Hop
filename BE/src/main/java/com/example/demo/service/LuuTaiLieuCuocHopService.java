@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.StandardCopyOption;
 import java.util.Locale;
 import java.util.Set;
@@ -103,6 +104,35 @@ public class LuuTaiLieuCuocHopService {
                     HttpStatus.INTERNAL_SERVER_ERROR,
                     "Không thể lưu tài liệu cuộc họp",
                     ex);
+        }
+    }
+
+    public record TepTaiLieu(String tenFile, byte[] noiDung) {}
+
+    TepTaiLieu docTep(TaiLieuCuocHop taiLieu, Path thuMucUpload) {
+        if (taiLieu.getDuongDanFile() == null || taiLieu.getDuongDanFile().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Tài liệu chưa có tệp");
+        }
+        try {
+            Path thuMuc = thuMucUpload.toRealPath();
+            Path file = Path.of(taiLieu.getDuongDanFile()).toRealPath();
+            if (!file.startsWith(thuMuc) || !Files.isRegularFile(file)) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy tệp tài liệu");
+            }
+            byte[] duLieu;
+            try (InputStream input = Files.newInputStream(file)) {
+                duLieu = input.readNBytes((int) DUNG_LUONG_TOI_DA + 1);
+            }
+            if (duLieu.length > DUNG_LUONG_TOI_DA) {
+                throw new ResponseStatusException(HttpStatus.PAYLOAD_TOO_LARGE, "Tệp vượt quá 10 MB");
+            }
+            String ten = taiLieu.getTenFileGoc();
+            return new TepTaiLieu(ten == null || ten.isBlank() ? "tai-lieu" : ten.replaceAll("[\\p{Cntrl}]", ""),
+                    duLieu);
+        } catch (NoSuchFileException ex) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Tệp không còn trên máy chủ");
+        } catch (IOException ex) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Không thể đọc tệp tài liệu", ex);
         }
     }
 

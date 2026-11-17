@@ -151,6 +151,8 @@ export default function ThanhVienCuocHopThuKy({
     }
   }
 
+  const lichCuChoXacNhan = lichKeHoachDaDuyet?.trangThai === 'DE_XUAT' && !lichKeHoachQuaHan
+
   return (
     <section className="space-y-4">
       {choPhepMoi && coLichDaXacNhan === null && (
@@ -162,14 +164,16 @@ export default function ThanhVienCuocHopThuKy({
             <p className="text-sm font-semibold text-amber-950">
               {lichKeHoachQuaHan
                 ? 'Lịch trong bản kế hoạch đã duyệt đã bắt đầu hoặc đã qua'
-                : 'Cần xác nhận đúng lịch trong bản kế hoạch đã duyệt'}
+                : lichCuChoXacNhan
+                  ? 'Lịch của hồ sơ cũ đang chờ xác nhận'
+                  : 'Cần đề xuất lịch họp mới'}
             </p>
             <p className="mt-1 text-sm text-amber-900">
               {lichKeHoachQuaHan
-                ? `Lịch #${lichKeHoachDaDuyet?.lichHopId} đã bắt đầu hoặc đã qua. Hãy chọn lịch tương lai trên Calendar, cập nhật bản kế hoạch và trình duyệt lại; lời mời sẽ mở sau khi lịch mới được duyệt và xác nhận.`
-                : lichKeHoachDaDuyet
-                  ? `Lịch #${lichKeHoachDaDuyet.lichHopId} chưa được xác nhận. Xác nhận đúng lịch này trên Calendar; các lịch khác không tự thay thế lịch gắn với bản kế hoạch.`
-                  : 'Bản kế hoạch đã duyệt chưa liên kết với lịch hợp lệ. Hãy chọn lịch tương lai, cập nhật kế hoạch và trình duyệt lại trước khi mời.'}
+                ? `Lịch #${lichKeHoachDaDuyet?.lichHopId} đã bắt đầu hoặc đã qua. Hãy chọn lịch tương lai trên Calendar, cập nhật bản kế hoạch và trình duyệt lại; lời mời sẽ mở khi kế hoạch và lịch mới được duyệt.`
+                : lichCuChoXacNhan
+                  ? `Người đã duyệt hồ sơ có thể xác nhận lịch #${lichKeHoachDaDuyet.lichHopId} trên Calendar.`
+                  : 'Hãy đề xuất lịch tương lai, cập nhật kế hoạch và trình duyệt lại trước khi mời.'}
             </p>
           </div>
           {onLapLich && (
@@ -178,7 +182,7 @@ export default function ThanhVienCuocHopThuKy({
               onClick={() => onLapLich(cuocHopId)}
               className="rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm font-semibold text-amber-950 transition hover:bg-amber-100"
             >
-              {lichKeHoachQuaHan ? 'Mở Calendar để chọn lịch tương lai' : 'Mở Calendar để xác nhận lịch'}
+              {lichCuChoXacNhan ? 'Xem lịch trên Calendar' : 'Đề xuất lại lịch'}
             </button>
           )}
         </div>

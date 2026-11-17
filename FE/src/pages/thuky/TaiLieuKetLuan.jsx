@@ -5,7 +5,19 @@ import {
   taiXuongTaiLieuKetLuan,
 } from '../../api/ketLuanCuocHopApi.js'
 
-export default function TaiLieuKetLuan({ cuocHopId, token, choPhepTaiLen }) {
+import {
+  layTaiLieuBienBan,
+  taiLenTaiLieuBienBan,
+  taiXuongTaiLieuBienBan,
+} from '../../api/bienBanApi.js'
+
+const TAI_LIEU = {
+  'bien-ban': { ten: 'Tệp đính kèm biên bản', lay: layTaiLieuBienBan, taiLen: taiLenTaiLieuBienBan, taiXuong: taiXuongTaiLieuBienBan },
+  'ket-luan': { ten: 'Tệp đính kèm kết luận', lay: layTaiLieuKetLuan, taiLen: taiLenTaiLieuKetLuan, taiXuong: taiXuongTaiLieuKetLuan },
+}
+
+export default function TaiLieuKetLuan({ cuocHopId, token, choPhepTaiLen, loai = 'ket-luan' }) {
+  const taiLieuVanBan = TAI_LIEU[loai]
   const [danhSach, setDanhSach] = useState(null)
   const [lanTai, setLanTai] = useState(0)
   const [dangTaiLen, setDangTaiLen] = useState(false)
@@ -15,7 +27,7 @@ export default function TaiLieuKetLuan({ cuocHopId, token, choPhepTaiLen }) {
   useEffect(() => {
     const controller = new AbortController()
 
-    layTaiLieuKetLuan(cuocHopId, token, controller.signal)
+    taiLieuVanBan.lay(cuocHopId, token, controller.signal)
       .then((duLieu) => {
         if (controller.signal.aborted) return
 
@@ -27,7 +39,7 @@ export default function TaiLieuKetLuan({ cuocHopId, token, choPhepTaiLen }) {
       })
 
     return () => controller.abort()
-  }, [cuocHopId, token, lanTai])
+  }, [cuocHopId, token, lanTai, taiLieuVanBan])
 
   async function xuLyTaiLen(event) {
     event.preventDefault()
@@ -45,7 +57,7 @@ export default function TaiLieuKetLuan({ cuocHopId, token, choPhepTaiLen }) {
     setLoiThaoTac('')
 
     try {
-      await taiLenTaiLieuKetLuan(cuocHopId, file, token)
+      await taiLieuVanBan.taiLen(cuocHopId, file, token)
       form.reset()
       setLanTai((hienTai) => hienTai + 1)
     } catch (loi) {
@@ -59,7 +71,7 @@ export default function TaiLieuKetLuan({ cuocHopId, token, choPhepTaiLen }) {
     setLoiThaoTac('')
 
     try {
-      await taiXuongTaiLieuKetLuan(cuocHopId, taiLieu, token)
+      await taiLieuVanBan.taiXuong(cuocHopId, taiLieu, token)
     } catch (loi) {
       setLoiThaoTac(loi.message)
     }
@@ -67,7 +79,7 @@ export default function TaiLieuKetLuan({ cuocHopId, token, choPhepTaiLen }) {
 
   return (
     <div className="space-y-3 border-t border-slate-200 pt-4">
-      <h4 className="font-semibold">Tài liệu kết luận</h4>
+      <h4 className="font-semibold">{taiLieuVanBan.ten}</h4>
 
       {choPhepTaiLen && (
         <form onSubmit={xuLyTaiLen} className="flex flex-wrap items-end gap-3">

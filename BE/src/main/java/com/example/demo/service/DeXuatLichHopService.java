@@ -33,7 +33,7 @@ public class DeXuatLichHopService {
         PhongHop phong = null;
         if (request.phongHopId() != null) {
             phong = lichHopService.timPhongHop(request.phongHopId());
-            lichHopService.kiemTraTrungLich(request.phongHopId(), -1,
+            lichHopService.kiemTraTrungLichDeXuat(ch.getCuocHopId(), request.phongHopId(), -1,
                     request.thoiGianBatDau(), request.thoiGianKetThuc());
         }
         PhongHop phongDaChon = phong;
@@ -58,7 +58,7 @@ public class DeXuatLichHopService {
         PhongHop phong = null;
         if (request.phongHopId() != null) {
             phong = lichHopService.timPhongHop(request.phongHopId());
-            lichHopService.kiemTraTrungLich(request.phongHopId(), lichHopId,
+            lichHopService.kiemTraTrungLichDeXuat(ch.getCuocHopId(), request.phongHopId(), lichHopId,
                     request.thoiGianBatDau(), request.thoiGianKetThuc());
         }
         LichHop lichDaKhoa = lich;

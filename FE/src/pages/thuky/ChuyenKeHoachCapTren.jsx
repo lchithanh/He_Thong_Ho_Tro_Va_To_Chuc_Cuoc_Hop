@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { guiKeHoachLenCapTren, layLuaChonKeHoach } from '../../api/cuocHopApi.js'
+import { guiKeHoachLenCapTren, layLuaChonKeHoach, xuLyYeuCauKeHoach } from '../../api/cuocHopApi.js'
 
 export default function ChuyenKeHoachCapTren({
   cuocHopId,
@@ -45,6 +45,26 @@ export default function ChuyenKeHoachCapTren({
         await onDaGui?.(ketQua)
       } catch {
         setLoi('Đã chuyển hồ sơ. Hãy tải lại trang để cập nhật tiến độ mới nhất.')
+      }
+    } catch (error) {
+      setLoi(error.message)
+    } finally {
+      setDangGui(false)
+    }
+  }
+
+  async function deXuatLaiLich() {
+    if (dangGui || daGui) return
+    setDangGui(true)
+    setLoi('')
+    try {
+      const ketQua = await xuLyYeuCauKeHoach(cuocHopId, yeuCauId, 'de-xuat-lai-lich', null, token)
+      setDaGui(true)
+      setThongBao(ketQua.message)
+      try {
+        await onDaGui?.(ketQua)
+      } catch {
+        setLoi('Đã mở lại kế hoạch. Hãy tải lại trang để tiếp tục.')
       }
     } catch (error) {
       setLoi(error.message)
@@ -106,6 +126,19 @@ export default function ChuyenKeHoachCapTren({
           {dangGui ? 'Đang chuyển hồ sơ…' : 'Gửi hồ sơ lên cấp trên'}
         </button>
       </form>
+      <div className="space-y-2 border-t border-blue-200 pt-3">
+        <p className="text-sm text-blue-900">
+          Nếu lịch đã quá hạn hoặc cần đổi giờ, mở lại hồ sơ rồi chọn lịch mới và trình lại trưởng phòng.
+        </p>
+        <button
+          type="button"
+          onClick={deXuatLaiLich}
+          disabled={dangGui || daGui}
+          className="rounded-lg border border-blue-300 bg-white px-4 py-2 text-sm font-semibold text-blue-900 disabled:opacity-60"
+        >
+          Đề xuất lại lịch
+        </button>
+      </div>
     </section>
   )
 }

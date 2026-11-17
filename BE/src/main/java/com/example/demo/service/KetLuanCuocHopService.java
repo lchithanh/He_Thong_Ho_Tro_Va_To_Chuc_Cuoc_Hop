@@ -190,7 +190,7 @@ public class KetLuanCuocHopService {
     }
 
     @Transactional
-    public boolean xuLyDuyetKetLuan(
+    public void xuLyDuyetKetLuan(
             Integer cuocHopId,
             Integer yeuCauId,
             Integer nguoiDuyetId,
@@ -199,16 +199,14 @@ public class KetLuanCuocHopService {
         CuocHop cuocHop = cuocHopRepository.findByIdForUpdate(cuocHopId)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Không tìm thấy cuộc họp"));
-        NguoiDung nguoiDuyet = nguoiDungHienTaiService
-                .layTaiKhoanHoatDong(nguoiDuyetId);
+        nguoiDungHienTaiService.layTaiKhoanHoatDong(nguoiDuyetId);
         YeuCauPheDuyet yeuCau = yeuCauPheDuyetRepository.findByIdForUpdate(yeuCauId)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Không tìm thấy yêu cầu duyệt kết luận"));
         if (yeuCau.getLoaiYeuCau() != LoaiYeuCau.KET_LUAN
                 || !cuocHopId.equals(yeuCau.getCuocHop().getCuocHopId())
                 || yeuCau.getTrangThai() != TrangThai.CHO_DUYET
-                || yeuCau.getNguoiDuyet() == null
-                || !nguoiDuyetId.equals(yeuCau.getNguoiDuyet().getNguoiDungId())) {
+                || !ThaoTacCuocHop.laNguoiChuTri(cuocHop, nguoiDuyetId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                     "Yêu cầu không chờ bạn xử lý");
         }
@@ -220,6 +218,8 @@ public class KetLuanCuocHopService {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Kết luận không còn chờ duyệt");
         }
+        yeuCau.setNguoiDuyet(cuocHop.getNguoiChuTri());
+        yeuCau.setCapPheDuyet("CHU_TRI");
         if ("tra-lai".equals(thaoTac)) {
             if (yKien == null || yKien.isBlank()) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
@@ -233,37 +233,17 @@ public class KetLuanCuocHopService {
                     ketLuan.getNguoiSoan());
             lichSuPheDuyetService.ghiNhan(cuocHopId, null, null, nguoiDuyetId,
                     "KET_LUAN", "YEU_CAU_CHINH_SUA", yKien, yeuCau);
-            return false;
+            return;
         }
         if (!"phe-duyet".equals(thaoTac)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Thao tác duyệt kết luận không hợp lệ");
-        }
-        if ("CHU_TRI".equals(yeuCau.getCapPheDuyet())
-                && canDuyetHaiCap(cuocHop)) {
-            NguoiDung lanhDao = layLanhDaoDuyetCuoi(
-                    cuocHopId, cuocHop.getNguoiChuTri().getNguoiDungId());
-            yeuCau.setTrangThai(TrangThai.DA_DUYET);
-            YeuCauPheDuyet yeuCauCapTren = taoYeuCauCapTren(
-                    cuocHop, yeuCau, nguoiDuyet, lanhDao,
-                    yKien == null ? null : yKien.strip());
-            thongBaoService.gui(cuocHop, nguoiDuyetId, "KET_LUAN_CHO_DUYET",
-                    "Kết luận đã qua chủ trì và cần lãnh đạo duyệt",
-                    ketLuan.getTieuDe(), lanhDao);
-            lichSuPheDuyetService.ghiNhan(cuocHopId, null, null, nguoiDuyetId,
-                    "KET_LUAN", "PHE_DUYET", yKien, yeuCau);
-            lichSuPheDuyetService.ghiNhan(cuocHopId, null, null, nguoiDuyetId,
-                    "KET_LUAN", "TRINH_CAP_TREN",
-                    "Chủ trì đã duyệt; kết luận được chuyển lãnh đạo duyệt",
-                    yeuCauCapTren);
-            return false;
         }
         yeuCau.setTrangThai(TrangThai.DA_DUYET);
         ketLuan.setTrangThai("DA_DUYET");
         thongBaoChoThuKy(cuocHop, nguoiDuyetId, ketLuan);
         lichSuPheDuyetService.ghiNhan(cuocHopId, null, null, nguoiDuyetId,
                 "KET_LUAN", "PHE_DUYET", yKien, yeuCau);
-        return true;
     }
     
     @Transactional
@@ -287,7 +267,10 @@ public class KetLuanCuocHopService {
                 new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Không tìm thấy cuộc họp"));
 
-        kiemTraThuKy(cuocHop, nguoiDangNhapId);
+        if (!ThaoTacCuocHop.laNguoiChuTri(cuocHop, nguoiDangNhapId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Chỉ chủ trì cuộc họp được phát hành kết luận");
+        }
         if (!"DA_KET_THUC".equals(cuocHop.getTrangThai())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Chỉ được phát hành kết luận sau khi cuộc họp đã kết thúc");
@@ -345,13 +328,10 @@ public class KetLuanCuocHopService {
 
         boolean duocXem = ThaoTacCuocHop.laNguoiChuTri(
                 ketLuan.getCuocHop(), nguoiDangNhapId)
+                || phanCongXuLyKeHoachService.laThuKyToChuc(ketLuan.getCuocHop(), nguoiDangNhapId)
                 || thanhVienCuocHopRepository
                         .existsByCuocHop_CuocHopIdAndNguoiDung_NguoiDungIdAndVaiTroTaiCuocHop(
                                 cuocHopId, nguoiDangNhapId, "THU_KY")
-                || yeuCauPheDuyetRepository
-                                .existsByCuocHop_CuocHopIdAndLoaiYeuCauAndTrangThaiAndNguoiDuyet_NguoiDungId(
-                                        cuocHopId, LoaiYeuCau.KET_LUAN,
-                                        TrangThai.CHO_DUYET, nguoiDangNhapId)
                 || ("DA_PHAT_HANH".equals(ketLuan.getTrangThai())
                         && thanhVienCuocHopRepository
                                 .existsByCuocHop_CuocHopIdAndNguoiDung_NguoiDungId(
@@ -371,7 +351,7 @@ public class KetLuanCuocHopService {
 
         Map<Integer, KetLuanCuocHopResponse> ketLuanTheoId = new LinkedHashMap<>();
         yeuCauPheDuyetRepository
-                .findByNguoiDuyet_NguoiDungIdAndLoaiYeuCauAndTrangThaiOrderByThoiGianTrinhDesc(
+                .findByCuocHop_NguoiChuTri_NguoiDungIdAndLoaiYeuCauAndTrangThaiOrderByThoiGianTrinhDesc(
                         nguoiDungId, LoaiYeuCau.KET_LUAN, TrangThai.CHO_DUYET)
                 .forEach(yeuCau -> ketLuanCuocHopRepository
                         .findByCuocHop_CuocHopId(yeuCau.getCuocHop().getCuocHopId())
@@ -381,9 +361,7 @@ public class KetLuanCuocHopService {
 
         ketLuanCuocHopRepository.findAll().stream()
                 .filter(ketLuan -> "DA_DUYET".equals(ketLuan.getTrangThai()))
-                .filter(ketLuan -> thanhVienCuocHopRepository
-                        .existsByCuocHop_CuocHopIdAndNguoiDung_NguoiDungIdAndVaiTroTaiCuocHop(
-                                ketLuan.getCuocHop().getCuocHopId(), nguoiDungId, "THU_KY"))
+                .filter(ketLuan -> ThaoTacCuocHop.laNguoiChuTri(ketLuan.getCuocHop(), nguoiDungId))
                 .forEach(ketLuan -> ketLuanTheoId.put(
                         ketLuan.getKetLuanId(), toResponse(ketLuan)));
         return new ArrayList<>(ketLuanTheoId.values());
@@ -434,6 +412,10 @@ public class KetLuanCuocHopService {
                         cuocHop.getCuocHopId(), LoaiYeuCau.KET_LUAN)
                 .orElse(null);
 
+        boolean choChuTriDuyet = "CHO_DUYET".equals(ketLuan.getTrangThai()) && yeuCau != null;
+        NguoiDung nguoiDuyet = choChuTriDuyet ? cuocHop.getNguoiChuTri()
+                : yeuCau == null ? null : yeuCau.getNguoiDuyet();
+
         return new KetLuanCuocHopResponse(
                 ketLuan.getKetLuanId(),
                 cuocHop.getCuocHopId(),
@@ -444,13 +426,15 @@ public class KetLuanCuocHopService {
                 hanPhatHanh,
                 quaHanPhatHanh,
                 yeuCau == null ? null : yeuCau.getYeuCauPheDuyetId(),
-                yeuCau == null ? null : yeuCau.getCapPheDuyet(),
-                yeuCau == null || yeuCau.getNguoiDuyet() == null
-                        ? null : yeuCau.getNguoiDuyet().getNguoiDungId(),
-                yeuCau == null || yeuCau.getNguoiDuyet() == null
-                        ? null : yeuCau.getNguoiDuyet().getHoTen(),
+                choChuTriDuyet ? "CHU_TRI" : yeuCau == null ? null : yeuCau.getCapPheDuyet(),
+                nguoiDuyet == null ? null : nguoiDuyet.getNguoiDungId(),
+                nguoiDuyet == null ? null : nguoiDuyet.getHoTen(),
                 yeuCau == null || yeuCau.getTrangThai() != TrangThai.TRA_LAI
-                        ? null : yeuCau.getGhiChuTrinh()
+                        ? null : yeuCau.getGhiChuTrinh(),
+                ketLuan.getNguoiSoan().getHoTen(),
+                yeuCau == null ? null : yeuCau.getThoiGianTrinh(),
+                ketLuan.getNguoiPhatHanh() == null ? null : ketLuan.getNguoiPhatHanh().getHoTen(),
+                ngayPhatHanh
         );
     }
 
@@ -471,49 +455,6 @@ public class KetLuanCuocHopService {
         }
     }
 
-    private boolean canDuyetHaiCap(CuocHop cuocHop) {
-        return QuyTacDuyetKeHoach.canDuyetVanBanHaiCap(
-                cuocHop.getPhamViCuocHop(),
-                Boolean.TRUE.equals(cuocHop.getCoKhachMoiBenNgoai()));
-    }
-
-    private NguoiDung layLanhDaoDuyetCuoi(Integer cuocHopId, Integer chuTriId) {
-        YeuCauPheDuyet lanTrinhKeHoach = yeuCauPheDuyetRepository
-                .findFirstByCuocHop_CuocHopIdAndLoaiYeuCauOrderByYeuCauPheDuyetIdDesc(
-                        cuocHopId, LoaiYeuCau.KE_HOACH_CUOC_HOP)
-                .filter(yc -> yc.getTrangThai() == TrangThai.DA_DUYET)
-                .filter(yc -> "LANH_DAO".equals(yc.getCapPheDuyet()))
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.CONFLICT,
-                        "Không tìm thấy lãnh đạo đã duyệt kế hoạch cuối cùng"));
-        Integer lanhDaoId = lanTrinhKeHoach.getNguoiDuyet() == null
-                ? null : lanTrinhKeHoach.getNguoiDuyet().getNguoiDungId();
-        if (lanhDaoId == null || Objects.equals(lanhDaoId, chuTriId)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Cần có lãnh đạo khác chủ trì để hoàn tất duyệt hai cấp");
-        }
-        return nguoiDungHienTaiService.layTaiKhoanHoatDong(lanhDaoId);
-    }
-
-    private YeuCauPheDuyet taoYeuCauCapTren(
-            CuocHop cuocHop,
-            YeuCauPheDuyet yeuCauTruoc,
-            NguoiDung nguoiTrinh,
-            NguoiDung lanhDao,
-            String ghiChu) {
-        YeuCauPheDuyet yeuCau = new YeuCauPheDuyet();
-        yeuCau.setLoaiYeuCau(LoaiYeuCau.KET_LUAN);
-        yeuCau.setCuocHop(cuocHop);
-        yeuCau.setNguoiTrinh(nguoiTrinh);
-        yeuCau.setNguoiDuyet(lanhDao);
-        yeuCau.setCapPheDuyet("LANH_DAO");
-        yeuCau.setYeuCauTruoc(yeuCauTruoc);
-        yeuCau.setTrangThai(TrangThai.CHO_DUYET);
-        yeuCau.setThoiGianTrinh(LocalDateTime.now());
-        yeuCau.setGhiChuTrinh(ghiChu);
-        return yeuCauPheDuyetRepository.save(yeuCau);
-    }
-
     private void thongBaoChoThuKy(
             CuocHop cuocHop, Integer nguoiThaoTacId, KetLuanCuocHop ketLuan) {
         thanhVienCuocHopRepository
@@ -521,7 +462,7 @@ public class KetLuanCuocHopService {
                         cuocHop.getCuocHopId(), "THU_KY")
                 .forEach(thanhVien -> thongBaoService.gui(
                         cuocHop, nguoiThaoTacId, "KET_LUAN_DA_DUYET",
-                        "Kết luận đã được duyệt, thư ký có thể phát hành",
+                        "Kết luận đã được duyệt và chờ chủ trì phát hành",
                         ketLuan.getTieuDe(), thanhVien.getNguoiDung()));
     }
 }

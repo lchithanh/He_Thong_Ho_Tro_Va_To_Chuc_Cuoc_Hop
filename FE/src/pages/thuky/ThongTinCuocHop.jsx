@@ -20,7 +20,7 @@ const THONG_BAO = {
   CHO_DUYET: 'Hồ sơ đang trong quy trình phê duyệt.',
   TRA_LAI: 'Kế hoạch đã được trả lại để chỉnh sửa.',
   TU_CHOI: 'Hồ sơ đã bị từ chối.',
-  DA_DUYET: 'Cuộc họp đã được duyệt. Xem trạng thái xác nhận ở mục Lịch họp.',
+  DA_DUYET: 'Kế hoạch đã được duyệt. Xem lịch đi kèm trong mục Lịch họp.',
   DANG_DIEN_RA: 'Cuộc họp đang diễn ra.',
   DA_KET_THUC: 'Cuộc họp đã kết thúc.',
   DA_HUY: 'Cuộc họp đã được hủy.',

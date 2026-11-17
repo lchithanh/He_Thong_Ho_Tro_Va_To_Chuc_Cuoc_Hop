@@ -35,6 +35,13 @@ public class QuyTrinhKeHoachController {
                 request == null ? null : request.ghiChu());
     }
 
+    @PostMapping("/{cuocHopId}/yeu-cau/{yeuCauId}/de-xuat-lai-lich")
+    public TrinhKeHoachResponse deXuatLaiLich(@PathVariable Integer cuocHopId,
+            @PathVariable Integer yeuCauId, Authentication auth) {
+        return quyTrinhKeHoachService.deXuatLaiLichKhiChoChuyenCap(
+                cuocHopId, yeuCauId, layNguoiDungId(auth));
+    }
+
     @PostMapping("/{cuocHopId}/trinh")
 
     public TrinhKeHoachResponse trinh(@PathVariable Integer cuocHopId,
@@ -73,7 +80,7 @@ public class QuyTrinhKeHoachController {
         boolean daDuyetCuoi = quyTrinhKeHoachService.pheDuyetKeHoach(
                 cuocHopId, yeuCauId, layNguoiDungId(auth), yKien(request));
         return Map.of("message", daDuyetCuoi
-                ? "Phê duyệt kế hoạch thành công"
+                ? "Đã duyệt kế hoạch và xác nhận lịch họp"
                 : "Đã đồng ý trình cấp trên; hồ sơ vẫn chờ thư ký chuyển tiếp");
     }
 

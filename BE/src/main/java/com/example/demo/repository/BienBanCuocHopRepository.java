@@ -1,5 +1,6 @@
 package com.example.demo.repository;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -15,6 +16,8 @@ import jakarta.persistence.LockModeType;
 @Repository
 public interface BienBanCuocHopRepository
         extends JpaRepository<BienBanCuocHop, Integer> {
+
+    List<BienBanCuocHop> findByTrangThaiOrderByBienBanIdDesc(String trangThai);
 
     boolean existsByCuocHop_CuocHopId(Integer cuocHopId);
 

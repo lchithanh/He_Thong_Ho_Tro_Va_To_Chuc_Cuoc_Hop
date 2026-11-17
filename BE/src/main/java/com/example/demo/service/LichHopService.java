@@ -26,6 +26,7 @@ import org.springframework.web.server.ResponseStatusException;
 public class LichHopService {
     private final LichHopRepository lichHopRepository;
     private final QuyTrinhKeHoachService quyTrinhKeHoachService;
+    private final XacNhanLichHopService xacNhanLichHopService;
     private final CuocHopRepository cuocHopRepository;
     private final PhongHopRepository phongHopRepository;
     private final NguoiDungRepository nguoiDungRepository;
@@ -46,11 +47,13 @@ public class LichHopService {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Khoảng giờ kiểm tra không hợp lệ");
             }
         }
+        LichHop lichDangDung = batDau == null ? null : xacNhanLichHopService.layLichDaXacNhan(cuocHopId);
+        Integer lichDangDungId = lichDangDung == null ? -1 : lichDangDung.getLichHopId();
         return phongHopRepository.findAll().stream()
                 .map(phong -> new LuaChonPhongHop(phong.getPhongHopId(), phong.getTenPhongHop(),
                         phong.getViTri(), phong.getSucChua(), phong.getMoTa(), phong.getTrangThai(),
                         batDau == null ? null : lichHopRepository.existsLichHopTrung(
-                                phong.getPhongHopId(), -1, batDau, ketThuc)))
+                                phong.getPhongHopId(), lichDangDungId, batDau, ketThuc)))
                 .toList();
     }
 
@@ -115,13 +118,13 @@ public class LichHopService {
         CuocHop ch = lich.getCuocHop();
         Integer cuocHopId = ch.getCuocHopId();
         kiemTraQuyenXemCuocHop(cuocHopId, nguoiDungId);
-        boolean duocXacNhan = ThaoTacCuocHop.coTheLapLich(ch) && ThaoTacLichHop.coTheXacNhan(lich)
-                && !yeuCauPheDuyetRepository.existsByLichHop_LichHopIdAndLoaiYeuCauAndTrangThai(
-                        lichHopId, LoaiYeuCau.KE_HOACH_CUOC_HOP, TrangThai.CHO_DUYET)
-                && quyTrinhKeHoachService.coQuyenXacNhanLich(ch, nguoiDungId);
         var yc = yeuCauPheDuyetRepository
                 .findFirstByCuocHop_CuocHopIdAndLoaiYeuCauOrderByYeuCauPheDuyetIdDesc(
                         cuocHopId, LoaiYeuCau.KE_HOACH_CUOC_HOP).orElse(null);
+        boolean duocXacNhan = ThaoTacCuocHop.coTheLapLich(ch) && ThaoTacLichHop.coTheXacNhan(lich)
+                && lich.getThoiGianBatDau() != null && lich.getThoiGianBatDau().isAfter(LocalDateTime.now())
+                && yc != null && yc.getLichHop() != null && lichHopId.equals(yc.getLichHop().getLichHopId())
+                && quyTrinhKeHoachService.coQuyenXacNhanLich(ch, nguoiDungId);
         boolean nguoiDeXuat = ThaoTacCuocHop.laNguoiDeXuat(ch, nguoiDungId);
         boolean xemTep = yc != null && (nguoiDeXuat || phanQuyenCuocHopService.coVaiTro(nguoiDungId, "ADMIN")
                 || (yc.getNguoiTrinh() != null && nguoiDungId.equals(yc.getNguoiTrinh().getNguoiDungId()))
@@ -140,95 +143,29 @@ public class LichHopService {
                 xemTep ? yc.getGhiChuTrinh() : null, duocXacNhan, xemThanhVien);
     }
 
-    // =====================================================
-    // TẠO LỊCH HỌP
-    //
-    // NOI_BO:
-    // - Thư ký đang xử lý hồ sơ được lập lịch sau khi kế hoạch được duyệt.
-    //
-    // Các phạm vi còn lại:
-    // - Thư ký cuộc họp đề xuất.
-    // =====================================================
-public LichHopResponse xacNhanLichHop(
-        Integer lichHopId,
-        Integer nguoiXacNhanId) {
+    /** Xác nhận riêng cho hồ sơ đã được duyệt trước khi áp dụng duyệt kèm lịch. */
+    public LichHopResponse xacNhanLichHop(Integer lichHopId, Integer nguoiXacNhanId) {
+        kiemTraTaiKhoanHoatDong(nguoiXacNhanId);
+        LichHop lich = timLichHopVaKhoa(lichHopId);
+        CuocHop cuocHop = lich.getCuocHop();
 
-    kiemTraTaiKhoanHoatDong(nguoiXacNhanId);
-    LichHop lichHop = timLichHopVaKhoa(lichHopId);
-
-    kiemTraQuyenXacNhanLich(lichHop.getCuocHop(), nguoiXacNhanId);
-    kiemTraLichKhongChoDuyetKeHoach(lichHopId);
-
-    return thucHienXacNhanLich(lichHop, nguoiXacNhanId);
-}
-
-private LichHopResponse thucHienXacNhanLich(
-        LichHop lichHop,
-        Integer nguoiXacNhanId) {
-
-    if (!ThaoTacCuocHop.coTheLapLich(lichHop.getCuocHop())) {
-        throw new ResponseStatusException(HttpStatus.CONFLICT, "Kế hoạch chưa duyệt hoặc cuộc họp không ở bước tổ chức");
-    }
-    if (!ThaoTacLichHop.coTheXacNhan(lichHop)) {
-        throw new ResponseStatusException(
-                HttpStatus.CONFLICT,
-                "Chỉ có thể xác nhận lịch đang ở trạng thái đề xuất");
-    }
-
-    NguoiDung nguoiXacNhan = timNguoiDung(nguoiXacNhanId);
-    LichHop lichCuLienKet = lichHop.getLichThayThe();
-    LichHop lichHopCu = lichCuLienKet == null ? null
-            : timLichHopVaKhoa(lichCuLienKet.getLichHopId());
-    if (lichHopCu != null && !lichHop.getCuocHop().getCuocHopId()
-            .equals(lichHopCu.getCuocHop().getCuocHopId())) {
-        throw new ResponseStatusException(HttpStatus.CONFLICT,
-                "Lịch thay thế không thuộc cùng cuộc họp");
-    }
-
-    if (lichHopCu != null && !ThaoTacLichHop.daXacNhan(lichHopCu)) {
-        throw new ResponseStatusException(HttpStatus.CONFLICT, "Lịch cũ không còn ở trạng thái đã xác nhận");
-    }
-
-    kiemTraThoiGian(lichHop.getThoiGianBatDau(), lichHop.getThoiGianKetThuc());
-    if (lichHop.getPhongHop() != null) {
-        Integer phongHopId = lichHop.getPhongHop().getPhongHopId();
-
-        if (lichHopCu != null) {
-            kiemTraTrungLichKhiThayThe(
-                    phongHopId,
-                    lichHopCu.getLichHopId(),
-                    lichHop.getLichHopId(),
-                    lichHop.getThoiGianBatDau(),
-                    lichHop.getThoiGianKetThuc());
-        } else {
-            kiemTraTrungLich(
-                    phongHopId,
-                    lichHop.getLichHopId(),
-                    lichHop.getThoiGianBatDau(),
-                    lichHop.getThoiGianKetThuc());
+        kiemTraQuyenXacNhanLich(cuocHop, nguoiXacNhanId);
+        kiemTraLichKhongChoDuyetKeHoach(lichHopId);
+        if (!ThaoTacCuocHop.coTheLapLich(cuocHop)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Cuộc họp không ở bước tổ chức");
         }
+        var yeuCau = yeuCauPheDuyetRepository
+                .findFirstByCuocHop_CuocHopIdAndLoaiYeuCauOrderByYeuCauPheDuyetIdDesc(
+                        cuocHop.getCuocHopId(), LoaiYeuCau.KE_HOACH_CUOC_HOP)
+                .orElseThrow();
+        if (yeuCau.getLichHop() == null || !lichHopId.equals(yeuCau.getLichHop().getLichHopId())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Hãy trình lịch đề xuất cùng kế hoạch để duyệt.");
+        }
+        xacNhanLichHopService.xacNhan(cuocHop, lich, timNguoiDung(nguoiXacNhanId), null);
+        return chuyenDoiResponse(lich);
     }
 
-    ThaoTacCuocHop.thucHien(() -> ThaoTacLichHop.xacNhan(lichHop, nguoiXacNhan));
-
-    if (lichHopCu != null) {
-        ThaoTacCuocHop.thucHien(() -> ThaoTacLichHop.danhDauDaBiThayThe(lichHopCu));
-        lichHopRepository.save(lichHopCu);
-    }
-
-    LichHop saved = lichHopRepository.save(lichHop);
-
-    lichSuPheDuyetService.ghiNhan(
-            saved.getCuocHop().getCuocHopId(),
-            saved.getLichHopId(),
-            null,
-            nguoiXacNhanId,
-            "LICH_HOP",
-            "PHE_DUYET",
-            "Lịch họp đã được xác nhận");
-
-    return chuyenDoiResponse(saved);
-}    // =====================================================
+    // =====================================================
     // TỪ CHỐI LỊCH HỌP
     // Người duyệt kế hoạch mới nhất được xác nhận/từ chối lịch.
     // =====================================================
@@ -488,23 +425,12 @@ LichHop saved = lichHopRepository.save(lichHop);
     // =====================================================
     // KIỂM TRA TRÙNG LỊCH PHÒNG
     // =====================================================
-    void kiemTraTrungLich(
-            Integer phongHopId,
-            Integer lichHopId,
-            LocalDateTime batDau,
-            LocalDateTime ketThuc) {
-        boolean biTrung = lichHopRepository.existsLichHopTrung(
-                phongHopId,
-                lichHopId,
-                batDau,
-                ketThuc
-        );
-        if (biTrung) {
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT,
-                    "Phòng họp đã có lịch trong khoảng thời gian này"
-            );
-        }
+    void kiemTraTrungLichDeXuat(
+            Integer cuocHopId, Integer phongHopId, Integer lichHopId,
+            LocalDateTime batDau, LocalDateTime ketThuc) {
+        LichHop lichDangDung = xacNhanLichHopService.layLichDaXacNhan(cuocHopId);
+        Integer lichDangDungId = lichDangDung == null ? -1 : lichDangDung.getLichHopId();
+        kiemTraTrungLichKhiThayThe(phongHopId, lichDangDungId, lichHopId, batDau, ketThuc);
     }
     // =====================================================
     // KIỂM TRA TRÙNG LỊCH KHI THAY THẾ

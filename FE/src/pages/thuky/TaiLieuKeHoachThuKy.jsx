@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import XemTruocTepKeHoach from './XemTruocTepKeHoach.jsx'
 import {
   layChiTietDeXuat,
   layLichTheoCuocHop,
@@ -14,6 +15,7 @@ export default function TaiLieuKeHoachThuKy({
   luaChonKeHoach,
   nguoiChuTriId,
   loaiHinh,
+  vaiTroNguoiDeXuat,
   onLapLich,
   choPhepThaoTac = true,
 }) {
@@ -29,9 +31,10 @@ export default function TaiLieuKeHoachThuKy({
   const [lanTaiLich, setLanTaiLich] = useState(0)
 
   const lichCoTheTrinh = lichDeXuat?.filter((lich) =>
-  new Date(lich.thoiGianBatDau).getTime() > Date.now()
-  && (loaiHinh !== 'TRUC_TIEP' || lich.phongHopId != null),
-)
+    new Date(lich.thoiGianBatDau).getTime() > Date.now()
+    && (loaiHinh !== 'TRUC_TIEP' || lich.phongHopId != null)
+    && (loaiHinh !== 'TRUC_TUYEN' || lich.phongHopId == null),
+  )
   useEffect(() => {
     const controller = new AbortController()
     layLichTheoCuocHop(cuocHopId, token, controller.signal)
@@ -140,14 +143,15 @@ export default function TaiLieuKeHoachThuKy({
       const chiTietMoi = await layChiTietDeXuat(cuocHopId, token)
       onDaTrinh(chiTietMoi)
     } catch {
-      setLoiTrinh('Đã trình kế hoạch. Hãy tải lại trang để xem bước xử lý mới.')
+      setLoiTrinh('Đã trình kế hoạch và lịch. Hãy tải lại trang để xem bước xử lý mới.')
     } finally {
       setDangTrinh(false)
     }
   }
   return (
+    <XemTruocTepKeHoach danhSach={danhSach} cuocHopId={cuocHopId} token={token} loiDanhSach={loiDanhSach}>
     <section className="space-y-4 border-t border-slate-200 pt-5">
-      <h3 className="font-semibold">Tài liệu kế hoạch</h3>
+      <h3 className="font-semibold">Tải tài liệu lên</h3>
 
       {choPhepThaoTac ? (
         <form onSubmit={xuLyTaiLen} className="flex flex-wrap items-end gap-3">
@@ -176,29 +180,18 @@ export default function TaiLieuKeHoachThuKy({
 
       {loiTaiLen && <p role="alert" className="text-sm text-red-800">{loiTaiLen}</p>}
 
-      {loiDanhSach ? (
-        <p role="alert" className="text-sm text-red-800">{loiDanhSach}</p>
-      ) : danhSach === null ? (
-        <p role="status" className="text-sm text-slate-600">Đang tải tài liệu…</p>
-      ) : danhSach.length === 0 ? (
-        <p className="text-sm text-slate-600">Chưa có tệp. Có thể trình kế hoạch mà không cần đính kèm.</p>
-      ) : (
-        <ul className="divide-y divide-slate-200 text-sm">
-          {danhSach.map((taiLieu) => (
-            <li key={taiLieu.taiLieuId} className="break-all py-2">
-              {taiLieu.tenFileGoc || taiLieu.tenTaiLieu}
-            </li>
-          ))}
-        </ul>
-      )}
       {choPhepThaoTac && danhSach !== null && !loiDanhSach && (
   <form onSubmit={xuLyTrinh} className="space-y-4 border-t border-slate-200 pt-4">
-    <h4 className="font-semibold">Trình duyệt kế hoạch</h4>
+    <h4 className="font-semibold">Trình duyệt kế hoạch và lịch</h4>
     <p className="text-sm text-slate-600">
-      Tệp đính kèm không bắt buộc. Với hồ sơ hai cấp, thư ký sẽ chọn lãnh đạo sau khi trưởng phòng đồng ý trình.
+      {vaiTroNguoiDeXuat === 'LANH_DAO'
+        ? 'Hồ sơ gửi thẳng tới lãnh đạo đề xuất để duyệt kế hoạch và lịch.'
+        : luaChonKeHoach?.canChonLanhDao
+          ? 'Hồ sơ gửi trưởng phòng trước. Sau khi trưởng phòng đồng ý, thư ký sẽ chọn lãnh đạo nhận hồ sơ.'
+          : 'Hồ sơ gửi trưởng phòng để duyệt kế hoạch và lịch.'}
     </p>
     <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">
-      Chỉ chọn lịch đang ở trạng thái Đề xuất. Lịch đã xác nhận không tự thay lịch trong kế hoạch; lịch mới chỉ được xác nhận sau khi kế hoạch được duyệt.
+      Chọn lịch đề xuất còn hiệu lực. Khi người có thẩm quyền duyệt cuối, hệ thống sẽ xác nhận luôn lịch này.
     </p>
 
     <button
@@ -256,10 +249,17 @@ export default function TaiLieuKeHoachThuKy({
   </div>
 )}
 
-      {luaChonKeHoach?.canChonLanhDao && (
-        <p className="rounded-lg bg-blue-50 p-3 text-sm text-blue-900">
-          Cuộc họp cần duyệt hai cấp. Sau khi trưởng phòng đồng ý, thư ký sẽ chọn lãnh đạo nhận hồ sơ ở bước tiếp theo.
-        </p>
+      {danhSach.length > 0 && (
+        <div className="space-y-2 text-sm">
+          <p className="font-medium">Tệp đính kèm lần trình (tùy chọn)</p>
+          {danhSach.map((taiLieu) => (
+            <label key={taiLieu.taiLieuId} className="flex items-start gap-2">
+              <input type="checkbox" name="taiLieuIds" value={taiLieu.taiLieuId}
+                defaultChecked={!taiLieu.daDuocTrinh} className="mt-1" />
+              <span className="break-all">{taiLieu.tenFileGoc || taiLieu.tenTaiLieu}</span>
+            </label>
+          ))}
+        </div>
       )}
 
       <label className="block text-sm font-medium">
@@ -282,11 +282,12 @@ export default function TaiLieuKeHoachThuKy({
       disabled={dangTrinh || daTrinh || dangTaiLen || !coChuTriHopLe || !lichCoTheTrinh?.length}
       className="rounded-lg bg-emerald-800 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
     >
-      {dangTrinh ? 'Đang trình…' : daTrinh ? 'Đã trình kế hoạch' : 'Trình duyệt kế hoạch'}
+      {dangTrinh ? 'Đang trình…' : daTrinh ? 'Đã trình kế hoạch và lịch' : 'Trình duyệt kế hoạch và lịch'}
     </button>
   </form>
 )}
     </section>
+    </XemTruocTepKeHoach>
   )
 }
 

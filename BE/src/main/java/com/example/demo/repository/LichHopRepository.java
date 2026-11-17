@@ -2,6 +2,7 @@ package com.example.demo.repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -10,6 +11,7 @@ import org.springframework.stereotype.Repository;
 
 import com.example.demo.entity.CuocHop;
 import com.example.demo.entity.LichHop;
+import com.example.demo.entity.PhongHop;
 import com.example.demo.entity.YeuCauPheDuyet.LoaiYeuCau;
 
 import jakarta.persistence.EntityManager;
@@ -23,6 +25,26 @@ public interface LichHopRepository
     List<LichHop> findByCuocHop_CuocHopIdOrderByThoiGianBatDauAsc(
             Integer cuocHopId
     );
+
+    Optional<LichHop> findFirstByCuocHop_CuocHopIdAndTrangThaiOrderByLichHopIdDesc(
+            Integer cuocHopId, String trangThai);
+
+    // Đọc trạng thái đã commit gần nhất sau khi khóa phòng, kể cả với REPEATABLE READ.
+    @Query(value = """
+            SELECT lich_hop_id FROM lich_hop
+            WHERE phong_hop_id = :phongHopId
+              AND lich_hop_id NOT IN (:lichHopId, :lichCuId)
+              AND trang_thai = 'DA_XAC_NHAN'
+              AND thoi_gian_bat_dau < :ketThuc
+              AND thoi_gian_ket_thuc > :batDau
+            LIMIT 1 FOR UPDATE
+            """, nativeQuery = true)
+    List<Integer> khoaLichTrungPhong(
+            @Param("phongHopId") Integer phongHopId,
+            @Param("lichHopId") Integer lichHopId,
+            @Param("lichCuId") Integer lichCuId,
+            @Param("batDau") LocalDateTime batDau,
+            @Param("ketThuc") LocalDateTime ketThuc);
 
     // Kiểm tra trùng với lịch đã xác nhận, bỏ qua lịch đang xử lý.
     @Query("""
@@ -124,12 +146,19 @@ public interface LichHopRepository
 interface LichHopLamMoiRepository {
 
     void lamMoiCuocHopVaLich(CuocHop cuocHop, LichHop lichHop);
+
+    void khoaPhongHop(PhongHop phongHop);
 }
 
 class LichHopLamMoiRepositoryImpl implements LichHopLamMoiRepository {
 
     @PersistenceContext
     private EntityManager entityManager;
+
+    @Override
+    public void khoaPhongHop(PhongHop phongHop) {
+        entityManager.refresh(phongHop, LockModeType.PESSIMISTIC_WRITE);
+    }
 
     @Override
     public void lamMoiCuocHopVaLich(CuocHop cuocHop, LichHop lichHop) {

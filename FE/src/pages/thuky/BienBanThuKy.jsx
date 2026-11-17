@@ -1,9 +1,11 @@
+import TaiLieuKetLuan from './TaiLieuKetLuan.jsx'
+import BanXemTruocVanBan from './BanXemTruocVanBan.jsx'
+import KhongGianVanBan from './KhongGianVanBan.jsx'
 import { useEffect, useState } from 'react'
 import {
   capNhatBienBan,
   layBienBanTheoCuocHop,
   layLichSuPhienBan,
-  phatHanhBienBan,
   taoBienBanCuocHop,
   trinhDuyetBienBan,
 } from '../../api/bienBanApi.js'
@@ -18,8 +20,9 @@ const TEN_TRANG_THAI = {
   BI_TRA_LAI: 'Bị trả lại',
 }
 
-export default function BienBanThuKy({ cuocHopId, tieuDeCuocHop, token, onPhatHanh }) {
+export default function BienBanThuKy({ cuocHopId, tieuDeCuocHop, token, tenChuTri }) {
   const [bienBan, setBienBan] = useState(undefined)
+  const [banNhapXemTruoc, setBanNhapXemTruoc] = useState(null)
   const [loiTai, setLoiTai] = useState('')
   const [loiLuu, setLoiLuu] = useState('')
   const [dangLuu, setDangLuu] = useState(false)
@@ -27,6 +30,9 @@ export default function BienBanThuKy({ cuocHopId, tieuDeCuocHop, token, onPhatHa
   const [phienBan, setPhienBan] = useState([])
   const [loiPhienBan, setLoiPhienBan] = useState('')
   const [lanLuu, setLanLuu] = useState(0)
+  const [lanTai, setLanTai] = useState(0)
+  const [coTepChuaLuu, setCoTepChuaLuu] = useState(false)
+  const gio = (moc, macDinh) => moc ? new Date(moc).toLocaleString('vi-VN') : macDinh
 
   const bienBanId = bienBan?.bienBanId
   const coTheSua = ['NHAP', 'BI_TRA_LAI'].includes(bienBan?.trangThai)
@@ -40,14 +46,14 @@ const [yeuCauPheDuyetId, setYeuCauPheDuyetId] = useState(null)
 
     layBienBanTheoCuocHop(cuocHopId, token, controller.signal)
       .then((duLieu) => {
-        if (!controller.signal.aborted) setBienBan(duLieu)
+        if (!controller.signal.aborted) { setBienBan(duLieu); setLoiTai('') }
       })
       .catch((loi) => {
         if (!controller.signal.aborted) setLoiTai(loi.message)
       })
 
     return () => controller.abort()
-  }, [cuocHopId, token])
+  }, [cuocHopId, token, lanTai])
 
   useEffect(() => {
     if (!bienBanId) return
@@ -66,6 +72,11 @@ const [yeuCauPheDuyetId, setYeuCauPheDuyetId] = useState(null)
 
     return () => controller.abort()
   }, [bienBanId, token, lanLuu])
+
+  function capNhatBanXemTruoc(event) {
+    const duLieu = new FormData(event.currentTarget)
+    setBanNhapXemTruoc({ tieuDe: duLieu.get('tieuDe'), noiDung: duLieu.get('noiDungChinhThuc') })
+  }
 
   async function xuLyLuu(event) {
     event.preventDefault()
@@ -98,6 +109,7 @@ const [yeuCauPheDuyetId, setYeuCauPheDuyetId] = useState(null)
         : await taoBienBanCuocHop(cuocHopId, duLieu, token)
 
       setBienBan(bienBanMoi)
+      setBanNhapXemTruoc(null)
       setDangSua(false)
       setLanLuu((hienTai) => hienTai + 1)
     } catch (loi) {
@@ -109,7 +121,7 @@ const [yeuCauPheDuyetId, setYeuCauPheDuyetId] = useState(null)
 
   async function xuLyTrinh(event) {
   event.preventDefault()
-  if (dangTrinh || !coTheSua) return
+  if (dangTrinh || !coTheSua || coTepChuaLuu) return
 
   const form = new FormData(event.currentTarget)
   const ghiChuTrinh = form.get('ghiChuTrinh').trim() || null
@@ -125,6 +137,7 @@ const [yeuCauPheDuyetId, setYeuCauPheDuyetId] = useState(null)
       trangThai: ketQua.trangThai,
     }))
     setYeuCauPheDuyetId(ketQua.yeuCauPheDuyetId)
+    setLanTai((lan) => lan + 1)
   } catch (loi) {
     setLoiTrinh(loi.message)
   } finally {
@@ -132,30 +145,28 @@ const [yeuCauPheDuyetId, setYeuCauPheDuyetId] = useState(null)
   }
 }
 
-  async function xuLyPhatHanh() {
-    if (dangLuu) return
-    setDangLuu(true)
-    setLoiLuu('')
-    try {
-      setBienBan(await phatHanhBienBan(cuocHopId, token))
-      onPhatHanh?.()
-    } catch (loi) {
-      setLoiLuu(loi.message)
-    } finally {
-      setDangLuu(false)
-    }
-  }
 
   return (
     <section className="space-y-4 border-t border-slate-200 pt-5">
-      <h3 className="font-semibold">Biên bản cuộc họp</h3>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="font-semibold">Biên bản cuộc họp</h3>
+        {!dangSua && <button type="button" className="rounded-md border px-3 py-1.5 text-sm font-semibold"
+          disabled={dangLuu || dangTrinh} onClick={() => setLanTai((lan) => lan + 1)}>Làm mới trạng thái</button>}
+      </div>
 
+      <KhongGianVanBan banXem={!loiTai && bienBan !== undefined && (
+        <BanXemTruocVanBan tenLoai="Biên bản cuộc họp" tenNguoiKy={tenChuTri}
+          tieuDe={banNhapXemTruoc?.tieuDe ?? bienBan?.tieuDe ?? tieuDeCuocHop}
+          noiDung={banNhapXemTruoc?.noiDung ?? bienBan?.noiDungChinhThuc}
+          trangThai={TEN_TRANG_THAI[bienBan?.trangThai] || 'Bản nháp'}
+          ngayPhatHanh={bienBan?.ngayPhatHanh} />
+      )}>
       {loiTai ? (
         <p role="alert" className="text-sm text-red-800">{loiTai}</p>
       ) : bienBan === undefined ? (
         <p role="status" className="text-sm text-slate-600">Đang tải biên bản…</p>
       ) : bienBan === null || dangSua ? (
-        <form onSubmit={xuLyLuu} className="space-y-4">
+        <form onSubmit={xuLyLuu} onChange={capNhatBanXemTruoc} className="space-y-4">
           {bienBan?.trangThai === 'BI_TRA_LAI' && bienBan.yKienPhanHoi && (
             <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-950">
               Lý do trả lại: {bienBan.yKienPhanHoi}
@@ -216,7 +227,6 @@ const [yeuCauPheDuyetId, setYeuCauPheDuyetId] = useState(null)
       ) : (
         <div className="space-y-3 rounded-lg border border-slate-200 p-4">
           <div>
-            <h4 className="font-semibold">{bienBan.tieuDe}</h4>
             <p className="text-sm text-slate-600">
               Biên bản #{bienBan.bienBanId} ·{' '}
               {TEN_TRANG_THAI[bienBan.trangThai] ?? bienBan.trangThai}
@@ -226,7 +236,20 @@ const [yeuCauPheDuyetId, setYeuCauPheDuyetId] = useState(null)
             </p>
           </div>
 
-          <p className="whitespace-pre-wrap text-sm">{bienBan.noiDungChinhThuc}</p>
+          <dl className="grid gap-3 rounded-lg bg-slate-50 p-3 text-sm sm:grid-cols-2">
+            {[
+              ['Người soạn', bienBan.tenNguoiSoan || (bienBan.nguoiSoanId == null ? 'Chưa có thông tin' : `Người dùng #${bienBan.nguoiSoanId}`)],
+              ['Người duyệt', bienBan.tenNguoiDuyet || 'Chưa có quyết định duyệt'],
+              ['Ngày soạn', gio(bienBan.ngaySoan, 'Chưa có thông tin')],
+              ['Ngày trình duyệt', gio(bienBan.ngayTrinhDuyet, 'Chưa trình duyệt')],
+              ['Ngày duyệt', gio(bienBan.ngayDuyet, 'Chưa duyệt')],
+            ].map(([nhan, giaTri]) => (
+              <div key={nhan}><dt className="font-medium">{nhan}</dt><dd>{giaTri}</dd></div>
+            ))}
+          </dl>
+          <TaiLieuKetLuan loai="bien-ban" cuocHopId={cuocHopId} token={token}
+            choPhepTaiLen={coTheSua && !dangTrinh} phienLamMoi={lanTai}
+            onTepChuaLuuThayDoi={setCoTepChuaLuu} />
           {bienBan.trangThai === 'BI_TRA_LAI' && bienBan.yKienPhanHoi && (
             <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-950">
               Lý do trả lại: {bienBan.yKienPhanHoi}
@@ -237,6 +260,7 @@ const [yeuCauPheDuyetId, setYeuCauPheDuyetId] = useState(null)
                     {coTheSua && !dangSua && (
             <button
               type="button"
+              disabled={coTepChuaLuu || dangTrinh}
               onClick={() => setDangSua(true)}
               className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold"
             >
@@ -256,10 +280,13 @@ const [yeuCauPheDuyetId, setYeuCauPheDuyetId] = useState(null)
                 </label>
 
                 {loiTrinh && <p role="alert" className="text-sm text-red-800">{loiTrinh}</p>}
+                {coTepChuaLuu && (
+                  <p role="status" className="text-sm text-slate-600">Hãy tải tệp đã chọn lên trước khi trình biên bản.</p>
+                )}
 
                 <button
                 type="submit"
-                disabled={dangTrinh}
+                disabled={dangTrinh || coTepChuaLuu}
                 className="rounded-lg bg-emerald-800 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
                 >
                 {dangTrinh ? 'Đang trình…' : 'Trình duyệt biên bản'}
@@ -276,12 +303,8 @@ const [yeuCauPheDuyetId, setYeuCauPheDuyetId] = useState(null)
       )}
 
       {bienBan?.trangThai === 'DA_PHE_DUYET' && (
-        <button type="button" disabled={dangLuu} onClick={xuLyPhatHanh}
-          className="rounded-lg bg-emerald-800 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">
-          Phát hành biên bản
-        </button>
+        <p className="text-sm text-slate-600">Biên bản đang chờ chủ trì phát hành.</p>
       )}
-      {bienBan?.trangThai === 'DA_PHE_DUYET' && loiLuu && <p role="alert" className="text-sm text-red-800">{loiLuu}</p>}
 
       {bienBanId && (
         <div className="space-y-2 border-t border-slate-200 pt-4">
@@ -305,6 +328,7 @@ const [yeuCauPheDuyetId, setYeuCauPheDuyetId] = useState(null)
           ))}
         </div>
       )}
+      </KhongGianVanBan>
     </section>
   )
 }

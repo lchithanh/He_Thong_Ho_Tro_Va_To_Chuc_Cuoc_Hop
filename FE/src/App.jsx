@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react'
 import CalendarDays from 'lucide-react/dist/esm/icons/calendar-days.mjs'
-import CheckCircle2 from 'lucide-react/dist/esm/icons/check-circle-2.mjs'
 import ShieldCheck from 'lucide-react/dist/esm/icons/shield-check.mjs'
-import Sparkles from 'lucide-react/dist/esm/icons/sparkles.mjs'
 import { dangNhap, layThongTinNguoiDung } from './api/authApi.js'
 import KhongGianLamViec from './layouts/KhongGianLamViec.jsx'
 
@@ -121,9 +119,9 @@ export default function App() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f3f6f5] p-4 sm:p-6 lg:grid lg:place-items-center">
+    <main className="min-h-screen bg-[#f8fafc] p-4 sm:p-6 lg:grid lg:place-items-center">
       <div className="mx-auto grid min-h-[min(760px,calc(100vh-3rem))] w-full max-w-6xl overflow-hidden rounded-[28px] bg-white shadow-xl shadow-slate-900/10 lg:grid-cols-[1.05fr_0.95fr]">
-        <section className="relative hidden overflow-hidden bg-gradient-to-br from-[#123a32] via-[#145345] to-[#18705a] p-10 text-white lg:flex lg:flex-col lg:justify-between xl:p-14">
+        <section className="relative hidden overflow-hidden bg-gradient-to-br from-[#102a43] via-[#1e3a5f] to-[#1e40af] p-10 text-white lg:flex lg:flex-col lg:justify-between lg:gap-16 xl:p-14">
           <div className="absolute -right-20 -top-20 size-96 rounded-full border border-white/10" />
           <div className="absolute -bottom-36 -left-24 size-[30rem] rounded-full border border-white/10" />
           <div className="relative z-10 flex items-center gap-3">
@@ -136,32 +134,10 @@ export default function App() {
             </span>
           </div>
 
-          <div className="relative z-10 max-w-lg">
-            <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-medium text-emerald-50">
-              <Sparkles size={14} />
-              Quản lý tập trung, phối hợp hiệu quả
-            </span>
-            <h1 className="mt-6 text-4xl font-bold leading-tight tracking-tight xl:text-5xl">
-              Mọi cuộc họp, trong một quy trình rõ ràng.
-            </h1>
-            <p className="mt-5 max-w-md text-base leading-7 text-emerald-50/75">
-              Theo dõi đề xuất, kế hoạch, thành viên, biểu quyết và kết luận trên cùng một không gian làm việc.
-            </p>
-            <ul className="mt-8 space-y-4 text-sm text-emerald-50/85">
-              {[
-                'Quản lý trạng thái cuộc họp theo thời gian',
-                'Ghi nhận điểm danh và kết quả biểu quyết',
-                'Tập trung biên bản, kết luận và tài liệu',
-              ].map((muc) => (
-                <li key={muc} className="flex items-center gap-3">
-                  <CheckCircle2 size={17} className="text-emerald-200" />
-                  {muc}
-                </li>
-              ))}
-            </ul>
+          <div className="relative z-10 max-w-md">
+            <h1 className="text-4xl font-bold leading-tight tracking-tight">Điều phối cuộc họp hành chính</h1>
+            <p className="mt-4 text-base leading-7 text-blue-100">Đề xuất, lập lịch, xử lý hồ sơ và phát hành văn bản cuộc họp.</p>
           </div>
-
-          <p className="relative z-10 text-xs text-emerald-100/55">Hệ thống quản lý và hỗ trợ tổ chức cuộc họp</p>
         </section>
 
         <section className="flex items-center justify-center px-5 py-10 sm:px-10 lg:px-12 xl:px-16">
@@ -222,7 +198,6 @@ export default function App() {
                 {dangGui ? 'Đang đăng nhập…' : 'Đăng nhập'}
               </button>
             </form>
-            <p className="mt-8 text-center text-xs text-slate-400">Kết nối an toàn · Hỗ trợ tổ chức cuộc họp</p>
           </div>
         </section>
       </div>

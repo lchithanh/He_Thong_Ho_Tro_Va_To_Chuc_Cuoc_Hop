@@ -2,6 +2,7 @@ package com.example.demo.service;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -11,6 +12,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
+import java.util.regex.Pattern;
 import java.util.zip.ZipFile;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -41,6 +43,9 @@ public class TaiLieuKeHoachService {
     private static final String LOAI_KE_HOACH = "KE_HOACH_CUOC_HOP";
     private static final long TOI_DA = 10L * 1024 * 1024;
     private static final int SO_TEP_TOI_DA_MOI_LAN_TRINH = 20;
+    private static final int SO_BYTE_KIEM_TRA_PDF = 1024;
+    private static final Pattern DAU_TEP_PDF = Pattern.compile(
+            "(?:\\xEF\\xBB\\xBF)?[ \\t\\r\\n\\f]*%PDF-[0-9]\\.[0-9](?=[\\r\\n])");
     private static final Set<String> DINH_DANG = Set.of("pdf", "doc", "docx", "xls", "xlsx");
     private final CuocHopRepository cuocHopRepository;
     private final TaiLieuCuocHopRepository taiLieuCuocHopRepository;
@@ -336,15 +341,18 @@ public class TaiLieuKeHoachService {
         return ten;
     }
     private void kiemTraDinhDangThucTe(Path path, String duoi) throws IOException {
-        byte[] dau;
-        try (InputStream in = Files.newInputStream(path)) { dau = in.readNBytes(8); }
-        boolean ole = dau.length == 8 && java.util.Arrays.equals(dau, new byte[]{
-                (byte)0xD0, (byte)0xCF, 0x11, (byte)0xE0, (byte)0xA1, (byte)0xB1, 0x1A, (byte)0xE1});
         if ("pdf".equals(duoi)) {
-            if (dau.length < 5 || !new String(dau, 0, 5, java.nio.charset.StandardCharsets.US_ASCII).equals("%PDF-")) {
-                throw loi(HttpStatus.BAD_REQUEST, "Nội dung tệp không phải PDF hợp lệ");
+            if (!coDauTepPdf(path)) {
+                throw loi(HttpStatus.BAD_REQUEST,
+                        "Không nhận diện được đầu tệp PDF. Hãy mở tài liệu gốc và xuất lại dưới dạng PDF.");
             }
         } else if ("doc".equals(duoi) || "xls".equals(duoi)) {
+            byte[] dau;
+            try (InputStream in = Files.newInputStream(path)) {
+                dau = in.readNBytes(8);
+            }
+            boolean ole = java.util.Arrays.equals(dau, new byte[]{
+                    (byte)0xD0, (byte)0xCF, 0x11, (byte)0xE0, (byte)0xA1, (byte)0xB1, 0x1A, (byte)0xE1});
             if (!ole) throw loi(HttpStatus.BAD_REQUEST, "Tệp DOC/XLS phải dùng định dạng Office nhị phân");
         } else {
             try (ZipFile zip = new ZipFile(path.toFile())) {
@@ -355,6 +363,13 @@ public class TaiLieuKeHoachService {
             } catch (java.util.zip.ZipException ex) {
                 throw loi(HttpStatus.BAD_REQUEST, "Tệp Word/Excel không hợp lệ");
             }
+        }
+    }
+    private static boolean coDauTepPdf(Path path) throws IOException {
+        // Một số tệp có xuống dòng hoặc BOM trước dòng khai báo phiên bản PDF.
+        try (InputStream in = Files.newInputStream(path)) {
+            String dauTep = new String(in.readNBytes(SO_BYTE_KIEM_TRA_PDF), StandardCharsets.ISO_8859_1);
+            return DAU_TEP_PDF.matcher(dauTep).lookingAt();
         }
     }
     private void donTep(Path path) {

@@ -7,7 +7,7 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   color: #0f172a;
-  background: #f4f7f6;
+  background: #f8fafc;
 }
 
 * {
@@ -25,7 +25,7 @@ body,
 
 body {
   min-height: 100vh;
-  background: #f4f7f6;
+  background: #f8fafc;
 }
 
 html {
@@ -44,6 +44,55 @@ button:enabled {
 }
 
 ::selection {
-  color: #123a32;
-  background: #d1fae5;
+  color: #102a43;
+  background: #dbeafe;
+}
+/* Các tiện ích màu chủ đạo hiện có dùng chung bảng màu hành chính. */
+@theme {
+  --color-emerald-50: #eff6ff;
+  --color-emerald-100: #dbeafe;
+  --color-emerald-200: #bfdbfe;
+  --color-emerald-300: #93c5fd;
+  --color-emerald-400: #60a5fa;
+  --color-emerald-500: #3b82f6;
+  --color-emerald-600: #2563eb;
+  --color-emerald-700: #1d4ed8;
+  --color-emerald-800: #1e40af;
+  --color-emerald-900: #1e3a8a;
+  --color-emerald-950: #102a43;
+}
+
+.khung-khong-gian-van-ban {
+  container-type: inline-size;
+}
+
+.khong-gian-van-ban {
+  display: grid;
+  gap: 1rem;
+  align-items: start;
+}
+
+@container (min-width: 48rem) {
+  .khong-gian-van-ban {
+    grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+  }
+
+  .khong-gian-van-ban .vung-giay-a4 {
+    max-height: 68vh;
+    overflow: auto;
+  }
+}
+
+.giay-a4 {
+  container-type: inline-size;
+  width: min(100%, 210mm);
+  aspect-ratio: 210 / 297;
+  margin-inline: auto;
+  font-family: "Times New Roman", Times, serif;
+  color: #111;
+}
+
+.noi-dung-giay-a4 {
+  padding: 10cqi 9cqi 10cqi 15cqi;
+  font-size: clamp(0.75rem, 2.2cqi, 13pt);
 }

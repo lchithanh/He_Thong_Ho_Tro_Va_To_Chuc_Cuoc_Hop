@@ -265,6 +265,11 @@ final class ThaoTacCuocHop {
         cuocHop.setBuocXuLyHienTai("CHO_GUI_CAP_TREN");
     }
 
+    static void moLaiKeHoachChoChuyenCap(CuocHop cuocHop) {
+        kiemTraBuocKeHoach(cuocHop, "CHO_GUI_CAP_TREN");
+        cuocHop.setBuocXuLyHienTai("LAP_KE_HOACH");
+    }
+
     static void guiKeHoachCapTren(CuocHop cuocHop) {
         kiemTraBuocKeHoach(cuocHop, "CHO_GUI_CAP_TREN");
         cuocHop.setBuocXuLyHienTai("CHO_THU_KY_LANH_DAO");

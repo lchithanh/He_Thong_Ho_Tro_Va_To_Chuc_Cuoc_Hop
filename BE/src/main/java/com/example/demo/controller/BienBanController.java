@@ -1,9 +1,13 @@
 package com.example.demo.controller;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import com.example.demo.dto.request.XuLyBienBanRequest;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -12,6 +16,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.bind.annotation.RestController;
 import com.example.demo.dto.request.LuuBienBanRequest;
 import com.example.demo.dto.request.TrinhBienBanRequest;
@@ -19,6 +25,8 @@ import com.example.demo.dto.response.BienBanChoDuyetResponse;
 import com.example.demo.dto.response.BienBanResponse;
 import com.example.demo.dto.response.PhienBanBienBanResponse;
 import com.example.demo.service.BienBanService;
+import com.example.demo.service.TaiLieuBienBanService;
+import com.example.demo.service.TaiLieuBienBanService.TaiLieuBienBan;
 import com.example.demo.service.NguoiDungHienTaiService;
 import com.example.demo.service.QuyTrinhBienBanService;
 
@@ -30,6 +38,7 @@ import lombok.RequiredArgsConstructor;
 public class BienBanController {
 
     private final BienBanService bienBanService;
+    private final TaiLieuBienBanService taiLieuBienBanService;
 
     private final NguoiDungHienTaiService nguoiDungHienTaiService;
     private final QuyTrinhBienBanService quyTrinhBienBanService;
@@ -86,6 +95,33 @@ public class BienBanController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping("/cho-toi-phat-hanh")
+    public List<BienBanResponse> layBienBanChoPhatHanh(Authentication auth) {
+        return bienBanService.layBienBanChoPhatHanh(nguoiDungHienTaiService.layNguoiDungId(auth));
+    }
+
+    @PostMapping(value = "/cuoc-hop/{cuocHopId}/tai-lieu", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Map<String, Integer>> taiLenTaiLieu(
+            @PathVariable Integer cuocHopId, @RequestParam("file") MultipartFile file, Authentication auth) {
+        Integer taiLieuId = taiLieuBienBanService.taiLen(cuocHopId, nguoiDungHienTaiService.layNguoiDungId(auth), file);
+        return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("taiLieuId", taiLieuId));
+    }
+
+    @GetMapping("/cuoc-hop/{cuocHopId}/tai-lieu")
+    public List<TaiLieuBienBan> layTaiLieu(@PathVariable Integer cuocHopId, Authentication auth) {
+        return taiLieuBienBanService.layDanhSach(cuocHopId, nguoiDungHienTaiService.layNguoiDungId(auth));
+    }
+
+    @GetMapping("/cuoc-hop/{cuocHopId}/tai-lieu/{taiLieuId}/tai-xuong")
+    public ResponseEntity<byte[]> taiXuongTaiLieu(
+            @PathVariable Integer cuocHopId, @PathVariable Integer taiLieuId, Authentication auth) {
+        var tep = taiLieuBienBanService.taiXuong(cuocHopId, taiLieuId, nguoiDungHienTaiService.layNguoiDungId(auth));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment()
+                        .filename(tep.tenFile(), StandardCharsets.UTF_8).build().toString())
+                .body(tep.noiDung());
+    }
+
     @GetMapping("/{bienBanId}/phien-ban")
     public ResponseEntity<List<PhienBanBienBanResponse>>
             layLichSuPhienBan(
@@ -131,18 +167,16 @@ public class BienBanController {
         Integer nguoiDungId = nguoiDungHienTaiService
                 .layNguoiDungId(authentication);
 
-        boolean daPheDuyetCuoi = quyTrinhBienBanService.pheDuyetBienBan(
+        quyTrinhBienBanService.pheDuyetBienBan(
                 bienBanId,
                 request.getYeuCauPheDuyetId(),
                 nguoiDungId,
                 request.getYKien());
 
         return ResponseEntity.ok(Map.of(
-                "message", daPheDuyetCuoi
-                        ? "Biên bản đã được duyệt cuối và chờ thư ký phát hành"
-                        : "Chủ trì đã duyệt; biên bản đã chuyển lãnh đạo duyệt",
+                "message", "Biên bản đã được chủ trì duyệt và chờ chủ trì phát hành",
                 "bienBanId", bienBanId,
-                "trangThai", daPheDuyetCuoi ? "DA_PHE_DUYET" : "CHO_DUYET"));
+                "trangThai", "DA_PHE_DUYET"));
     }
 
     @PostMapping("/{bienBanId}/tra-lai")

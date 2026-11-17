@@ -100,6 +100,26 @@ public class PheDuyetKeHoachService {
     }
 
     @Transactional(readOnly = true)
+    public ChiTietKeHoachPheDuyetResponse layChiTietKeHoachHienTai(Integer cuocHopId, Integer nguoiDungId) {
+        nguoiDungHienTaiService.layTaiKhoanHoatDong(nguoiDungId);
+        YeuCauPheDuyet yeuCau = phanCongXuLyKeHoachService.layLanTrinhMoiNhat(cuocHopId);
+        if (yeuCau == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Hồ sơ chưa có lần trình kế hoạch");
+        }
+        kiemTraQuyenXemYeuCau(yeuCau, nguoiDungId);
+        QuyetDinh quyetDinh = yeuCau.getTrangThai() == TrangThai.DA_DUYET
+                ? lichSuPheDuyetRepository
+                        .findFirstByYeuCauPheDuyet_YeuCauPheDuyetIdAndLoaiPheDuyetAndHanhDongOrderByThoiGianPheDuyetDescLichSuPheDuyetIdDesc(
+                                yeuCau.getYeuCauPheDuyetId(), "KE_HOACH",
+                                laDuyetCapTrungGian(yeuCau) ? "DONG_Y_TRINH_CAP_TREN" : "PHE_DUYET")
+                        .map(muc -> new QuyetDinh(muc.getNguoiPheDuyet().getNguoiDungId(),
+                                muc.getNguoiPheDuyet().getHoTen(), muc.getThoiGianPheDuyet(), muc.getYKien()))
+                        .orElse(null)
+                : null;
+        return taoChiTietKeHoachResponse(yeuCau, quyetDinh);
+    }
+
+    @Transactional(readOnly = true)
 
     public ChiTietKeHoachPheDuyetResponse layChiTietKeHoachChoDuyet(
             Integer yeuCauPheDuyetId, Integer nguoiDungId) {
@@ -164,7 +184,8 @@ private ChiTietKeHoachPheDuyetResponse taoChiTietKeHoachResponse(
             banChup.tenPhongHop(), banChup.viTriPhongHop(), quyetDinh,
             yeuCau.getCapPheDuyet(),
             yeuCau.getYeuCauTruoc() == null ? null
-                    : yeuCau.getYeuCauTruoc().getYeuCauPheDuyetId());
+                    : yeuCau.getYeuCauTruoc().getYeuCauPheDuyetId(),
+            ten(yeuCau.getNguoiDuyet()), yeuCau.getThoiGianTrinh());
 }
 
 static ChiTietKeHoachPheDuyetResponse taoBanChup(YeuCauPheDuyet yeuCau) {
@@ -194,7 +215,8 @@ static ChiTietKeHoachPheDuyetResponse taoBanChup(YeuCauPheDuyet yeuCau) {
             null,
             yeuCau.getCapPheDuyet(),
             yeuCau.getYeuCauTruoc() == null ? null
-                    : yeuCau.getYeuCauTruoc().getYeuCauPheDuyetId());
+                    : yeuCau.getYeuCauTruoc().getYeuCauPheDuyetId(),
+            ten(yeuCau.getNguoiDuyet()), yeuCau.getThoiGianTrinh());
 }
 
 private static String ten(NguoiDung nd) {

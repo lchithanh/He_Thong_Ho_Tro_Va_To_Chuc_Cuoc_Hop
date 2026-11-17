@@ -167,6 +167,12 @@ export function layTrangThaiHienThiCuocHop(cuocHop) {
   return cuocHop.trangThai
 }
 
+export async function layChiTietKeHoachHienTai(cuocHopId, token, signal) {
+  const response = await goiApi(`/api/cuoc-hop/${cuocHopId}/ke-hoach/lan-trinh-hien-tai`, { token, signal })
+  if (response.status === 404) return null
+  return docPhanHoiJson(response, 'Không tải được lần trình kế hoạch.')
+}
+
 export async function layChiTietKeHoachChoDuyet(yeuCauId, token, signal) {
   const response = await goiApi(`/api/cuoc-hop/ke-hoach/cho-duyet/${yeuCauId}`, {
     token,
@@ -347,15 +353,24 @@ export async function layTaiLieuLanTrinh(yeuCauId, token, signal) {
   return docPhanHoiTaiLieu(response)
 }
 
-export async function taiXuongTaiLieuLanTrinh(yeuCauId, taiLieu, token) {
-  const response = await goiApi(
-    `/api/tai-lieu-ke-hoach/yeu-cau/${yeuCauId}/tai-lieu/${taiLieu.taiLieuId}/tai-xuong`,
-    { token },
-  )
+function duongDanTepKeHoach({ cuocHopId, yeuCauId }, taiLieuId, thaoTac) {
+  const hoSo = yeuCauId == null ? `cuoc-hop/${cuocHopId}` : `yeu-cau/${yeuCauId}`
+  return `/api/tai-lieu-ke-hoach/${hoSo}/tai-lieu/${taiLieuId}/${thaoTac}`
+}
 
+export async function layTepKeHoach(hoSo, taiLieuId, token, signal) {
+  const response = await goiApi(duongDanTepKeHoach(hoSo, taiLieuId, 'tai-xuong'), { token, signal })
   if (!response.ok) return docPhanHoiTaiLieu(response)
+  return response.blob()
+}
 
-  const url = URL.createObjectURL(await response.blob())
+export function taiXuongTaiLieuLanTrinh(yeuCauId, taiLieu, token) {
+  return taiXuongTepKeHoach({ yeuCauId }, taiLieu, token)
+}
+
+export async function taiXuongTepKeHoach(hoSo, taiLieu, token) {
+  const tep = await layTepKeHoach(hoSo, taiLieu.taiLieuId, token)
+  const url = URL.createObjectURL(tep)
   const lienKet = document.createElement('a')
   lienKet.href = url
   lienKet.download = taiLieu.tenFileGoc || taiLieu.tenTaiLieu || 'tai-lieu-ke-hoach'

@@ -6,7 +6,6 @@ import CircleDot from 'lucide-react/dist/esm/icons/circle-dot.mjs'
 import Clock3 from 'lucide-react/dist/esm/icons/clock-3.mjs'
 import FileClock from 'lucide-react/dist/esm/icons/file-clock.mjs'
 import Inbox from 'lucide-react/dist/esm/icons/inbox.mjs'
-import Sparkles from 'lucide-react/dist/esm/icons/sparkles.mjs'
 import { layDanhSachDeXuat, layTrangThaiHienThiCuocHop } from '../api/cuocHopApi.js'
 
 const TRANG_THAI = {
@@ -26,7 +25,7 @@ const THE_NHAN_TRANG_THAI = {
   CHO_TIEP_NHAN: 'bg-amber-50 text-amber-800',
   DANG_CHUAN_BI: 'bg-sky-50 text-sky-800',
   CHO_DUYET: 'bg-violet-50 text-violet-800',
-  DA_DUYET: 'bg-emerald-50 text-emerald-800',
+  DA_DUYET: 'bg-green-50 text-green-800',
   DANG_DIEN_RA: 'bg-rose-50 text-rose-800',
   DA_KET_THUC: 'bg-slate-100 text-slate-700',
   TRA_LAI: 'bg-amber-50 text-amber-900',
@@ -91,28 +90,12 @@ export default function TongQuanCuocHop({
     [danhSach, xemTatCa],
   )
 
-  const tenGoi = nguoiDung.hoTen?.trim()?.split(/\s+/).at(-1) || 'bạn'
-
   return (
     <div className="space-y-6">
-      <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#123a32] via-[#145345] to-[#18705a] p-6 text-white shadow-sm sm:p-8">
-        <div className="relative z-10 max-w-2xl">
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-medium text-emerald-50">
-            <Sparkles size={14} />
-            Bảng điều hành cuộc họp
-          </div>
-          <h1 className="mt-5 text-2xl font-bold tracking-tight sm:text-3xl">
-            Xin chào, {tenGoi}
-          </h1>
-          <p className="mt-2 max-w-xl text-sm leading-6 text-emerald-50/80 sm:text-base">
-            Theo dõi tiến độ đề xuất và tình trạng các cuộc họp của bạn tại một nơi.
-          </p>
-          <p className="mt-4 text-sm font-medium text-white/90">
-            {nguoiDung.tenPhongBan || nguoiDung.tenVaiTro || nguoiDung.maVaiTro}
-          </p>
-        </div>
-        <CalendarDays aria-hidden="true" className="absolute -bottom-10 -right-4 size-48 text-white/[0.07] sm:right-8 sm:size-60" strokeWidth={1} />
-      </section>
+      <header className="flex flex-wrap items-end justify-between gap-3 rounded-xl border border-slate-200 bg-white px-5 py-4 sm:px-6">
+        <h1 className="text-2xl font-bold tracking-tight text-[#102a43]">Tổng quan cuộc họp</h1>
+        <p className="text-sm font-medium text-slate-600">{nguoiDung.tenPhongBan || nguoiDung.tenVaiTro || nguoiDung.maVaiTro}</p>
+      </header>
 
       <section aria-label="Thống kê trạng thái cuộc họp">
         <div className="mb-3 flex items-center justify-between gap-3">
@@ -130,13 +113,13 @@ export default function TongQuanCuocHop({
           </p>
         )}
 
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+        <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 xl:grid-cols-4">
           {thongKe.map(({ ten, soLuong, BieuTuong, mau }) => {
             const mauThe = {
               amber: 'bg-amber-50 text-amber-700',
               sky: 'bg-sky-50 text-sky-700',
               violet: 'bg-violet-50 text-violet-700',
-              emerald: 'bg-emerald-50 text-emerald-700',
+              emerald: 'bg-green-50 text-green-700',
               rose: 'bg-rose-50 text-rose-700',
               slate: 'bg-slate-100 text-slate-600',
             }[mau]

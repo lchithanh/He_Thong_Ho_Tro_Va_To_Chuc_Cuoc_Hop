@@ -36,7 +36,9 @@ public class QuyenBienBanService {
     }
 
     private boolean laThuKyCuocHop(CuocHop cuocHop, Integer nguoiDungId) {
-        return thanhVienCuocHopRepository
+        var banGiao = phanCongXuLyKeHoachService.layLanTrinhMoiNhat(cuocHop.getCuocHopId());
+        return phanCongXuLyKeHoachService.laThuKyDaNhanBanGiao(banGiao, nguoiDungId)
+                || thanhVienCuocHopRepository
                 .existsByCuocHop_CuocHopIdAndNguoiDung_NguoiDungIdAndVaiTroTaiCuocHop(
                         cuocHop.getCuocHopId(), nguoiDungId, "THU_KY");
     }

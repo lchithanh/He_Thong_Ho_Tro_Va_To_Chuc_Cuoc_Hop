@@ -17,7 +17,7 @@ const CAU_HINH_THAC_TAC = {
     { ma: 'tra-lai', thongBao: 'Đã trả hồ sơ cho thư ký.', batBuocLyDo: true },
   ],
   duyet: [
-    { ma: 'phe-duyet', thongBao: 'Đã phê duyệt kế hoạch.' },
+    { ma: 'phe-duyet', thongBao: 'Đã duyệt kế hoạch và xác nhận lịch họp.' },
     { ma: 'tra-lai', thongBao: 'Đã trả lại kế hoạch cho thư ký.', batBuocLyDo: true },
     { ma: 'tu-choi', thongBao: 'Đã từ chối kế hoạch.', batBuocLyDo: true },
   ],

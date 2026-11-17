@@ -102,14 +102,12 @@ public class KetLuanCuocHopController {
             Authentication authentication) {
         Integer nguoiDangNhapId =
                 nguoiDungHienTaiService.layNguoiDungId(authentication);
-        boolean daDuyetCuoi = ketLuanCuocHopService.xuLyDuyetKetLuan(
+        ketLuanCuocHopService.xuLyDuyetKetLuan(
                 cuocHopId, yeuCauId, nguoiDangNhapId,
                 "phe-duyet", request.getYKien());
         return ResponseEntity.ok(Map.of(
-                "message", daDuyetCuoi
-                        ? "Kết luận đã được duyệt cuối; thư ký cuộc họp có thể phát hành"
-                        : "Chủ trì đã duyệt; kết luận đã chuyển lãnh đạo duyệt",
-                "trangThai", daDuyetCuoi ? "DA_DUYET" : "CHO_DUYET"));
+                "message", "Kết luận đã được chủ trì duyệt và chờ chủ trì phát hành",
+                "trangThai", "DA_DUYET"));
     }
 
     @PostMapping("/{cuocHopId}/ket-luan/yeu-cau/{yeuCauId}/tra-lai")

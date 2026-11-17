@@ -245,7 +245,7 @@ export default function ChiTietDeXuat({ cuocHopId, token, nguoiDung, onQuayLai, 
       return !chiXem || Number(nguoiDung?.nguoiDungId) === Number(chiTiet?.nguoiDeXuatId)
     }
     if (id === 'diem-danh') return !chiXem && (laThuKy || coBanGiao) && (dangDienRa || daKetThuc)
-    if (id === 'bieu-quyet') return laChuTri && ['DA_DUYET', 'DANG_DIEN_RA', 'DA_KET_THUC'].includes(chiTiet?.trangThai)
+    if (id === 'bieu-quyet') return laChuTri && (dangDienRa || daKetThuc)
     if (id === 'bien-ban' || id === 'ket-luan') return daKetThuc && (laThuKy || coBanGiao || laChuTri)
     return true
   })
@@ -271,16 +271,33 @@ export default function ChiTietDeXuat({ cuocHopId, token, nguoiDung, onQuayLai, 
         <p role="status" className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-600">Đang tải chi tiết cuộc họp…</p>
       ) : (
         <>
-          <div className={'grid items-start gap-5' + (hienThanhVien ? ' xl:grid-cols-[minmax(0,1fr)_320px]' : '')}>
+          <div className={'grid items-start gap-5' + (hienThanhVien && !['ke-hoach', 'bien-ban', 'ket-luan'].includes(tabHienThi)
+            ? ' xl:grid-cols-[minmax(0,1fr)_300px]' : '')}>
             <section className="min-w-0 overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm shadow-slate-900/[0.02]">
-              <div className="border-b border-slate-100 p-5 sm:p-7">
+              <div className="border-b border-[#334e68] bg-[#102a43] p-5 text-white sm:p-7">
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div className="min-w-0">
-                    <p className="text-xs font-bold uppercase tracking-[0.16em] text-emerald-800">Hồ sơ cuộc họp</p>
-                    <h1 className="mt-2 break-words text-2xl font-bold tracking-tight text-slate-900 md:text-3xl">{chiTiet.tieuDe}</h1>
-                    <p className="mt-2 break-all text-sm text-slate-500">
+                    <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#bcccdc]">Hồ sơ cuộc họp</p>
+                    <h1 className="mt-2 break-words text-2xl font-bold tracking-tight md:text-3xl">{chiTiet.tieuDe}</h1>
+                    <p className="mt-3 inline-block break-all rounded-md border border-[#486581] bg-[#243b53] px-2.5 py-1 font-mono text-xs text-[#d9e2ec]">
                       {chiTiet.maCuocHop || `Mã cuộc họp #${cuocHopId}`}
                     </p>
+                    {(chiTiet.tenNguoiChuTri || chiTiet.tenThuKyCuocHop) && (
+                      <dl className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm">
+                        {chiTiet.tenNguoiChuTri && (
+                          <div>
+                            <dt className="text-xs text-[#bcccdc]">Chủ trì</dt>
+                            <dd className="font-medium">{chiTiet.tenNguoiChuTri}</dd>
+                          </div>
+                        )}
+                        {chiTiet.tenThuKyCuocHop && (
+                          <div>
+                            <dt className="text-xs text-[#bcccdc]">Thư ký cuộc họp</dt>
+                            <dd className="font-medium">{chiTiet.tenThuKyCuocHop}</dd>
+                          </div>
+                        )}
+                      </dl>
+                    )}
                   </div>
                   <NhanTrangThai trangThai={layTrangThaiHienThiCuocHop(chiTiet)} />
                 </div>
@@ -328,12 +345,17 @@ export default function ChiTietDeXuat({ cuocHopId, token, nguoiDung, onQuayLai, 
                 {tabHienThi === 'thong-tin' && (
                   <>
                     <ThongTinCuocHop chiTiet={chiTiet} />
+                    {chiTiet.trangThai !== 'NHAP' && (
+                      <LichCuaHoSo cuocHopId={cuocHopId} token={token} loaiHinh={chiTiet.loaiHinh}
+                        lichHopIdKeHoachDaDuyet={chiTiet.lichHopIdKeHoachDaDuyet} />
+                    )}
 
                     {choTiepNhan && !chiXem && chiTiet.duocLapKeHoach && (
                       <TiepNhanDeXuatAction onClick={xuLyTiepNhan} disabled={dangTiepNhan} />
                     )}
 
-                    <TaiLieuTongQuanCuocHop key={'de-xuat/' + cuocHopId} cuocHopId={cuocHopId} token={token} loai="de-xuat" />
+                    <TaiLieuTongQuanCuocHop key={'de-xuat/' + cuocHopId} cuocHopId={cuocHopId} token={token} loai="de-xuat"
+                      choPhepTaiLen={chiTiet.trangThai === 'NHAP' && nguoiDung.nguoiDungId === chiTiet.nguoiDeXuatId} />
                     {chiTiet.daHoanTatHoSo && <p className="text-sm font-semibold text-emerald-800">Đã hoàn tất hồ sơ.</p>}
 
                     {!chiXem && laThuKy && dangToChuc && (
@@ -425,7 +447,7 @@ export default function ChiTietDeXuat({ cuocHopId, token, nguoiDung, onQuayLai, 
                       cuocHopId={cuocHopId}
                       loaiHinh={chiTiet.loaiHinh}
                       token={token}
-                      keHoachDaDuyet={chiTiet.trangThai === 'DA_DUYET'}
+                      lichHopIdKeHoachDaDuyet={chiTiet.lichHopIdKeHoachDaDuyet}
                     />
 
                     {hienFormKeHoach ? (
@@ -468,6 +490,7 @@ export default function ChiTietDeXuat({ cuocHopId, token, nguoiDung, onQuayLai, 
                           token={token}
                           loaiHinh={chiTiet.loaiHinh}
                           onLapLich={onLapLich}
+                          vaiTroNguoiDeXuat={chiTiet.vaiTroNguoiDeXuat}
                           choPhepThaoTac={dangLapKeHoach}
                           onDaTrinh={(chiTietMoi) => {
                             setChiTiet(chiTietMoi)
@@ -477,29 +500,11 @@ export default function ChiTietDeXuat({ cuocHopId, token, nguoiDung, onQuayLai, 
                         />
                       </>
                     ) : (
-                      <>
-                        {chiTiet.trangThai !== 'NHAP' && chiTiet.trangThai !== 'CHO_TIEP_NHAN' && (
-                          <TaiLieuTongQuanCuocHop
-                            key={'ke-hoach/' + cuocHopId + '/' + chiTiet.trangThai}
-                            cuocHopId={cuocHopId}
-                            token={token}
-                            loai="ke-hoach"
-                          />
-                        )}
-                        {coBanGiao && (
-                          <HoSoDaTrinh
-                            key={chiTiet.yeuCauBanGiaoId}
-                            yeuCauId={chiTiet.yeuCauBanGiaoId}
-                            token={token}
-                            daDuyet
-                          />
-                        )}
-                        {chiTiet.trangThai === 'DA_DUYET' && !coBanGiao && (
-                          <p className="text-sm text-slate-600">
-                            Hồ sơ này chưa có mã bàn giao để mở quyết định duyệt và tệp theo lần trình.
-                          </p>
-                        )}
-                      </>
+                      <HoSoDaTrinh
+                        key={`${cuocHopId}/${buocXuLy}/${chiTiet.yeuCauBanGiaoId ?? ''}`}
+                        cuocHopId={cuocHopId}
+                        token={token}
+                      />
                     )}
 
                     {!chiXem && chiTiet.yeuCauChoGuiCapTrenId != null && (
@@ -522,10 +527,6 @@ export default function ChiTietDeXuat({ cuocHopId, token, nguoiDung, onQuayLai, 
                     )}
                     {!chiXem && buocThuKyLanhDao && yeuCauThuKy && (
                       <div className="space-y-3">
-                        <HoSoDaTrinh
-                          yeuCauId={yeuCauThuKy.yeuCauPheDuyetId}
-                          token={token}
-                        />
                         <ThaoTacKeHoach
                           key={`${yeuCauThuKy.yeuCauPheDuyetId}/${buocXuLy}`}
                           cuocHopId={cuocHopId}
@@ -577,7 +578,8 @@ export default function ChiTietDeXuat({ cuocHopId, token, nguoiDung, onQuayLai, 
                 )}
 
                 {(chiXem || !laThuKy) && ['bien-ban', 'ket-luan'].includes(tabHienThi) && (
-                  <VanBanCuaHoSo key={tabHienThi} loai={tabHienThi} cuocHopId={cuocHopId} token={token} />
+                  <VanBanCuaHoSo key={tabHienThi} loai={tabHienThi} cuocHopId={cuocHopId} token={token}
+                    tenChuTri={chiTiet.tenNguoiChuTri} choPhepXuLy={laChuTri && daKetThuc} onPhatHanh={taiLaiSauPhatHanh} />
                 )}
 
                 {!chiXem && laThuKy && tabHienThi === 'bien-ban' && daKetThuc && (
@@ -585,8 +587,8 @@ export default function ChiTietDeXuat({ cuocHopId, token, nguoiDung, onQuayLai, 
                     key={`bien-ban-${cuocHopId}`}
                     cuocHopId={cuocHopId}
                     tieuDeCuocHop={chiTiet.tieuDe}
+                    tenChuTri={chiTiet.tenNguoiChuTri}
                     token={token}
-                    onPhatHanh={taiLaiSauPhatHanh}
                   />
                 )}
 
@@ -595,15 +597,15 @@ export default function ChiTietDeXuat({ cuocHopId, token, nguoiDung, onQuayLai, 
                     key={`ket-luan-${cuocHopId}`}
                     cuocHopId={cuocHopId}
                     tieuDeCuocHop={chiTiet.tieuDe}
+                    tenChuTri={chiTiet.tenNguoiChuTri}
                     token={token}
-                    onPhatHanh={taiLaiSauPhatHanh}
                   />
                 )}
               </div>
             </section>
 
             {hienThanhVien && (
-              <aside className="space-y-4 xl:sticky xl:top-24">
+              <aside className="min-w-0 space-y-4">
                 <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm shadow-slate-900/[0.02]">
                   <div className="mb-4">
                     <p className="text-xs font-bold uppercase tracking-[0.14em] text-emerald-800">Thành viên</p>

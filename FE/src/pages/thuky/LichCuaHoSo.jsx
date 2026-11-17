@@ -44,7 +44,7 @@ function DanhSachLich({ lich, loaiHinh }) {
   )
 }
 
-export default function LichCuaHoSo({ cuocHopId, loaiHinh, token ,  keHoachDaDuyet = false, }) {
+export default function LichCuaHoSo({ cuocHopId, loaiHinh, token, lichHopIdKeHoachDaDuyet }) {
   const [lich, setLich] = useState(null)
   const [loi, setLoi] = useState('')
   useEffect(() => {
@@ -58,9 +58,9 @@ export default function LichCuaHoSo({ cuocHopId, loaiHinh, token ,  keHoachDaDuy
   }, [cuocHopId, token])
 
   const hienTai = lich?.filter((muc) => ['DA_XAC_NHAN', 'DE_XUAT'].includes(muc.trangThai))
-  const choXacNhanLich = keHoachDaDuyet && !loi
-  && hienTai?.some((lich) => lich.trangThai === 'DE_XUAT')
-  && !hienTai.some((lich) => lich.trangThai === 'DA_XAC_NHAN')
+  const choXacNhanLich = !loi && hienTai?.some(
+    (muc) => muc.lichHopId === lichHopIdKeHoachDaDuyet && muc.trangThai === 'DE_XUAT',
+  )
 
   const lichSu = lich?.filter((muc) => !hienTai.includes(muc))
   return (
@@ -69,7 +69,7 @@ export default function LichCuaHoSo({ cuocHopId, loaiHinh, token ,  keHoachDaDuy
         <h2 className="font-semibold">Lịch họp</h2>
         {choXacNhanLich && (
           <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900">
-            Chờ xác nhận lịch
+            Hồ sơ cũ chờ xác nhận lịch
           </span>
         )}
       </div>      

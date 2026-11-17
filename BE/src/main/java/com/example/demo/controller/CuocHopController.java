@@ -169,7 +169,7 @@ public class CuocHopController {
 
         return ResponseEntity.ok(daDuyetCuoi
                 ? new BuocXuLyCuocHopResponse(
-                "Duyệt kế hoạch cuộc họp thành công",
+                "Đã duyệt kế hoạch và xác nhận lịch họp",
                 cuocHopId,
                 "DA_DUYET",
                 "THU_KY_TO_CHUC")
@@ -209,6 +209,12 @@ public class CuocHopController {
                         layNguoiDungId(authentication)));
     }
     
+    @GetMapping("/{cuocHopId}/ke-hoach/lan-trinh-hien-tai")
+    public ChiTietKeHoachPheDuyetResponse layChiTietKeHoachHienTai(
+            @PathVariable("cuocHopId") Integer cuocHopId, Authentication auth) {
+        return pheDuyetKeHoachService.layChiTietKeHoachHienTai(cuocHopId, layNguoiDungId(auth));
+    }
+
     @GetMapping("/ke-hoach/cho-duyet/{yeuCauPheDuyetId}")
     public ResponseEntity<ChiTietKeHoachPheDuyetResponse> layChiTietKeHoachChoDuyet(
             @PathVariable("yeuCauPheDuyetId") Integer yeuCauPheDuyetId,

@@ -28,12 +28,6 @@ public interface YeuCauPheDuyetRepository
             LoaiYeuCau loaiYeuCau,
             TrangThai trangThai);
 
-    boolean existsByCuocHop_CuocHopIdAndLoaiYeuCauAndTrangThaiAndNguoiDuyet_NguoiDungId(
-            Integer cuocHopId,
-            LoaiYeuCau loaiYeuCau,
-            TrangThai trangThai,
-            Integer nguoiDuyetId);
-
     boolean existsByYeuCauTruoc_YeuCauPheDuyetId(Integer yeuCauTruocId);
 
     @Query("""
@@ -110,13 +104,6 @@ public interface YeuCauPheDuyetRepository
     );
     
     
-    List<YeuCauPheDuyet>
-    findByNguoiDuyet_NguoiDungIdAndLoaiYeuCauAndTrangThaiOrderByThoiGianTrinhDesc(
-            Integer nguoiDungId,
-            LoaiYeuCau loaiYeuCau,
-            TrangThai trangThai);
+    List<YeuCauPheDuyet> findByCuocHop_NguoiChuTri_NguoiDungIdAndLoaiYeuCauAndTrangThaiOrderByThoiGianTrinhDesc(
+            Integer nguoiDungId, LoaiYeuCau loaiYeuCau, TrangThai trangThai);
 }
-
-
-
-

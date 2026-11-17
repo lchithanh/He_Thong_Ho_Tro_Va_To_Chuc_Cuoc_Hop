@@ -25,7 +25,7 @@ export default function KeHoachChoDuyet({ token }) {
   }, [token])
 
   return (
-    <section className="space-y-4 rounded-xl border border-[#e0e7e1] bg-white p-5">
+    <section className="space-y-4 rounded-xl border border-[#e2e8f0] bg-white p-5">
       <h2 className="text-lg font-bold">Kế hoạch chờ tôi duyệt</h2>
       {thongBao && (
         <p role="status" className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-900">

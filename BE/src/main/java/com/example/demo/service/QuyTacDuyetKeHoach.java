@@ -2,13 +2,18 @@ package com.example.demo.service;
 
 import java.util.Set;
 
-/** Quy tắc chọn cấp duyệt; không tự thay đổi trạng thái hay ghi dữ liệu. */
 public final class QuyTacDuyetKeHoach {
-    public enum CapPheDuyet { TRUONG_PHONG, LANH_DAO }
+
+    public enum CapPheDuyet {
+        TRUONG_PHONG,
+        LANH_DAO
+    }
+
     private static final Set<String> PHAM_VI = Set.of(
             "NOI_BO", "LIEN_PHONG_BAN", "TOAN_CO_QUAN", "BEN_NGOAI");
 
-    private QuyTacDuyetKeHoach() { }
+    private QuyTacDuyetKeHoach() {
+    }
 
     public static CapPheDuyet xacDinhCapDuyet(
             boolean doLanhDaoDeXuat, String phamVi, boolean coKhachNgoai) {

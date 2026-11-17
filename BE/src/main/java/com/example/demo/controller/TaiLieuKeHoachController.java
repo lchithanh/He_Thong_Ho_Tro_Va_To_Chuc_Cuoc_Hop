@@ -14,6 +14,7 @@ import org.springframework.web.multipart.MultipartFile;
 import com.example.demo.dto.response.TaiLieuKeHoachResponse;
 import com.example.demo.service.TaiLieuKeHoachService;
 import com.example.demo.service.NguoiDungHienTaiService;
+import com.example.demo.service.XemTruocTaiLieuKeHoachService;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -22,6 +23,7 @@ import lombok.RequiredArgsConstructor;
 public class TaiLieuKeHoachController {
     private final TaiLieuKeHoachService taiLieuKeHoachService;
     private final NguoiDungHienTaiService nguoiDungHienTaiService;
+    private final XemTruocTaiLieuKeHoachService xemTruocTaiLieuKeHoachService;
 
     @PostMapping(value = "/cuoc-hop/{cuocHopId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public Map<String, Object> taiLen(@PathVariable Integer cuocHopId,
@@ -61,6 +63,27 @@ public class TaiLieuKeHoachController {
             @PathVariable Integer taiLieuId, Authentication auth) {
         return traTep(taiLieuKeHoachService.taiXuongTheoLanTrinh(
                 yeuCauId, taiLieuId, layNguoiDungId(auth)));
+    }
+
+    @GetMapping("/cuoc-hop/{cuocHopId}/tai-lieu/{taiLieuId}/xem-truoc")
+    public ResponseEntity<byte[]> xemTruocSoanThao(@PathVariable Integer cuocHopId,
+            @PathVariable Integer taiLieuId, Authentication auth) {
+        return traBanXemTruoc(taiLieuKeHoachService.taiXuongSoanThao(
+                cuocHopId, taiLieuId, layNguoiDungId(auth)));
+    }
+
+    @GetMapping("/yeu-cau/{yeuCauId}/tai-lieu/{taiLieuId}/xem-truoc")
+    public ResponseEntity<byte[]> xemTruocLanTrinh(@PathVariable Integer yeuCauId,
+            @PathVariable Integer taiLieuId, Authentication auth) {
+        return traBanXemTruoc(taiLieuKeHoachService.taiXuongTheoLanTrinh(
+                yeuCauId, taiLieuId, layNguoiDungId(auth)));
+    }
+
+    private ResponseEntity<byte[]> traBanXemTruoc(TaiLieuKeHoachService.TepTaiXuong tep) {
+        byte[] pdf = xemTruocTaiLieuKeHoachService.taoPdf(tep);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_PDF)
+                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.inline().build().toString())
+                .cacheControl(CacheControl.noStore()).contentLength(pdf.length).body(pdf);
     }
 
     private ResponseEntity<byte[]> traTep(TaiLieuKeHoachService.TepTaiXuong tep) {

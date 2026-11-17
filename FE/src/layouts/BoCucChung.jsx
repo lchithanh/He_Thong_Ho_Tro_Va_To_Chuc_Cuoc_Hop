@@ -22,10 +22,10 @@ export default function BoCucChung({
   }))
 
   return (
-    <div className="min-h-screen bg-[#f4f7f6] text-slate-900 md:grid md:grid-cols-[250px_minmax(0,1fr)]">
-      <aside className="z-20 bg-[#123a32] text-white md:sticky md:top-0 md:h-screen md:overflow-y-auto">
+    <div className="min-h-screen bg-[#f8fafc] text-slate-900 md:grid md:grid-cols-[232px_minmax(0,1fr)]">
+      <aside className="z-20 bg-[#102a43] text-white md:sticky md:top-0 md:h-screen md:overflow-y-auto">
         <div className="flex items-center gap-3 px-5 py-5 md:px-6 md:py-7">
-          <span className="grid size-11 shrink-0 place-items-center rounded-2xl bg-white/10 text-emerald-100">
+          <span className="grid size-11 shrink-0 place-items-center rounded-lg bg-white/10 text-emerald-100">
             <CalendarDays size={23} strokeWidth={1.8} />
           </span>
           <span>
@@ -42,9 +42,9 @@ export default function BoCucChung({
             type="button"
             aria-current={mucDangChon === 'tong-quan' ? 'page' : undefined}
             onClick={() => onChonMuc('tong-quan')}
-            className={`flex shrink-0 items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${
+            className={`flex shrink-0 items-center gap-3 rounded-md px-3 py-2.5 text-left text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${
               mucDangChon === 'tong-quan'
-                ? 'bg-white text-[#123a32] shadow-sm'
+                ? 'bg-white text-[#102a43] shadow-sm'
                 : 'text-emerald-50/80 hover:bg-white/10 hover:text-white'
             }`}
           >
@@ -62,7 +62,7 @@ export default function BoCucChung({
                 type="button"
                 aria-current={dangChon ? 'page' : undefined}
                 onClick={() => onChonMuc(id)}
-                className={`flex shrink-0 items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${
+                className={`flex shrink-0 items-center gap-3 rounded-md px-3 py-2.5 text-left text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${
                   dangChon
                     ? 'bg-white/15 text-white'
                     : 'text-emerald-50/75 hover:bg-white/10 hover:text-white'
@@ -75,13 +75,10 @@ export default function BoCucChung({
           })}
         </nav>
 
-        <div className="hidden border-t border-white/10 px-6 py-5 text-xs leading-5 text-emerald-100/55 md:block">
-          Nền tảng quản lý và hỗ trợ tổ chức cuộc họp
-        </div>
       </aside>
 
       <div className="min-w-0">
-        <header className="sticky top-0 z-10 flex min-h-[76px] items-center justify-between gap-4 border-b border-slate-200/80 bg-white/95 px-4 backdrop-blur md:px-8">
+        <header className="sticky top-0 z-10 flex min-h-16 items-center justify-between gap-4 border-b border-slate-200/80 bg-white/95 px-4 backdrop-blur md:px-8">
           <div className="min-w-0">
             <p className="text-xs font-medium capitalize text-slate-500">{ngayHienTai}</p>
             <p className="mt-1 truncate text-sm font-semibold text-slate-800">
@@ -111,7 +108,7 @@ export default function BoCucChung({
           </div>
         </header>
 
-        <main className="mx-auto max-w-[1440px] space-y-6 p-4 sm:p-6 md:p-8">
+        <main className="mx-auto max-w-[1600px] space-y-5 p-4 sm:p-6 xl:px-8">
           {children}
         </main>
       </div>

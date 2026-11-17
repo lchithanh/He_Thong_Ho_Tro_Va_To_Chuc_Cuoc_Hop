@@ -6,8 +6,10 @@ import {
   xuLyDuyetKetLuan,
 } from '../../api/ketLuanCuocHopApi.js'
 import TaiLieuKetLuan from '../thuky/TaiLieuKetLuan.jsx'
+import BanXemTruocVanBan from '../thuky/BanXemTruocVanBan.jsx'
+import KhongGianVanBan from '../thuky/KhongGianVanBan.jsx'
 
-export default function KetLuanChoPhatHanh({ token }) {
+export default function KetLuanChoPhatHanh({ token, cheDo }) {
   const [danhSach, setDanhSach] = useState(null)
   const [dangMo, setDangMo] = useState({})
   const [loi, setLoi] = useState('')
@@ -83,16 +85,22 @@ export default function KetLuanChoPhatHanh({ token }) {
     }
   }
 
+  const danhSachHienThi = danhSach?.filter((ketLuan) => cheDo === 'duyet'
+    ? ketLuan.trangThai === 'CHO_DUYET'
+    : ketLuan.trangThai === 'DA_DUYET')
+
   return (
     <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-5">
-      <h2 className="text-lg font-bold">Kết luận cần duyệt hoặc phát hành</h2>
+      <h2 className="text-lg font-bold">{cheDo === 'duyet' ? 'Kết luận chờ duyệt' : 'Kết luận chờ phát hành'}</h2>
 
       {loi && <p role="alert" className="text-sm text-red-800">{loi}</p>}
       {thongBao && <p role="status" className="text-sm text-emerald-800">{thongBao}</p>}
       {!loi && danhSach === null && <p role="status">Đang tải kết luận…</p>}
-      {danhSach?.length === 0 && <p>Hiện chưa có kết luận chờ bạn phát hành.</p>}
+      {danhSachHienThi?.length === 0 && (
+        <p className="text-sm text-slate-600">{cheDo === 'duyet' ? 'Chưa có kết luận chờ bạn duyệt.' : 'Chưa có kết luận chờ bạn phát hành.'}</p>
+      )}
 
-      {danhSach?.map((ketLuan) => (
+      {danhSachHienThi?.map((ketLuan) => (
         <details key={ketLuan.ketLuanId}
           onToggle={(event) => {
             const mo = event.currentTarget.open
@@ -103,26 +111,21 @@ export default function KetLuanChoPhatHanh({ token }) {
             {ketLuan.tieuDeCuocHop || ketLuan.tieuDe}
           </summary>
 
+          <KhongGianVanBan banXem={dangMo[ketLuan.ketLuanId] && (
+              <BanXemTruocVanBan tenLoai="Kết luận cuộc họp" tieuDe={ketLuan.tieuDe}
+                noiDung={ketLuan.noiDung} trangThai={ketLuan.trangThai === 'CHO_DUYET'
+                  ? 'Chờ chủ trì duyệt' : 'Đã duyệt · chờ chủ trì phát hành'} />
+            )}>
           <div className="mt-3 space-y-3">
             <p className="text-xs text-slate-500">Cuộc họp #{ketLuan.cuocHopId}
               {ketLuan.hanPhatHanh ? ` · Hạn phát hành ${ketLuan.hanPhatHanh.split('-').reverse().join('/')}` : ''}
             </p>
             {dangMo[ketLuan.ketLuanId] && <LichCuaHoSo cuocHopId={ketLuan.cuocHopId} token={token} />}
-            <h3 className="font-semibold">{ketLuan.tieuDe}</h3>
-            <p className="text-sm text-slate-600">
-              {ketLuan.trangThai === 'CHO_DUYET'
-                ? `Chờ ${ketLuan.capPheDuyet === 'LANH_DAO' ? 'lãnh đạo' : 'chủ trì'} duyệt`
-                : 'Đã duyệt cuối · chờ thư ký cuộc họp phát hành'}
-            </p>
-            <p className="whitespace-pre-wrap break-words text-sm leading-6">
-              {ketLuan.noiDung || 'Chưa có nội dung văn bản.'}
-            </p>
-
-            <TaiLieuKetLuan
+            {dangMo[ketLuan.ketLuanId] && <TaiLieuKetLuan
               cuocHopId={ketLuan.cuocHopId}
               token={token}
               choPhepTaiLen={false}
-            />
+            />}
 
             {ketLuan.trangThai === 'CHO_DUYET' && (
               <form onSubmit={(event) => xuLyDuyet(event, ketLuan)} className="space-y-3">
@@ -168,6 +171,7 @@ export default function KetLuanChoPhatHanh({ token }) {
               </button>
             )}
           </div>
+          </KhongGianVanBan>
         </details>
       ))}
     </section>

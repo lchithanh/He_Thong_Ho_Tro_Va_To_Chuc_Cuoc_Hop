@@ -15,5 +15,7 @@ public record BienBanResponse(
         String yKienPhanHoi,
         LocalDateTime ngaySoan,
         LocalDateTime ngayTrinhDuyet,
-        LocalDateTime ngayDuyet) {
+        LocalDateTime ngayDuyet,
+String tieuDeCuocHop,
+String tenNguoiSoan){
 }
