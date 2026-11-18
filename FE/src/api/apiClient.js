@@ -1,4 +1,6 @@
-export function goiApi(duongDan, { token, duLieu, headers, ...tuyChon } = {}) {
+import { thongBaoDaThayDoiDuLieu } from '../services/dongBoDuLieu.js'
+
+export async function goiApi(duongDan, { token, duLieu, headers, ...tuyChon } = {}) {
   const tieuDe = new Headers(headers)
 
   if (token) {
@@ -10,7 +12,13 @@ export function goiApi(duongDan, { token, duLieu, headers, ...tuyChon } = {}) {
     tuyChon.body = JSON.stringify(duLieu)
   }
 
-  return fetch(duongDan, { ...tuyChon, headers: tieuDe })
+  const phanHoi = await fetch(duongDan, { ...tuyChon, headers: tieuDe })
+  const phuongThuc = tuyChon.method?.toUpperCase()
+  if (phanHoi.ok && token && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(phuongThuc)) {
+    thongBaoDaThayDoiDuLieu()
+  }
+
+  return phanHoi
 }
 
 export async function docPhanHoiJson(response, thongBaoMacDinh) {

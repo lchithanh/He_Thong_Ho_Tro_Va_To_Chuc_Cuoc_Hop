@@ -1,4 +1,5 @@
 import TaiLieuKetLuan from '../thuky/TaiLieuKetLuan.jsx'
+import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
 import BanXemTruocVanBan from '../thuky/BanXemTruocVanBan.jsx'
 import KhongGianVanBan from '../thuky/KhongGianVanBan.jsx'
 import { useEffect, useState } from 'react'
@@ -9,6 +10,7 @@ import {
 } from '../../api/bienBanApi.js'
 
 export default function BienBanChoDuyet({ token }) {
+  const phienDongBo = useDongBoDuLieu()
   const [danhSach, setDanhSach] = useState(null)
   const [dangMo, setDangMo] = useState({})
   const [dangXuLy, setDangXuLy] = useState(false)
@@ -20,14 +22,17 @@ export default function BienBanChoDuyet({ token }) {
 
     layBienBanChoToiDuyet(token, controller.signal)
       .then((duLieu) => {
-        if (!controller.signal.aborted) setDanhSach(duLieu)
+        if (!controller.signal.aborted) {
+          setDanhSach(duLieu)
+          setLoi('')
+        }
       })
       .catch((loiTai) => {
         if (!controller.signal.aborted) setLoi(loiTai.message)
       })
 
     return () => controller.abort()
-  }, [token])
+  }, [token, phienDongBo])
 
   async function xuLy(event, bienBan) {
     event.preventDefault()

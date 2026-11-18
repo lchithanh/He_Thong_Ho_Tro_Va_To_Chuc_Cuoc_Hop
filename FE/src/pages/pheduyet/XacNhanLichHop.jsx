@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
 import {
   layKeHoachToiDaDuyet,
   layLichTheoCuocHop,
@@ -6,6 +7,7 @@ import {
 } from '../../api/cuocHopApi.js'
 
 export default function XacNhanLichHop({ token }) {
+  const phienDongBo = useDongBoDuLieu()
   const [keHoach, setKeHoach] = useState(null)
   const [cuocHopId, setCuocHopId] = useState('')
   const [loi, setLoi] = useState('')
@@ -15,14 +17,17 @@ export default function XacNhanLichHop({ token }) {
 
     layKeHoachToiDaDuyet(token, controller.signal)
       .then((duLieu) => {
-        if (!controller.signal.aborted) setKeHoach(duLieu)
+        if (!controller.signal.aborted) {
+          setKeHoach(duLieu)
+          setLoi('')
+        }
       })
       .catch((loiTai) => {
         if (!controller.signal.aborted) setLoi(loiTai.message)
       })
 
     return () => controller.abort()
-  }, [token])
+  }, [token, phienDongBo])
 
   const cuocHop = [
     ...new Map((keHoach ?? []).map((muc) => [muc.cuocHopId, muc])).values(),
@@ -76,6 +81,7 @@ const TEN_TRANG_THAI = {
 }
 
 function DanhSachLichXacNhan({ cuocHopId, token }) {
+  const phienDongBo = useDongBoDuLieu()
   const [danhSach, setDanhSach] = useState(null)
   const [loi, setLoi] = useState('')
   const [lichDangXuLy, setLichDangXuLy] = useState(null)
@@ -86,14 +92,17 @@ function DanhSachLichXacNhan({ cuocHopId, token }) {
 
     layLichTheoCuocHop(cuocHopId, token, controller.signal)
       .then((duLieu) => {
-        if (!controller.signal.aborted) setDanhSach(duLieu)
+        if (!controller.signal.aborted) {
+          setDanhSach(duLieu)
+          setLoi('')
+        }
       })
       .catch((loiTai) => {
         if (!controller.signal.aborted) setLoi(loiTai.message)
       })
 
     return () => controller.abort()
-  }, [cuocHopId, token])
+  }, [cuocHopId, token, phienDongBo])
 
   async function xuLyXacNhan(lichHopId) {
     if (lichDangXuLy !== null) return

@@ -28,7 +28,12 @@ public record DeXuatCuocHopResponse(
         Integer yeuCauChoGuiCapTrenId,
         Integer nguoiDangXuLyId,
         String tenNguoiDangXuLy,
-        Integer lichHopIdKeHoachDaDuyet
+        Integer lichHopIdKeHoachDaDuyet,
+        String tenNguoiChuTri,
+        String tenThuKyCuocHop,
+        LocalDateTime thoiGianBatDauThucTe,
+        LocalDateTime thoiGianKetThucThucTe,
+        boolean coLichDaXacNhan
 ) {
     public record PhanHoiKeHoach(
             Integer yeuCauPheDuyetId,

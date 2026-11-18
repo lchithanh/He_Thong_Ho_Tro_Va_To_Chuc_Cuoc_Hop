@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
+import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
 import { LOP_KHOI, LOP_TRUONG, LOP_NUT_CHINH } from '../../components/lopBieuMau.js'
 import { huyPhanCongThuKy, layDuLieuPhanCongThuKy, luuPhanCongThuKy } from '../../api/cuocHopApi.js'
 
 export default function PhanCongThuKy({ token }) {
+  const phienDongBo = useDongBoDuLieu()
   const [duLieu, setDuLieu] = useState(null)
   const [loi, setLoi] = useState('')
   const [thongBao, setThongBao] = useState('')
@@ -14,7 +16,7 @@ export default function PhanCongThuKy({ token }) {
       .then((ketQua) => { if (!controller.signal.aborted) setDuLieu(ketQua) })
       .catch((error) => { if (!controller.signal.aborted) setLoi(error.message) })
     return () => controller.abort()
-  }, [token])
+  }, [token, phienDongBo])
 
   const phongTheoId = new Map(duLieu?.phongBan.map((phong) => [phong.phongBanId, phong]))
   const taiKhoan = duLieu?.nguoiDung.filter((muc) => muc.trangThai === 'HOAT_DONG') ?? []

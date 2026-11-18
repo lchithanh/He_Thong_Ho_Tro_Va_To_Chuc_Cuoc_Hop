@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
+import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
 import { layBienBanChoToiPhatHanh } from '../../api/bienBanApi.js'
 import VanBanCuaHoSo from '../thuky/VanBanCuaHoSo.jsx'
 
 export default function BienBanChoPhatHanh({ token }) {
+  const phienDongBo = useDongBoDuLieu()
   const [danhSach, setDanhSach] = useState(null)
   const [dangMo, setDangMo] = useState({})
   const [loi, setLoi] = useState('')
@@ -14,7 +16,7 @@ export default function BienBanChoPhatHanh({ token }) {
       .then((duLieu) => { if (!controller.signal.aborted) setDanhSach(duLieu) })
       .catch((error) => { if (!controller.signal.aborted) setLoi(error.message) })
     return () => controller.abort()
-  }, [token])
+  }, [token, phienDongBo])
 
   return (
     <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-5">

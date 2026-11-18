@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
 import {
   capNhatKetLuanNhap,
   layKetLuanTheoCuocHop,
@@ -20,6 +21,7 @@ const TEN_TRANG_THAI = {
 }
 
 export default function KetLuanThuKy({ cuocHopId, tieuDeCuocHop, token, tenChuTri }) {
+  const phienDongBo = useDongBoDuLieu()
   const [ketLuan, setKetLuan] = useState(undefined)
   const [banNhapXemTruoc, setBanNhapXemTruoc] = useState(null)
   const [loiTai, setLoiTai] = useState('')
@@ -38,11 +40,13 @@ export default function KetLuanThuKy({ cuocHopId, tieuDeCuocHop, token, tenChuTr
         if (!controller.signal.aborted) { setKetLuan(duLieu); setLoiTai('') }
       })
       .catch((loi) => {
-        if (!controller.signal.aborted) setLoiTai(loi.message)
+        if (controller.signal.aborted) return
+        if ([401, 403].includes(loi.status)) setKetLuan(undefined)
+        setLoiTai(loi.message)
       })
 
     return () => controller.abort()
-  }, [cuocHopId, token, lanTai])
+  }, [cuocHopId, token, lanTai, phienDongBo])
 
   function capNhatBanXemTruoc(event) {
     const duLieu = new FormData(event.currentTarget)
@@ -120,17 +124,16 @@ export default function KetLuanThuKy({ cuocHopId, tieuDeCuocHop, token, tenChuTr
         </dl>
       )}
 
-      <KhongGianVanBan banXem={!loiTai && ketLuan !== undefined && (
+      <KhongGianVanBan banXem={ketLuan !== undefined && (
         <BanXemTruocVanBan tenLoai="Kết luận cuộc họp" tenNguoiKy={tenChuTri}
           tieuDe={banNhapXemTruoc?.tieuDe ?? ketLuan?.tieuDe ?? tieuDeCuocHop}
           noiDung={banNhapXemTruoc?.noiDung ?? ketLuan?.noiDung}
           trangThai={TEN_TRANG_THAI[ketLuan?.trangThai] || 'Bản nháp'}
           ngayPhatHanh={ketLuan?.ngayPhatHanh} />
       )}>
-      {loiTai ? (
-        <p role="alert" className="text-sm text-red-800">{loiTai}</p>
-      ) : ketLuan === undefined ? (
-        <p role="status" className="text-sm text-slate-600">Đang tải kết luận…</p>
+      {loiTai && <p role="alert" className="text-sm text-red-800">{loiTai}</p>}
+      {ketLuan === undefined ? (
+        !loiTai && <p role="status" className="text-sm text-slate-600">Đang tải kết luận…</p>
       ) : coTheSua ? (
         <form onSubmit={xuLyLuu} onChange={capNhatBanXemTruoc} className="space-y-4">
           {ketLuan?.trangThai === 'BI_TRA_LAI' && ketLuan.ghiChuPhanHoi && (

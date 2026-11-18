@@ -1,5 +1,6 @@
 package com.example.demo.controller;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.http.ResponseEntity;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.demo.dto.request.DiemDanhThanhVienRequest;
 import com.example.demo.dto.request.MoiThanhVienCuocHopRequest;
 import com.example.demo.dto.request.PhanHoiLoiMoiRequest;
+import com.example.demo.dto.response.CuocHopDangDienRaResponse;
 import com.example.demo.dto.response.ThanhVienCuocHopResponse;
 import com.example.demo.service.ThanhVienCuocHopService;
 import com.example.demo.service.NguoiDungHienTaiService;
@@ -96,6 +98,21 @@ public class ThanhVienCuocHopController {
         Integer nguoiDungId = nguoiDungHienTaiService.layNguoiDungId(authentication);
         return thanhVienCuocHopService.layLoiMoiChoPhanHoi(nguoiDungId);
     }
+
+    @GetMapping("/thanh-vien/dang-dien-ra-cua-toi")
+    public List<CuocHopDangDienRaResponse> layCuocHopDangDienRaCuaToi(Authentication authentication) {
+        return thanhVienCuocHopService.layCuocHopDangDienRaCuaToi(
+                nguoiDungHienTaiService.layNguoiDungId(authentication));
+    }
+
+    @PutMapping("/{cuocHopId}/thanh-vien/tham-gia")
+    public ThamGiaCuocHopResponse thamGiaCuocHop(
+            @PathVariable("cuocHopId") Integer cuocHopId, Authentication authentication) {
+        return new ThamGiaCuocHopResponse(thanhVienCuocHopService.thamGiaCuocHop(
+                cuocHopId, nguoiDungHienTaiService.layNguoiDungId(authentication)));
+    }
+
+    public record ThamGiaCuocHopResponse(LocalDateTime thoiGianDiemDanh) {}
 
     @PutMapping("/{cuocHopId}/thanh-vien/{nguoiDungId}/diem-danh")
     public ResponseEntity<Void> diemDanhThanhVien(

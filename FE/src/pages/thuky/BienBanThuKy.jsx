@@ -1,4 +1,5 @@
 import TaiLieuKetLuan from './TaiLieuKetLuan.jsx'
+import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
 import BanXemTruocVanBan from './BanXemTruocVanBan.jsx'
 import KhongGianVanBan from './KhongGianVanBan.jsx'
 import { useEffect, useState } from 'react'
@@ -21,6 +22,7 @@ const TEN_TRANG_THAI = {
 }
 
 export default function BienBanThuKy({ cuocHopId, tieuDeCuocHop, token, tenChuTri }) {
+  const phienDongBo = useDongBoDuLieu()
   const [bienBan, setBienBan] = useState(undefined)
   const [banNhapXemTruoc, setBanNhapXemTruoc] = useState(null)
   const [loiTai, setLoiTai] = useState('')
@@ -49,11 +51,13 @@ const [yeuCauPheDuyetId, setYeuCauPheDuyetId] = useState(null)
         if (!controller.signal.aborted) { setBienBan(duLieu); setLoiTai('') }
       })
       .catch((loi) => {
-        if (!controller.signal.aborted) setLoiTai(loi.message)
+        if (controller.signal.aborted) return
+        if ([401, 403].includes(loi.status)) setBienBan(undefined)
+        setLoiTai(loi.message)
       })
 
     return () => controller.abort()
-  }, [cuocHopId, token, lanTai])
+  }, [cuocHopId, token, lanTai, phienDongBo])
 
   useEffect(() => {
     if (!bienBanId) return
@@ -71,7 +75,7 @@ const [yeuCauPheDuyetId, setYeuCauPheDuyetId] = useState(null)
       })
 
     return () => controller.abort()
-  }, [bienBanId, token, lanLuu])
+  }, [bienBanId, token, lanLuu, phienDongBo])
 
   function capNhatBanXemTruoc(event) {
     const duLieu = new FormData(event.currentTarget)
@@ -154,18 +158,17 @@ const [yeuCauPheDuyetId, setYeuCauPheDuyetId] = useState(null)
           disabled={dangLuu || dangTrinh} onClick={() => setLanTai((lan) => lan + 1)}>Làm mới trạng thái</button>}
       </div>
 
-      <KhongGianVanBan banXem={!loiTai && bienBan !== undefined && (
+      <KhongGianVanBan banXem={bienBan !== undefined && (
         <BanXemTruocVanBan tenLoai="Biên bản cuộc họp" tenNguoiKy={tenChuTri}
           tieuDe={banNhapXemTruoc?.tieuDe ?? bienBan?.tieuDe ?? tieuDeCuocHop}
           noiDung={banNhapXemTruoc?.noiDung ?? bienBan?.noiDungChinhThuc}
           trangThai={TEN_TRANG_THAI[bienBan?.trangThai] || 'Bản nháp'}
           ngayPhatHanh={bienBan?.ngayPhatHanh} />
       )}>
-      {loiTai ? (
-        <p role="alert" className="text-sm text-red-800">{loiTai}</p>
-      ) : bienBan === undefined ? (
-        <p role="status" className="text-sm text-slate-600">Đang tải biên bản…</p>
-      ) : bienBan === null || dangSua ? (
+      {loiTai && <p role="alert" className="text-sm text-red-800">{loiTai}</p>}
+      {bienBan === undefined ? (
+        !loiTai && <p role="status" className="text-sm text-slate-600">Đang tải biên bản…</p>
+      ) : bienBan === null || (dangSua && coTheSua) ? (
         <form onSubmit={xuLyLuu} onChange={capNhatBanXemTruoc} className="space-y-4">
           {bienBan?.trangThai === 'BI_TRA_LAI' && bienBan.yKienPhanHoi && (
             <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-950">

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
 import {
   layBienBanChoToiDuyet,
   layBienBanTheoCuocHop,
@@ -16,6 +17,7 @@ const TEN_TRANG_THAI = {
 }
 
 export default function VanBanCuaHoSo({ loai, cuocHopId, token, choPhepXuLy = false, onPhatHanh, tenChuTri }) {
+  const phienDongBo = useDongBoDuLieu()
   const [vanBan, setVanBan] = useState(undefined)
   const [loi, setLoi] = useState('')
   const [dangXuLy, setDangXuLy] = useState(false)
@@ -81,7 +83,7 @@ export default function VanBanCuaHoSo({ loai, cuocHopId, token, choPhepXuLy = fa
       .then((duLieu) => { if (!controller.signal.aborted) setVanBan(duLieu) })
       .catch((error) => { if (!controller.signal.aborted) setLoi(error.message) })
     return () => controller.abort()
-  }, [cuocHopId, token, laKetLuan])
+  }, [cuocHopId, token, laKetLuan, phienDongBo])
 
   if (loi) return <p role="alert" className="text-sm text-red-800">{loi}</p>
   if (vanBan === undefined) return <p role="status" className="text-sm">Đang tải văn bản…</p>

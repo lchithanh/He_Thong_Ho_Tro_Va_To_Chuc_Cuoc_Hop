@@ -14,6 +14,9 @@ public interface TaiLieuCuocHopRepository
     // Lấy danh sách tài liệu thuộc một cuộc họp
     List<TaiLieuCuocHop> findByCuocHop_CuocHopId(Integer cuocHopId);
 
+    List<TaiLieuCuocHop> findByCuocHop_CuocHopIdInAndLoaiTaiLieuOrderByTaiLieuIdAsc(
+            List<Integer> cuocHopIds, String loaiTaiLieu);
+
     // Lấy tài liệu theo trạng thái xử lý
     List<TaiLieuCuocHop> findByTrangThaiXuLy(String trangThaiXuLy);
 

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
 import {
   layChiTietBieuQuyet,
   layDanhSachBieuQuyetThamDu,
@@ -7,6 +8,7 @@ import FormBoPhieu from '../../components/FormBoPhieu.jsx'
 import KetQuaBieuQuyetThamDu from './KetQuaBieuQuyetThamDu.jsx'
 
 export default function BieuQuyetThamDu({ token }) {
+  const phienDongBo = useDongBoDuLieu()
   const [danhSach, setDanhSach] = useState(null)
   const [loiDanhSach, setLoiDanhSach] = useState('')
   const [lanTai, setLanTai] = useState(0)
@@ -19,14 +21,17 @@ export default function BieuQuyetThamDu({ token }) {
 
     layDanhSachBieuQuyetThamDu(token, controller.signal)
       .then((duLieu) => {
-        if (!controller.signal.aborted) setDanhSach(duLieu)
+        if (!controller.signal.aborted) {
+          setDanhSach(duLieu)
+          setLoiDanhSach('')
+        }
       })
       .catch((loi) => {
         if (!controller.signal.aborted) setLoiDanhSach(loi.message)
       })
 
     return () => controller.abort()
-  }, [token, lanTai])
+  }, [token, lanTai, phienDongBo])
 
   useEffect(() => {
     if (!phienDangXem) return
@@ -36,14 +41,17 @@ export default function BieuQuyetThamDu({ token }) {
 
     layChiTietBieuQuyet(cuocHopId, bieuQuyetId, token, controller.signal)
       .then((duLieu) => {
-        if (!controller.signal.aborted) setChiTiet(duLieu)
+        if (!controller.signal.aborted) {
+          setChiTiet(duLieu)
+          setLoiChiTiet('')
+        }
       })
       .catch((loi) => {
         if (!controller.signal.aborted) setLoiChiTiet(loi.message)
       })
 
     return () => controller.abort()
-  }, [phienDangXem, token])
+  }, [phienDangXem, token, phienDongBo])
 
   function taiLaiDanhSach() {
     setDanhSach(null)

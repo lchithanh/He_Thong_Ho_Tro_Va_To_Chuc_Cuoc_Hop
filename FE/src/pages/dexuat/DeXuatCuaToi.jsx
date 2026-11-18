@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
 import { LOP_KHOI, LOP_TRUONG, LOP_NUT_CHINH } from '../../components/lopBieuMau.js'
 import {
   guiDeXuatCuocHop,
@@ -27,6 +28,7 @@ const TEN_TRANG_THAI = {
 }
 
 export default function DeXuatCuaToi({ token, nguoiDung, onXemCuocHop }) {
+  const phienDongBo = useDongBoDuLieu()
   const [danhSach, setDanhSach] = useState(null)
   const [lanTai, setLanTai] = useState(0)
   const [loiTai, setLoiTai] = useState('')
@@ -47,7 +49,7 @@ export default function DeXuatCuaToi({ token, nguoiDung, onXemCuocHop }) {
       })
       .catch((error) => { if (!controller.signal.aborted) setLoiTai(error.message) })
     return () => controller.abort()
-  }, [token, nguoiDung.nguoiDungId, lanTai])
+  }, [token, nguoiDung.nguoiDungId, lanTai, phienDongBo])
 
   async function xuLyDeXuat(thaoTac) {
     if (dangGui) return

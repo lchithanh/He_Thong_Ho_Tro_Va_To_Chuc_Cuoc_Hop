@@ -2,6 +2,7 @@ package com.example.demo.service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -9,15 +10,22 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.example.demo.dto.request.LuuBienBanRequest;
+import com.example.demo.dto.response.BienBanDaPhatHanhResponse;
+import com.example.demo.dto.response.BienBanDaPhatHanhResponse.ThongTinCuocHop;
+import com.example.demo.dto.response.TaiLieuBienBanResponse;
 import com.example.demo.dto.response.BienBanResponse;
 import com.example.demo.dto.response.PhienBanBienBanResponse;
 import com.example.demo.entity.BienBanCuocHop;
 import com.example.demo.entity.CuocHop;
 import com.example.demo.entity.NguoiDung;
 import com.example.demo.entity.PhienBanBienBan;
+import com.example.demo.entity.YeuCauPheDuyet.LoaiYeuCau;
+import com.example.demo.entity.YeuCauPheDuyet.TrangThai;
 import com.example.demo.repository.BienBanCuocHopRepository;
 import com.example.demo.repository.CuocHopRepository;
 import com.example.demo.repository.PhienBanBienBanRepository;
+import com.example.demo.repository.PhienBanBienBanRepository.SoPhienBanMoiNhat;
+import com.example.demo.repository.TaiLieuCuocHopRepository;
 import com.example.demo.repository.ThanhVienCuocHopRepository;
 import com.example.demo.entity.ThanhVienCuocHop;
 
@@ -27,7 +35,10 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class BienBanService {
 
+    static final String LOAI_TAI_LIEU_BIEN_BAN = "BIEN_BAN_CUOC_HOP";
+
     private final BienBanCuocHopRepository bienBanRepository;
+    private final TaiLieuCuocHopRepository taiLieuCuocHopRepository;
     private final PhienBanBienBanRepository phienBanRepository;
 
     private final NguoiDungHienTaiService nguoiDungHienTaiService;
@@ -142,6 +153,42 @@ public class BienBanService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public List<BienBanDaPhatHanhResponse> layBienBanDaPhatHanhCuaToi(Integer nguoiDungId) {
+        nguoiDungHienTaiService.layTaiKhoanHoatDong(nguoiDungId);
+        var bienBanDaPhatHanh = bienBanRepository.timBienBanDaPhatHanhDuocXem(
+                nguoiDungId, LoaiYeuCau.KE_HOACH_CUOC_HOP, TrangThai.DA_DUYET);
+        if (bienBanDaPhatHanh.isEmpty()) {
+            return List.of();
+        }
+
+        var cuocHopIds = bienBanDaPhatHanh.stream()
+                .map(bienBan -> bienBan.getCuocHop().getCuocHopId()).toList();
+        var taiLieuTheoCuocHop = taiLieuCuocHopRepository
+                .findByCuocHop_CuocHopIdInAndLoaiTaiLieuOrderByTaiLieuIdAsc(cuocHopIds, LOAI_TAI_LIEU_BIEN_BAN)
+                .stream()
+                .collect(Collectors.groupingBy(tep -> tep.getCuocHop().getCuocHopId(),
+                        Collectors.mapping(TaiLieuBienBanResponse::tuTaiLieu, Collectors.toList())));
+
+        var bienBanIds = bienBanDaPhatHanh.stream().map(BienBanCuocHop::getBienBanId).toList();
+        var phienBanTheoBienBan = phienBanRepository.timSoPhienBanMoiNhat(bienBanIds).stream()
+                .collect(Collectors.toMap(SoPhienBanMoiNhat::getBienBanId, SoPhienBanMoiNhat::getSoPhienBan));
+
+        return bienBanDaPhatHanh.stream().map(bienBan -> {
+            var cuocHop = bienBan.getCuocHop();
+            var chuTri = cuocHop.getNguoiChuTri();
+            var thongTin = new ThongTinCuocHop(
+                    cuocHop.getMaCuocHop(), chuTri == null ? null : chuTri.getHoTen(),
+                    cuocHop.getLoaiHinh(), cuocHop.getPhamViCuocHop(),
+                    cuocHop.getThoiGianBatDauThucTe(), cuocHop.getThoiGianKetThucThucTe());
+            return new BienBanDaPhatHanhResponse(
+                    bienBan.getBienBanId(), cuocHop.getCuocHopId(), cuocHop.getTieuDe(),
+                    bienBan.getTieuDe(), bienBan.getNoiDungChinhThuc(), bienBan.getTrangThai(),
+                    bienBan.getNgayDuyet(), phienBanTheoBienBan.get(bienBan.getBienBanId()), thongTin,
+                    taiLieuTheoCuocHop.getOrDefault(cuocHop.getCuocHopId(), List.of()));
+        }).toList();
+    }
+
     BienBanCuocHop layBienBanDuocXem(Integer cuocHopId, Integer nguoiDungId) {
         nguoiDungHienTaiService.layTaiKhoanHoatDong(nguoiDungId);
         kiemTraMaHopLe(cuocHopId, "cuộc họp");
@@ -149,9 +196,10 @@ public class BienBanService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy cuộc họp"));
         BienBanCuocHop bienBan = bienBanRepository.findByCuocHop_CuocHopId(cuocHopId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Cuộc họp chưa có biên bản"));
-        boolean thanhVienDocBanPhatHanh = "DA_PHAT_HANH".equals(bienBan.getTrangThai())
-                && thanhVienCuocHopRepository.existsByCuocHop_CuocHopIdAndNguoiDung_NguoiDungId(cuocHopId, nguoiDungId);
-        if (!thanhVienDocBanPhatHanh
+        boolean duocDocBanPhatHanh = "DA_PHAT_HANH".equals(bienBan.getTrangThai())
+                && cuocHopRepository.coQuyenDocVanBanDaPhatHanh(
+                        cuocHopId, nguoiDungId, LoaiYeuCau.KE_HOACH_CUOC_HOP, TrangThai.DA_DUYET);
+        if (!duocDocBanPhatHanh
                 && !phanCongXuLyKeHoachService.laThuKyToChuc(cuocHop, nguoiDungId)) {
             quyenBienBanService.kiemTraQuyenXem(cuocHop, nguoiDungId);
         }

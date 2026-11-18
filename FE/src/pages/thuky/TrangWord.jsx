@@ -13,7 +13,7 @@ const KHUNG_WORD = `<!doctype html>
 <body><div id="noi-dung-word"></div></body>
 </html>`
 
-export default function TrangWord({ taiLieuId, cuocHopId, yeuCauId, token, tenTep }) {
+export default function TrangWord({ taiLieuId, cuocHopId, yeuCauId, token, tenTep, layTep = layTepKeHoach }) {
   const [khung, setKhung] = useState(null)
   const [loi, setLoi] = useState('')
   const [daTai, setDaTai] = useState(false)
@@ -27,7 +27,7 @@ export default function TrangWord({ taiLieuId, cuocHopId, yeuCauId, token, tenTe
     async function hienThiWord() {
       const [{ renderAsync }, tepWord] = await Promise.all([
         import('docx-preview'),
-        layTepKeHoach({ cuocHopId, yeuCauId }, taiLieuId, token, controller.signal),
+        layTep({ cuocHopId, yeuCauId }, taiLieuId, token, controller.signal),
       ])
       if (controller.signal.aborted) return
       const noiDung = khung.getElementById('noi-dung-word')
@@ -65,7 +65,7 @@ export default function TrangWord({ taiLieuId, cuocHopId, yeuCauId, token, tenTe
       controller.abort()
       theoDoiKichThuoc?.disconnect()
     }
-  }, [khung, taiLieuId, cuocHopId, yeuCauId, token, lanThu])
+  }, [khung, taiLieuId, cuocHopId, yeuCauId, token, lanThu, layTep])
 
   return (
     <>

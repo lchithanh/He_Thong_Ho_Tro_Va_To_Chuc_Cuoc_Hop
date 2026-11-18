@@ -6,7 +6,7 @@ const TRANG_THAI_LICH = {
   THAY_THE: { ten: 'Đã thay thế', the: 'bg-slate-100 text-slate-700' },
 }
 
-export const CHIEU_CAO_GIO = 64
+export const CHIEU_CAO_GIO = 84
 
 export function maNgay(ngay) {
   return [ngay.getFullYear(), ngay.getMonth() + 1, ngay.getDate()]

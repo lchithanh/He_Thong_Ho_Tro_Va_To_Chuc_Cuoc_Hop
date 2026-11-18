@@ -19,6 +19,7 @@ const BUOC_THEO_GIAI_DOAN = {
   THU_KY_LANH_DAO_XU_LY: 2,
   CHO_LANH_DAO: 2,
   THU_KY_TO_CHUC: 3,
+  DANG_HOP: 3,
   SAU_CUOC_HOP: 4,
 }
 
@@ -33,6 +34,7 @@ const NOI_DUNG_BUOC = {
   THU_KY_LANH_DAO_XU_LY: 'Thư ký lãnh đạo đang rà soát hồ sơ.',
   CHO_LANH_DAO: 'Hồ sơ đang chờ lãnh đạo phê duyệt.',
   THU_KY_TO_CHUC: 'Kế hoạch đã duyệt; thư ký được giao đang tổ chức cuộc họp.',
+  DANG_HOP: 'Cuộc họp đang diễn ra.',
   SAU_CUOC_HOP: 'Cuộc họp đã kết thúc; hồ sơ đang được hoàn thiện.',
 }
 

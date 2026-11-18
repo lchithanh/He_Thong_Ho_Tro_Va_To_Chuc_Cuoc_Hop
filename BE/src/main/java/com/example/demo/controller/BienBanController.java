@@ -22,11 +22,12 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.demo.dto.request.LuuBienBanRequest;
 import com.example.demo.dto.request.TrinhBienBanRequest;
 import com.example.demo.dto.response.BienBanChoDuyetResponse;
+import com.example.demo.dto.response.BienBanDaPhatHanhResponse;
 import com.example.demo.dto.response.BienBanResponse;
 import com.example.demo.dto.response.PhienBanBienBanResponse;
 import com.example.demo.service.BienBanService;
 import com.example.demo.service.TaiLieuBienBanService;
-import com.example.demo.service.TaiLieuBienBanService.TaiLieuBienBan;
+import com.example.demo.dto.response.TaiLieuBienBanResponse;
 import com.example.demo.service.NguoiDungHienTaiService;
 import com.example.demo.service.QuyTrinhBienBanService;
 
@@ -100,6 +101,12 @@ public class BienBanController {
         return bienBanService.layBienBanChoPhatHanh(nguoiDungHienTaiService.layNguoiDungId(auth));
     }
 
+    @GetMapping("/da-phat-hanh-cua-toi")
+    public List<BienBanDaPhatHanhResponse> layBienBanDaPhatHanhCuaToi(Authentication authentication) {
+        Integer nguoiDungId = nguoiDungHienTaiService.layNguoiDungId(authentication);
+        return bienBanService.layBienBanDaPhatHanhCuaToi(nguoiDungId);
+    }
+
     @PostMapping(value = "/cuoc-hop/{cuocHopId}/tai-lieu", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Map<String, Integer>> taiLenTaiLieu(
             @PathVariable Integer cuocHopId, @RequestParam("file") MultipartFile file, Authentication auth) {
@@ -108,7 +115,7 @@ public class BienBanController {
     }
 
     @GetMapping("/cuoc-hop/{cuocHopId}/tai-lieu")
-    public List<TaiLieuBienBan> layTaiLieu(@PathVariable Integer cuocHopId, Authentication auth) {
+    public List<TaiLieuBienBanResponse> layTaiLieu(@PathVariable Integer cuocHopId, Authentication auth) {
         return taiLieuBienBanService.layDanhSach(cuocHopId, nguoiDungHienTaiService.layNguoiDungId(auth));
     }
 

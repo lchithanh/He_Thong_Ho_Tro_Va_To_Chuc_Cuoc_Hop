@@ -16,7 +16,7 @@ function hienThiGiaTri(giaTri) {
   return String(giaTri)
 }
 
-export default function TrangExcel({ taiLieuId, cuocHopId, yeuCauId, token, tenTep }) {
+export default function TrangExcel({ taiLieuId, cuocHopId, yeuCauId, token, tenTep, layTep = layTepKeHoach }) {
   const [ketQua, setKetQua] = useState(null)
   const [trangId, setTrangId] = useState(0)
   const [lanThu, setLanThu] = useState(0)
@@ -27,7 +27,7 @@ export default function TrangExcel({ taiLieuId, cuocHopId, yeuCauId, token, tenT
     async function docBangTinh() {
       const [{ default: docExcel }, tep] = await Promise.all([
         import('read-excel-file/browser'),
-        layTepKeHoach({ cuocHopId, yeuCauId }, taiLieuId, token, controller.signal),
+        layTep({ cuocHopId, yeuCauId }, taiLieuId, token, controller.signal),
       ])
       if (controller.signal.aborted) return
       const cacTrang = await docExcel(tep)
@@ -40,7 +40,7 @@ export default function TrangExcel({ taiLieuId, cuocHopId, yeuCauId, token, tenT
       }
     })
     return () => controller.abort()
-  }, [taiLieuId, cuocHopId, yeuCauId, token, lanThu])
+  }, [taiLieuId, cuocHopId, yeuCauId, token, lanThu, layTep])
 
   if (!ketQua) return <p role="status" className="p-4 text-sm">Đang chuẩn bị bảng tính…</p>
   if (ketQua.loi) return (

@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
+import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
 import {
   layLoiMoiCuaToi,
   phanHoiLoiMoiCuocHop,
 } from '../../api/thanhVienCuocHopApi.js'
 
 export default function PhanHoiLoiMoi({ token }) {
+  const phienDongBo = useDongBoDuLieu()
   const [loiMoi, setLoiMoi] = useState(null)
   const [loiTai, setLoiTai] = useState('')
   const [loiPhanHoi, setLoiPhanHoi] = useState('')
@@ -23,7 +25,7 @@ export default function PhanHoiLoiMoi({ token }) {
       })
 
     return () => controller.abort()
-  }, [token])
+  }, [token, phienDongBo])
 
   async function xuLyPhanHoi(cuocHop, thamDu) {
     if (cuocHopDangGui !== null) return

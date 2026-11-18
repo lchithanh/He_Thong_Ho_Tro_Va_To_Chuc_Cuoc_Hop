@@ -1,4 +1,5 @@
 import XemTruocTepKeHoach from './XemTruocTepKeHoach.jsx'
+import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
 import { useEffect, useState } from 'react'
 import {
   layChiTietKeHoachChoDuyet,
@@ -13,6 +14,7 @@ const TEN_TRANG_THAI = {
 }
 
 export default function HoSoDaTrinh({ yeuCauId, cuocHopId, token, children }) {
+  const phienDongBo = useDongBoDuLieu()
   const [hoSo, setHoSo] = useState(undefined)
   const [tep, setTep] = useState(null)
   const [loi, setLoi] = useState('')
@@ -28,7 +30,7 @@ export default function HoSoDaTrinh({ yeuCauId, cuocHopId, token, children }) {
       .then((duLieu) => { if (!controller.signal.aborted) setHoSo(duLieu) })
       .catch((error) => { if (!controller.signal.aborted) setLoi(error.message) })
     return () => controller.abort()
-  }, [yeuCauId, cuocHopId, token])
+  }, [yeuCauId, cuocHopId, token, phienDongBo])
 
   useEffect(() => {
     if (lanTrinhId == null) return
@@ -37,7 +39,7 @@ export default function HoSoDaTrinh({ yeuCauId, cuocHopId, token, children }) {
       .then((duLieu) => { if (!controller.signal.aborted) setTep(duLieu) })
       .catch((error) => { if (!controller.signal.aborted) setLoiTep(error.message) })
     return () => controller.abort()
-  }, [lanTrinhId, token])
+  }, [lanTrinhId, token, phienDongBo])
 
   if (loi) return <p role="alert" className="text-sm text-red-800">{loi}</p>
   if (hoSo === undefined) return <p role="status" className="text-sm">Đang tải hồ sơ…</p>

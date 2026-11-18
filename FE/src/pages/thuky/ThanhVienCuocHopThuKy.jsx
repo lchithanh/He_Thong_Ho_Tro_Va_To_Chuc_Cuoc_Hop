@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
 import Building2 from 'lucide-react/dist/esm/icons/building-2.mjs'
 import UserPlus from 'lucide-react/dist/esm/icons/user-plus.mjs'
 import Users from 'lucide-react/dist/esm/icons/users.mjs'
@@ -38,6 +39,7 @@ export default function ThanhVienCuocHopThuKy({
   onLapLich,
   lichHopIdKeHoachDaDuyet,
 }) {
+  const phienDongBo = useDongBoDuLieu()
   const [danhSach, setDanhSach] = useState(null)
   const [lanTai, setLanTai] = useState(0)
   const [nguoiChonIds, setNguoiChonIds] = useState([])
@@ -100,7 +102,7 @@ export default function ThanhVienCuocHopThuKy({
     }
 
     return () => controller.abort()
-  }, [cuocHopId, token, lanTai, choPhepMoi, onTrangThaiLich, lichHopIdKeHoachDaDuyet])
+  }, [cuocHopId, token, lanTai, choPhepMoi, onTrangThaiLich, lichHopIdKeHoachDaDuyet, phienDongBo])
 
   const nguoiChon = (nguoiCoTheMoi ?? []).filter((nguoi) => nguoiChonIds.includes(nguoi.nguoiDungId))
   const ketQuaTim = nguoiCoTheMoi?.filter((nguoi) =>

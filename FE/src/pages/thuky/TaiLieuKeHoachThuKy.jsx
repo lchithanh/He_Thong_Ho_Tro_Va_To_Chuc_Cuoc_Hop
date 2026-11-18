@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
 import XemTruocTepKeHoach from './XemTruocTepKeHoach.jsx'
 import {
   layChiTietDeXuat,
@@ -19,6 +20,7 @@ export default function TaiLieuKeHoachThuKy({
   onLapLich,
   choPhepThaoTac = true,
 }) {
+  const phienDongBo = useDongBoDuLieu()
   const [danhSach, setDanhSach] = useState(null)
   const [lanTai, setLanTai] = useState(0)
   const [dangTaiLen, setDangTaiLen] = useState(false)
@@ -50,7 +52,7 @@ export default function TaiLieuKeHoachThuKy({
         if (!controller.signal.aborted) setDangTaiLich(false)
       })
     return () => controller.abort()
-  }, [cuocHopId, token, lanTaiLich])
+  }, [cuocHopId, token, lanTaiLich, phienDongBo])
 
   const [dangTrinh, setDangTrinh] = useState(false)
   const [daTrinh, setDaTrinh] = useState(false)
@@ -79,7 +81,7 @@ export default function TaiLieuKeHoachThuKy({
 
     taiDanhSach()
     return () => controller.abort()
-  }, [cuocHopId, token, lanTai])
+  }, [cuocHopId, token, lanTai, phienDongBo])
 
   async function xuLyTaiLen(event) {
     event.preventDefault()

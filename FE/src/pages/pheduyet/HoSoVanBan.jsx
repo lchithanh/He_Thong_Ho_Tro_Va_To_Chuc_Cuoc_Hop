@@ -12,7 +12,7 @@ const MUC = {
 }
 
 function HoSoVanBan({ cheDo, nguoiDung, ...props }) {
-  const laQuanLy = nguoiDung.maVaiTro === 'LANH_DAO' || nguoiDung.truongPhong
+  const laQuanLy = nguoiDung.maVaiTro === 'LANH_DAO' || (nguoiDung.maVaiTro === 'CAN_BO' && nguoiDung.truongPhong)
   const cacMuc = cheDo === 'duyet'
     ? [...(laQuanLy ? ['ke-hoach'] : []), 'bien-ban-duyet', 'ket-luan']
     : ['bien-ban-phat-hanh', 'ket-luan']

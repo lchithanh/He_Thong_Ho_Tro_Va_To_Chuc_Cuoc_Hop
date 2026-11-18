@@ -67,18 +67,15 @@ export async function taiLenTaiLieuKetLuan(cuocHopId, file, token) {
   return docPhanHoiKetLuan(response)
 }
 
+export async function layTepKetLuan({ cuocHopId }, taiLieuId, token, signal) {
+  const response = await goiApi(`/api/cuoc-hop/${cuocHopId}/ket-luan/tai-lieu/${taiLieuId}/tai-xuong`, { token, signal })
+  if (!response.ok) return docPhanHoiKetLuan(response)
+  return response.blob()
+}
+
 export async function taiXuongTaiLieuKetLuan(cuocHopId, taiLieu, token) {
-  const response = await goiApi(
-    `/api/cuoc-hop/${cuocHopId}/ket-luan/tai-lieu/${taiLieu.taiLieuId}/tai-xuong`,
-    { token },
-  )
-
-  if (!response.ok) {
-    await docPhanHoiKetLuan(response)
-    return
-  }
-
-  const url = URL.createObjectURL(await response.blob())
+  const tep = await layTepKetLuan({ cuocHopId }, taiLieu.taiLieuId, token)
+  const url = URL.createObjectURL(tep)
   const link = document.createElement('a')
   link.href = url
   link.download = taiLieu.tenFileGoc || `tai-lieu-ket-luan-${taiLieu.taiLieuId}`

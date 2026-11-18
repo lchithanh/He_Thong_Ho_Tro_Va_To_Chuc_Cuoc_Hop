@@ -106,7 +106,31 @@ public class PhanCongXuLyKeHoachService {
                         .isPresent();
     }
 
+    public boolean daDenGiaiDoanToChuc(CuocHop cuocHop) {
+        return ThaoTacCuocHop.coTheLapLich(cuocHop)
+                || ThaoTacCuocHop.dangDienRa(cuocHop) || ThaoTacCuocHop.daKetThuc(cuocHop);
+    }
+
+    public Integer layYeuCauChoChuyenCap(CuocHop cuocHop, YeuCauPheDuyet lanTrinhMoiNhat, Integer nguoiDungId) {
+        if (!"DANG_CHUAN_BI".equals(cuocHop.getTrangThai())
+                || !"CHO_GUI_CAP_TREN".equals(cuocHop.getBuocXuLyHienTai())
+                || lanTrinhMoiNhat == null
+                || lanTrinhMoiNhat.getTrangThai() != TrangThai.DA_DUYET
+                || !"TRUONG_PHONG".equals(lanTrinhMoiNhat.getCapPheDuyet())
+                || lanTrinhMoiNhat.getNguoiTrinh() == null
+                || nguoiDungId == null
+                || !nguoiDungId.equals(lanTrinhMoiNhat.getNguoiTrinh().getNguoiDungId())) {
+            return null;
+        }
+        // Người lập đã được kiểm tra quyền ở lần trình cấp 1. Việc phân công
+        // thư ký tổ chức sau đó không thay đổi người phụ trách chuyển chính hồ sơ này.
+        return lanTrinhMoiNhat.getYeuCauPheDuyetId();
+    }
+
     public boolean laThuKyToChuc(CuocHop cuocHop, Integer nguoiDungId) {
+        if (!daDenGiaiDoanToChuc(cuocHop)) {
+            return false;
+        }
         YeuCauPheDuyet yeuCau = layLanTrinhMoiNhat(cuocHop.getCuocHopId());
         if (yeuCau == null || yeuCau.getTrangThai() != TrangThai.DA_DUYET) {
             return false;
@@ -146,7 +170,7 @@ public class PhanCongXuLyKeHoachService {
                     || laThuKyDuocGiao(yeuCau, nguoiDungId);
         }
         if ("CHO_GUI_CAP_TREN".equals(cuocHop.getBuocXuLyHienTai())) {
-            return laThuKyBanDau(cuocHopId, nguoiDungId);
+            return layYeuCauChoChuyenCap(cuocHop, yeuCau, nguoiDungId) != null;
         }
         if (yeuCau == null) {
             return false;

@@ -8,6 +8,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import com.example.demo.entity.KetLuanCuocHop;
+import com.example.demo.entity.YeuCauPheDuyet.LoaiYeuCau;
+import com.example.demo.entity.YeuCauPheDuyet.TrangThai;
 
 public interface KetLuanCuocHopRepository
         extends JpaRepository<KetLuanCuocHop, Integer> {
@@ -22,20 +24,16 @@ public interface KetLuanCuocHopRepository
     
     
     @Query("""
-    	    select kl
-    	    from KetLuanCuocHop kl
-    	    where kl.trangThai = 'DA_PHAT_HANH'
-    	      and (
-    	        kl.cuocHop.nguoiChuTri.nguoiDungId = :nguoiDungId
-    	        or exists (
-    	          select tv
-    	          from ThanhVienCuocHop tv
-    	          where tv.cuocHop = kl.cuocHop
-    	            and tv.id.nguoiDungId = :nguoiDungId
-    	        )
-    	      )
-    	    order by kl.ngayPhatHanh desc
-    	    """)
-    	List<KetLuanCuocHop> timKetLuanDaPhatHanhDuocXem(
-    	        @Param("nguoiDungId") Integer nguoiDungId);
+            select kl
+            from KetLuanCuocHop kl
+            join kl.cuocHop hop
+            """ + CuocHopRepository.NOI_CUOC_HOP_VOI_NGUOI_PHU_TRACH + """
+            where kl.trangThai = 'DA_PHAT_HANH'
+            """ + CuocHopRepository.PHAM_VI_DOC_VAN_BAN_DA_PHAT_HANH + """
+            order by kl.ngayPhatHanh desc
+            """)
+    List<KetLuanCuocHop> timKetLuanDaPhatHanhDuocXem(
+            @Param("nguoiDungId") Integer nguoiDungId,
+            @Param("loaiKeHoach") LoaiYeuCau loaiKeHoach,
+            @Param("daDuyet") TrangThai daDuyet);
 }

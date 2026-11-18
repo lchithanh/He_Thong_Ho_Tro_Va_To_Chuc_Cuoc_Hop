@@ -71,7 +71,7 @@ function LuoiLich({ ngayHienThi, lichTungNgay, ngayChon, bayGio, cheDo, onChonNg
 
   return (
     <div ref={vungGio} role="region" tabIndex={0} aria-label="Lịch theo giờ"
-      className="h-[min(620px,70dvh)] min-h-[340px] overflow-auto overscroll-contain focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600">
+      className="luoi-gio-lich-hop h-[min(620px,70dvh)] min-h-[340px] overflow-auto overscroll-contain focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue-600">
       <div style={{ minWidth: 48 + ngayHienThi.length * 118 }}>
         <div className="sticky top-0 z-20 grid border-b border-slate-200 bg-white text-center" style={mauCot}>
           <span aria-hidden="true" />
@@ -179,7 +179,7 @@ export default function LichCuocHop({ danhSach, loiTai, ngayChon, onChonNgay, on
 
   return (
     <section aria-label="Lịch họp" className="min-w-0">
-      <div className="grid min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-white xl:grid-cols-[230px_minmax(0,1fr)]">
+      <div className="bo-cuc-lich-hop grid min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-white">
         <aside aria-label="Lịch trong ngày" className="min-w-0 border-b border-slate-200 px-4 py-3 xl:border-r xl:border-b-0">
           <div className="mb-3 flex items-center justify-between gap-2">
             <button type="button" aria-expanded={moLichNho} onClick={() => setMoLichNho(!moLichNho)} className={LOP_NUT + ' gap-2 px-2'}>

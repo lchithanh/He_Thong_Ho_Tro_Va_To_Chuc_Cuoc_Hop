@@ -7,7 +7,7 @@ import { layTepKeHoach, taiXuongTepKeHoach } from '../../api/cuocHopApi.js'
 const DINH_DANG_XEM = new Set(['pdf', 'docx', 'xlsx'])
 
 function tenTep(muc) {
-  return muc.tenFileGoc || muc.tenTaiLieu
+  return muc.tenFileGoc || muc.tenTaiLieu || `Tài liệu #${muc.taiLieuId}`
 }
 
 export default function XemTruocTepKeHoach({ danhSach, cuocHopId, yeuCauId, token, loiDanhSach, children }) {
@@ -85,34 +85,37 @@ export default function XemTruocTepKeHoach({ danhSach, cuocHopId, yeuCauId, toke
   )
 }
 
-function NoiDungXemTruoc({ tep, cuocHopId, yeuCauId, token }) {
-  const thongTin = { taiLieuId: tep.taiLieuId, cuocHopId, yeuCauId, token, tenTep: tenTep(tep) }
-  if (tep.dinhDangFile === 'docx') return <TrangWord {...thongTin} />
-  if (tep.dinhDangFile === 'pdf') return <TrangPdf {...thongTin} />
-  if (tep.dinhDangFile === 'xlsx') return <TrangExcel {...thongTin} />
+export function NoiDungXemTruoc({ tep, cuocHopId, yeuCauId, token, layTep = layTepKeHoach }) {
+  const thongTin = { taiLieuId: tep.taiLieuId, cuocHopId, yeuCauId, token, tenTep: tenTep(tep), layTep }
+  const dinhDang = (tep.dinhDangFile || tenTep(tep).split('.').pop()).toLowerCase()
+  if (dinhDang === 'docx') return <TrangWord {...thongTin} />
+  if (dinhDang === 'pdf') return <TrangPdf {...thongTin} />
+  if (dinhDang === 'xlsx') return <TrangExcel {...thongTin} />
   return (
     <p className="p-4 text-sm text-slate-600">
-      {tep.dinhDangFile === 'doc'
+      {dinhDang === 'doc'
         ? 'Hãy tải tệp gốc để mở. Để xem trong hồ sơ, lưu tệp Word dạng .docx hoặc PDF rồi tải lên.'
-        : tep.dinhDangFile === 'xls'
+        : dinhDang === 'xls'
           ? 'Hãy tải tệp gốc để mở. Để xem trong hồ sơ, lưu tệp Excel dạng .xlsx rồi tải lên.'
           : 'Hãy tải tệp gốc để mở định dạng này.'}
     </p>
   )
 }
 
-function TrangPdf({ taiLieuId, cuocHopId, yeuCauId, token, tenTep }) {
+function TrangPdf({ taiLieuId, cuocHopId, yeuCauId, token, tenTep, layTep }) {
   const [ketQua, setKetQua] = useState(null)
   const [lanThu, setLanThu] = useState(0)
 
   useEffect(() => {
     const controller = new AbortController()
     let url
-    layTepKeHoach({ cuocHopId, yeuCauId }, taiLieuId, token, controller.signal)
-      .then((blob) => {
+    layTep({ cuocHopId, yeuCauId }, taiLieuId, token, controller.signal)
+      .then(async (blob) => {
+        const dauTep = await blob.slice(0, 1024).text()
         if (controller.signal.aborted) return
-        if (blob.type !== 'application/pdf') throw new Error('Máy chủ chưa trả về tệp PDF.')
-        url = URL.createObjectURL(blob)
+        if (!dauTep.includes('%PDF-')) throw new Error('Máy chủ chưa trả về tệp PDF hợp lệ.')
+        const tepPdf = blob.type === 'application/pdf' ? blob : blob.slice(0, blob.size, 'application/pdf')
+        url = URL.createObjectURL(tepPdf)
         setKetQua({ url })
       })
       .catch((error) => {
@@ -122,7 +125,7 @@ function TrangPdf({ taiLieuId, cuocHopId, yeuCauId, token, tenTep }) {
       controller.abort()
       if (url) URL.revokeObjectURL(url)
     }
-  }, [taiLieuId, cuocHopId, yeuCauId, token, lanThu])
+  }, [taiLieuId, cuocHopId, yeuCauId, token, lanThu, layTep])
 
   if (!ketQua) return <p role="status" className="p-4 text-sm">Đang chuẩn bị bản xem trước…</p>
   if (ketQua.loi) return (

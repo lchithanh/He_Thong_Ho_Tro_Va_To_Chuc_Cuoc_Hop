@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
+import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
 import {
   layDanhSachBieuQuyetDaDongCuaToi,
   layKetQuaBieuQuyet,
 } from '../../api/bieuQuyetApi.js'
 
 export default function KetQuaBieuQuyetThamDu({ token }) {
+  const phienDongBo = useDongBoDuLieu()
   const [danhSach, setDanhSach] = useState(null)
   const [loiDanhSach, setLoiDanhSach] = useState('')
   const [lanTai, setLanTai] = useState(0)
@@ -17,14 +19,17 @@ export default function KetQuaBieuQuyetThamDu({ token }) {
 
     layDanhSachBieuQuyetDaDongCuaToi(token, controller.signal)
       .then((duLieu) => {
-        if (!controller.signal.aborted) setDanhSach(duLieu)
+        if (!controller.signal.aborted) {
+          setDanhSach(duLieu)
+          setLoiDanhSach('')
+        }
       })
       .catch((loi) => {
         if (!controller.signal.aborted) setLoiDanhSach(loi.message)
       })
 
     return () => controller.abort()
-  }, [token, lanTai])
+  }, [token, lanTai, phienDongBo])
 
   useEffect(() => {
     if (!phienDangXem) return
@@ -43,7 +48,7 @@ export default function KetQuaBieuQuyetThamDu({ token }) {
     return () => {
       conHieuLuc = false
     }
-  }, [phienDangXem, token])
+  }, [phienDangXem, token, phienDongBo])
 
   function taiLaiDanhSach() {
     setDanhSach(null)

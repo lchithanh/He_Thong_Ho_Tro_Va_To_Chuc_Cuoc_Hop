@@ -11,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import com.example.demo.dto.response.CuocHopDangDienRaResponse;
 import com.example.demo.dto.response.ThanhVienCuocHopResponse;
 import com.example.demo.entity.CuocHop;
 import com.example.demo.entity.NguoiDung;
@@ -30,6 +31,8 @@ import com.example.demo.dto.response.NguoiCoTheMoiResponse;
 @Service
 @RequiredArgsConstructor
 public class ThanhVienCuocHopService {
+    private static final Set<String> LOI_MOI_HOP_LE = Set.of("CHO_PHAN_HOI", "DA_XAC_NHAN");
+
     private final CuocHopRepository cuocHopRepository;
     private final NguoiDungRepository nguoiDungRepository;
     private final ThanhVienCuocHopRepository thanhVienCuocHopRepository;
@@ -214,6 +217,50 @@ public class ThanhVienCuocHopService {
                 .findFirstByCuocHop_CuocHopIdAndLoaiYeuCauOrderByYeuCauPheDuyetIdDesc(
                         cuocHopId, LoaiYeuCau.KE_HOACH_CUOC_HOP)
                 .orElse(null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<CuocHopDangDienRaResponse> layCuocHopDangDienRaCuaToi(Integer nguoiDungId) {
+        nguoiDungHienTaiService.layTaiKhoanHoatDong(nguoiDungId);
+        return cuocHopRepository.timCuocHopDangDienRaCuaToi(nguoiDungId, LOI_MOI_HOP_LE);
+    }
+
+    @Transactional
+    public LocalDateTime thamGiaCuocHop(Integer cuocHopId, Integer nguoiDungId) {
+        NguoiDung nguoiDung = nguoiDungHienTaiService.layTaiKhoanHoatDong(nguoiDungId);
+        CuocHop cuocHop = khoaCuocHop(cuocHopId);
+        boolean laChuTri = ThaoTacCuocHop.laNguoiChuTri(cuocHop, nguoiDungId);
+        ThanhVienCuocHopId id = taoId(cuocHopId, nguoiDungId);
+        ThanhVienCuocHop thanhVien = thanhVienCuocHopRepository.findByIdForUpdate(id).orElse(null);
+        if (!laChuTri && (thanhVien == null || thanhVien.getTrangThaiMoi() == null
+                || !LOI_MOI_HOP_LE.contains(thanhVien.getTrangThaiMoi()))) {
+            throw loi(HttpStatus.FORBIDDEN, "Bạn không có lời mời hợp lệ để tham gia cuộc họp này");
+        }
+        if (!"DANG_DIEN_RA".equals(cuocHop.getTrangThai()) || !ThaoTacCuocHop.dangDienRa(cuocHop)) {
+            throw loi(HttpStatus.CONFLICT, "Chỉ tham gia được khi cuộc họp đang diễn ra");
+        }
+
+        boolean themChuTri = thanhVien == null;
+        if (themChuTri) {
+            thanhVien = new ThanhVienCuocHop();
+            thanhVien.setId(id);
+            thanhVien.setCuocHop(cuocHop);
+            thanhVien.setNguoiDung(nguoiDung);
+            thanhVien.setVaiTroTaiCuocHop("CHU_TRI");
+        }
+        if (thanhVien.getThoiGianRoiCuocHop() != null) {
+            throw loi(HttpStatus.CONFLICT, "Bạn đã được ghi nhận rời cuộc họp");
+        }
+
+        thanhVien.setTrangThaiMoi("DA_XAC_NHAN");
+        if (!"CO_MAT".equals(thanhVien.getTrangThaiThamDu()) || thanhVien.getThoiGianDiemDanh() == null) {
+            thanhVien.setTrangThaiThamDu("CO_MAT");
+            thanhVien.setThoiGianDiemDanh(LocalDateTime.now());
+        }
+        if (themChuTri) {
+            thanhVienCuocHopRepository.themMoi(thanhVien);
+        }
+        return thanhVien.getThoiGianDiemDanh();
     }
 
     @Transactional

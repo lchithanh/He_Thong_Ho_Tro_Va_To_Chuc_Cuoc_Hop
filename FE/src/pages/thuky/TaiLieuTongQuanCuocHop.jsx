@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
+import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
 import { layTaiLieuKeHoach } from '../../api/cuocHopApi.js'
 import { layTaiLieuDeXuat, taiXuongTaiLieuDeXuat } from '../../api/taiLieuDeXuatApi.js'
 
 export default function TaiLieuTongQuanCuocHop({ cuocHopId, token, loai }) {
+  const phienDongBo = useDongBoDuLieu()
   const [danhSach, setDanhSach] = useState(null)
   const [loi, setLoi] = useState('')
   const [loiTaiXuong, setLoiTaiXuong] = useState('')
@@ -18,7 +20,7 @@ export default function TaiLieuTongQuanCuocHop({ cuocHopId, token, loai }) {
         if (!controller.signal.aborted) setLoi(error.status === 403 ? 'Bạn không có quyền xem nhóm tài liệu này.' : error.message)
       })
     return () => controller.abort()
-  }, [cuocHopId, token, laDeXuat])
+  }, [cuocHopId, token, laDeXuat, phienDongBo])
 
   async function taiXuong(taiLieu) {
     setDangTai(taiLieu.taiLieuId)

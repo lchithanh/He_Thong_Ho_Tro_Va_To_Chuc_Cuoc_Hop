@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
 import { taoBieuQuyet } from '../../api/bieuQuyetApi.js'
 import { layDanhSachDeXuat } from '../../api/cuocHopApi.js'
 import { layThanhVienCuocHop } from '../../api/thanhVienCuocHopApi.js'
@@ -8,6 +9,7 @@ import DanhSachBieuQuyetChuTri from './DanhSachBieuQuyetChuTri.jsx'
 const LOP_TRUONG = 'mt-1 w-full rounded-lg border border-slate-300 px-3 py-2'
 
 export default function TaoBieuQuyet({ nguoiDung, cuocHopId: cuocHopIdDuocChon }) {
+  const phienDongBo = useDongBoDuLieu()
   const [cuocHop, setCuocHop] = useState(null)
   const [loiTai, setLoiTai] = useState('')
   const [loiLuu, setLoiLuu] = useState('')
@@ -45,7 +47,7 @@ export default function TaoBieuQuyet({ nguoiDung, cuocHopId: cuocHopIdDuocChon }
       })
 
     return () => controller.abort()
-  }, [token, nguoiDungId, cuocHopIdDuocChon])
+  }, [token, nguoiDungId, cuocHopIdDuocChon, phienDongBo])
 
   useEffect(() => {
     if (!cuocHopDangChon) {
@@ -62,7 +64,10 @@ export default function TaoBieuQuyet({ nguoiDung, cuocHopId: cuocHopIdDuocChon }
 
     layThanhVienCuocHop(Number(cuocHopDangChon), token, controller.signal)
       .then((duLieu) => {
-        if (!controller.signal.aborted) setThanhVien(duLieu)
+        if (!controller.signal.aborted) {
+          setThanhVien(duLieu)
+          setLoiThanhVien('')
+        }
       })
       .catch((loi) => {
         if (!controller.signal.aborted) setLoiThanhVien(loi.message)

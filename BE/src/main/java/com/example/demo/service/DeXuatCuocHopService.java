@@ -436,7 +436,8 @@ public class DeXuatCuocHopService {
     private DeXuatCuocHopResponse chuyenDeXuatResponse(CuocHop ch, Integer nguoiDungId) {
         var banGiao = phanCongXuLyKeHoachService.layLanTrinhMoiNhat(ch.getCuocHopId());
         NguoiDung nguoiDangXuLy = layNguoiDangXuLy(ch, banGiao);
-        boolean nguoiNhan = phanCongXuLyKeHoachService.laThuKyDaNhanBanGiao(banGiao, nguoiDungId);
+        boolean nguoiNhan = phanCongXuLyKeHoachService.daDenGiaiDoanToChuc(ch)
+                && phanCongXuLyKeHoachService.laThuKyDaNhanBanGiao(banGiao, nguoiDungId);
         boolean duocLap = phanQuyenCuocHopService.laThuKyDuocPhanCong(ch.getCuocHopId(), nguoiDungId)
                 && (ThaoTacCuocHop.dangChoTiepNhan(ch) || ThaoTacCuocHop.dangLapKeHoach(ch));
         boolean hoanTat = phanCongXuLyKeHoachService.daHoanTatHoSo(ch);
@@ -468,10 +469,15 @@ public class DeXuatCuocHopService {
                 !hoanTat && phanCongXuLyKeHoachService.laThuKyToChuc(ch, nguoiDungId),
                 hoanTat,
                 xacDinhVaiTroNguoiDeXuat(ch),
-                yeuCauChoGuiCapTren(ch, nguoiDungId),
+                phanCongXuLyKeHoachService.layYeuCauChoChuyenCap(ch, banGiao, nguoiDungId),
                 nguoiDangXuLy == null ? null : nguoiDangXuLy.getNguoiDungId(),
                 nguoiDangXuLy == null ? null : nguoiDangXuLy.getHoTen(),
-                layLichHopIdKeHoachDaDuyet(ch, banGiao)
+                layLichHopIdKeHoachDaDuyet(ch, banGiao),
+                ch.getNguoiChuTri() == null ? null : ch.getNguoiChuTri().getHoTen(),
+                ch.getThuKyCuocHop() == null ? null : ch.getThuKyCuocHop().getHoTen(),
+                ch.getThoiGianBatDauThucTe(),
+                ch.getThoiGianKetThucThucTe(),
+                ThaoTacCuocHop.coTheLapLich(ch) && ThaoTacCuocHop.coLichDaXacNhan(ch)
         );
     }
 
@@ -501,20 +507,6 @@ public class DeXuatCuocHopService {
             return null;
         }
         return yeuCau.getLichHop().getLichHopId();
-    }
-
-    private Integer yeuCauChoGuiCapTren(CuocHop ch, Integer nguoiDungId) {
-        if (!"DANG_CHUAN_BI".equals(ch.getTrangThai())
-                || !"CHO_GUI_CAP_TREN".equals(ch.getBuocXuLyHienTai())
-                || !phanCongXuLyKeHoachService.laThuKyBanDau(ch.getCuocHopId(), nguoiDungId)) {
-            return null;
-        }
-        var yeuCau = phanCongXuLyKeHoachService.layLanTrinhMoiNhat(ch.getCuocHopId());
-        return yeuCau != null && yeuCau.getTrangThai() == TrangThai.DA_DUYET
-                && "TRUONG_PHONG".equals(yeuCau.getCapPheDuyet())
-                && yeuCau.getNguoiTrinh() != null
-                && nguoiDungId.equals(yeuCau.getNguoiTrinh().getNguoiDungId())
-                        ? yeuCau.getYeuCauPheDuyetId() : null;
     }
 
     private PhanHoiKeHoach layPhanHoiKeHoach(CuocHop ch) {

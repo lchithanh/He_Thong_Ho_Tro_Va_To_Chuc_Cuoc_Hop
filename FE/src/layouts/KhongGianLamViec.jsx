@@ -11,10 +11,22 @@ export default function KhongGianLamViec({ nguoiDung, loi, onDangXuat }) {
   const [mucDangChon, setMucDangChon] = useState('tong-quan')
   const [cuocHopLapLich, setCuocHopLapLich] = useState(null)
   const [hoSoDangXem, setHoSoDangXem] = useState(null)
+  const [cuocHopCanDuyet, setCuocHopCanDuyet] = useState(null)
   const cacMuc = layMenuKhongGianLamViec(maVaiTro, laQuanLy)
 
   const mucHienTai = cacMuc.find((muc) => muc.id === mucDangChon)
   const TrangHienTai = mucHienTai?.Trang
+
+  function chonMuc(id) {
+    setHoSoDangXem(null)
+    setCuocHopCanDuyet(null)
+    setMucDangChon(id)
+  }
+
+  function moYeuCauDuyet(cuocHopId) {
+    chonMuc('ho-so-cho-duyet')
+    setCuocHopCanDuyet(cuocHopId)
+  }
 
   return (
     <BoCucChung
@@ -22,7 +34,7 @@ export default function KhongGianLamViec({ nguoiDung, loi, onDangXuat }) {
       onDangXuat={onDangXuat}
       dieuHuong={cacMuc}
       mucDangChon={mucDangChon}
-      onChonMuc={(id) => { setHoSoDangXem(null); setMucDangChon(id) }}
+      onChonMuc={chonMuc}
     >
       {loi && (
         <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
@@ -44,14 +56,16 @@ export default function KhongGianLamViec({ nguoiDung, loi, onDangXuat }) {
 
       {hoSoDangXem ? (
         <ChiTietDeXuat key={hoSoDangXem} cuocHopId={hoSoDangXem} token={token} nguoiDung={nguoiDung}
-          chiXem tabBanDau="thong-tin" onQuayLai={() => setHoSoDangXem(null)} />
+          chiXem tabBanDau="thong-tin" onMoYeuCauDuyet={moYeuCauDuyet} onQuayLai={() => setHoSoDangXem(null)} />
       ) : TrangHienTai ? (
         <TrangHienTai
           key={mucDangChon}
           onXemCuocHop={laQuanLy ? setHoSoDangXem : undefined}
           token={token}
           nguoiDung={nguoiDung}
+          cuocHopCanDuyet={cuocHopCanDuyet}
           chiXemBanGiao={mucDangChon === 'cuoc-hop-duoc-giao'}
+          chiXemChuyenCap={mucDangChon === 'ho-so-chuyen-cap'}
           chiXemRaSoat={mucDangChon === 'ho-so-ra-soat'}
           chiXemPhanHoi={mucDangChon === 'phan-hoi-ke-hoach'}
           cuocHopLapLich={cuocHopLapLich}
@@ -64,6 +78,9 @@ export default function KhongGianLamViec({ nguoiDung, loi, onDangXuat }) {
         <TongQuanCuocHop
           token={token}
           nguoiDung={nguoiDung}
+          onMoHoSoDangHop={setHoSoDangXem}
+          onMoBieuQuyet={cacMuc.some(({ id }) => id === 'tham-gia-bieu-quyet')
+            ? () => chonMuc('tham-gia-bieu-quyet') : undefined}
           coTheMoDanhSach={cacMuc.some((muc) => muc.id === 'de-xuat')}
           onMoDanhSach={() => setMucDangChon('de-xuat')}
           onXemCuocHop={laQuanLy ? setHoSoDangXem : undefined}

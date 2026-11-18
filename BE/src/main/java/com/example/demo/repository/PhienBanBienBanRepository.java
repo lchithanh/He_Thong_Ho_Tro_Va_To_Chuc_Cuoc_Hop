@@ -14,6 +14,20 @@ import com.example.demo.entity.PhienBanBienBan;
 public interface PhienBanBienBanRepository
         extends JpaRepository<PhienBanBienBan, Integer> {
 
+    interface SoPhienBanMoiNhat {
+        Integer getBienBanId();
+        Integer getSoPhienBan();
+    }
+
+    @Query("""
+            select pb.bienBan.bienBanId as bienBanId, max(pb.soPhienBan) as soPhienBan
+            from PhienBanBienBan pb
+            where pb.bienBan.bienBanId in :bienBanIds
+            group by pb.bienBan.bienBanId
+            """)
+    List<SoPhienBanMoiNhat> timSoPhienBanMoiNhat(
+            @Param("bienBanIds") List<Integer> bienBanIds);
+
     // Danh sách phiên bản, mới nhất trước.
     List<PhienBanBienBan>
             findByBienBan_BienBanIdOrderBySoPhienBanDesc(

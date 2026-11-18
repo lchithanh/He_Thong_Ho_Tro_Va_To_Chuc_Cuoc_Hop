@@ -86,6 +86,11 @@ export async function layBienBanChoToiPhatHanh(token, signal) {
   return docPhanHoiBienBan(await goiApi('/api/bien-ban/cho-toi-phat-hanh', { token, signal }))
 }
 
+export async function layBienBanDaPhatHanhCuaToi(token, signal) {
+  const response = await goiApi('/api/bien-ban/da-phat-hanh-cua-toi', { token, signal })
+  return docPhanHoiBienBan(response)
+}
+
 export async function layTaiLieuBienBan(cuocHopId, token, signal) {
   return docPhanHoiBienBan(await goiApi(`/api/bien-ban/cuoc-hop/${cuocHopId}/tai-lieu`, { token, signal }))
 }
@@ -98,12 +103,15 @@ export async function taiLenTaiLieuBienBan(cuocHopId, file, token) {
   }))
 }
 
-export async function taiXuongTaiLieuBienBan(cuocHopId, taiLieu, token) {
-  const response = await goiApi(
-    `/api/bien-ban/cuoc-hop/${cuocHopId}/tai-lieu/${taiLieu.taiLieuId}/tai-xuong`, { token },
-  )
+export async function layTepBienBan({ cuocHopId }, taiLieuId, token, signal) {
+  const response = await goiApi(`/api/bien-ban/cuoc-hop/${cuocHopId}/tai-lieu/${taiLieuId}/tai-xuong`, { token, signal })
   if (!response.ok) return docPhanHoiBienBan(response)
-  const url = URL.createObjectURL(await response.blob())
+  return response.blob()
+}
+
+export async function taiXuongTaiLieuBienBan(cuocHopId, taiLieu, token) {
+  const tep = await layTepBienBan({ cuocHopId }, taiLieu.taiLieuId, token)
+  const url = URL.createObjectURL(tep)
   const lienKet = document.createElement('a')
   lienKet.href = url
   lienKet.download = taiLieu.tenFileGoc || 'tai-lieu-bien-ban'

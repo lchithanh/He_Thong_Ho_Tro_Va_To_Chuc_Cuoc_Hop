@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
 import { layLichTheoCuocHop } from '../../api/cuocHopApi.js'
 
 const TEN_TRANG_THAI = {
@@ -45,6 +46,7 @@ function DanhSachLich({ lich, loaiHinh }) {
 }
 
 export default function LichCuaHoSo({ cuocHopId, loaiHinh, token, lichHopIdKeHoachDaDuyet }) {
+  const phienDongBo = useDongBoDuLieu()
   const [lich, setLich] = useState(null)
   const [loi, setLoi] = useState('')
   useEffect(() => {
@@ -55,7 +57,7 @@ export default function LichCuaHoSo({ cuocHopId, loaiHinh, token, lichHopIdKeHoa
         if (!controller.signal.aborted) setLoi(error.status === 403 ? 'Bạn không có quyền xem lịch của cuộc họp này.' : error.message)
       })
     return () => controller.abort()
-  }, [cuocHopId, token])
+  }, [cuocHopId, token, phienDongBo])
 
   const hienTai = lich?.filter((muc) => ['DA_XAC_NHAN', 'DE_XUAT'].includes(muc.trangThai))
   const choXacNhanLich = !loi && hienTai?.some(

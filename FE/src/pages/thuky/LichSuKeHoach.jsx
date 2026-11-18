@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
 import { layLichSuKeHoach } from '../../api/cuocHopApi.js'
 
 const TEN_CAP = {
@@ -95,6 +96,7 @@ function LoTrinhLanTrinh({ lanTrinh, thuTu }) {
 }
 
 export default function LichSuKeHoach({ cuocHopId, token }) {
+  const phienDongBo = useDongBoDuLieu()
   const [ketQua, setKetQua] = useState(null)
   const khoaYeuCau = `${cuocHopId}:${token}`
 
@@ -110,7 +112,7 @@ export default function LichSuKeHoach({ cuocHopId, token }) {
       })
 
     return () => controller.abort()
-  }, [cuocHopId, khoaYeuCau, token])
+  }, [cuocHopId, khoaYeuCau, token, phienDongBo])
 
   const ketQuaHienTai = ketQua?.khoaYeuCau === khoaYeuCau ? ketQua : null
   const lichSu = ketQuaHienTai?.lichSu ?? null

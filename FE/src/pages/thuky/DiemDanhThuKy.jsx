@@ -1,18 +1,18 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
 import CheckCircle2 from 'lucide-react/dist/esm/icons/check-circle-2.mjs'
 import Clock3 from 'lucide-react/dist/esm/icons/clock-3.mjs'
 import LogOut from 'lucide-react/dist/esm/icons/log-out.mjs'
 import UserRoundCheck from 'lucide-react/dist/esm/icons/user-round-check.mjs'
 import UserRoundX from 'lucide-react/dist/esm/icons/user-round-x.mjs'
 import {
-  diemDanhThanhVienCuocHop,
   ghiNhanRoiSom,
   layThanhVienCuocHop,
 } from '../../api/thanhVienCuocHopApi.js'
 import { layLichTheoCuocHop } from '../../api/cuocHopApi.js'
 
 const TEN_TRANG_THAI = {
-  CHUA_DIEM_DANH: 'Chưa điểm danh',
+  CHUA_DIEM_DANH: 'Chưa tham gia',
   CO_MAT: 'Có mặt',
   VANG_MAT: 'Vắng mặt',
 }
@@ -26,12 +26,13 @@ function dinhDangGio(thoiGian) {
 }
 
 export default function DiemDanhThuKy({ cuocHopId, token, readOnly = false }) {
+  const phienDongBo = useDongBoDuLieu()
   const [thanhVien, setThanhVien] = useState(null)
   const [batDauDuKien, setBatDauDuKien] = useState(null)
   const [loiTai, setLoiTai] = useState('')
   const [loiDiemDanh, setLoiDiemDanh] = useState('')
-  const [dangLuuId, setDangLuuId] = useState(null)
   const [dangRoiSomId, setDangRoiSomId] = useState(null)
+  const [lanTai, setLanTai] = useState(0)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -39,7 +40,8 @@ export default function DiemDanhThuKy({ cuocHopId, token, readOnly = false }) {
     layThanhVienCuocHop(cuocHopId, token, controller.signal)
       .then((duLieu) => {
         if (!controller.signal.aborted) {
-          setThanhVien(duLieu.filter((muc) => muc.vaiTroTaiCuocHop === 'THAM_DU'))
+          setThanhVien(duLieu)
+          setLoiTai('')
         }
       })
       .catch((loi) => {
@@ -57,7 +59,7 @@ export default function DiemDanhThuKy({ cuocHopId, token, readOnly = false }) {
       })
 
     return () => controller.abort()
-  }, [cuocHopId, token])
+  }, [cuocHopId, token, lanTai, phienDongBo])
 
   const thongKe = useMemo(() => {
     const danhSach = thanhVien || []
@@ -72,30 +74,14 @@ export default function DiemDanhThuKy({ cuocHopId, token, readOnly = false }) {
   async function capNhatDanhSachSauKhiLuu() {
     try {
       const duLieu = await layThanhVienCuocHop(cuocHopId, token)
-      setThanhVien(duLieu.filter((muc) => muc.vaiTroTaiCuocHop === 'THAM_DU'))
+      setThanhVien(duLieu)
     } catch (loi) {
       setLoiDiemDanh(`Đã lưu, nhưng chưa tải lại được danh sách. ${loi.message}`)
     }
   }
 
-  async function xuLyDiemDanh(nguoiDungId, coMat) {
-    if (dangLuuId !== null || dangRoiSomId !== null || readOnly) return
-
-    setDangLuuId(nguoiDungId)
-    setLoiDiemDanh('')
-
-    try {
-      await diemDanhThanhVienCuocHop(cuocHopId, nguoiDungId, coMat, token)
-      await capNhatDanhSachSauKhiLuu()
-    } catch (loi) {
-      setLoiDiemDanh(loi.message)
-    } finally {
-      setDangLuuId(null)
-    }
-  }
-
   async function xuLyRoiSom(nguoiDungId) {
-    if (dangLuuId !== null || dangRoiSomId !== null || readOnly) return
+    if (dangRoiSomId !== null || readOnly) return
 
     setDangRoiSomId(nguoiDungId)
     setLoiDiemDanh('')
@@ -117,13 +103,18 @@ export default function DiemDanhThuKy({ cuocHopId, token, readOnly = false }) {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.14em] text-emerald-800">Tham dự</p>
-          <h2 className="mt-1 text-xl font-bold text-slate-900">Điểm danh cuộc họp</h2>
+          <h2 className="mt-1 text-xl font-bold text-slate-900">Tham dự cuộc họp</h2>
+          <p className="mt-1 text-sm text-slate-600">Thành viên được ghi nhận có mặt khi bấm Tham gia ở Tổng quan.</p>
           <p className="mt-1 text-sm text-slate-500">
             {mocBatDau
               ? `Lịch bắt đầu ${dinhDangGio(batDauDuKien)}`
               : 'Chưa có giờ bắt đầu đã xác nhận để đối chiếu giờ đến.'}
           </p>
         </div>
+        <button type="button" onClick={() => setLanTai((lan) => lan + 1)}
+          className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50">
+          Làm mới danh sách
+        </button>
         {readOnly && (
           <span className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600">
             Chế độ xem
@@ -158,7 +149,7 @@ export default function DiemDanhThuKy({ cuocHopId, token, readOnly = false }) {
       )}
 
       {thanhVien?.length === 0 && (
-        <p className="rounded-xl bg-slate-50 p-5 text-sm text-slate-600">Chưa có người tham dự để điểm danh.</p>
+        <p className="rounded-xl bg-slate-50 p-5 text-sm text-slate-600">Chưa có thành viên trong danh sách tham dự.</p>
       )}
 
       {thanhVien?.length > 0 && (
@@ -182,10 +173,10 @@ export default function DiemDanhThuKy({ cuocHopId, token, readOnly = false }) {
                       <p className="truncate text-sm font-semibold text-slate-900">{muc.hoTen}</p>
                       <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
                         <span className="inline-flex items-center gap-1">
-                          <Clock3 size={13} />
+                          <Clock3 size={13} aria-hidden="true" />
                           {TEN_TRANG_THAI[muc.trangThaiThamDu] ?? muc.trangThaiThamDu}
                         </span>
-                        {muc.thoiGianDiemDanh && <span>Điểm danh {dinhDangGio(muc.thoiGianDiemDanh)}</span>}
+                        {muc.thoiGianDiemDanh && <span>Ghi nhận {dinhDangGio(muc.thoiGianDiemDanh)}</span>}
                         {muc.thoiGianRoiCuocHop && <span>Rời họp {dinhDangGio(muc.thoiGianRoiCuocHop)}</span>}
                         {denMuon && <span className="rounded-full bg-amber-50 px-2 py-0.5 font-semibold text-amber-800">Đến muộn</span>}
                         {muc.thoiGianRoiCuocHop && <span className="rounded-full bg-orange-50 px-2 py-0.5 font-semibold text-orange-800">Rời sớm</span>}
@@ -193,35 +184,12 @@ export default function DiemDanhThuKy({ cuocHopId, token, readOnly = false }) {
                     </div>
                   </div>
 
-                  {!readOnly && (
-                    <div className="flex flex-wrap gap-2 sm:justify-end">
-                      <button
-                        type="button"
-                        disabled={dangLuuId !== null || dangRoiSomId !== null || muc.trangThaiThamDu === 'CO_MAT'}
-                        onClick={() => xuLyDiemDanh(muc.nguoiDungId, true)}
-                        className="rounded-lg bg-emerald-800 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-900 disabled:cursor-not-allowed disabled:opacity-45"
-                      >
-                        {dangLuuId === muc.nguoiDungId ? 'Đang lưu…' : 'Có mặt'}
-                      </button>
-                      <button
-                        type="button"
-                        disabled={dangLuuId !== null || dangRoiSomId !== null || muc.trangThaiThamDu === 'VANG_MAT' || Boolean(muc.thoiGianRoiCuocHop)}
-                        onClick={() => xuLyDiemDanh(muc.nguoiDungId, false)}
-                        className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-45"
-                      >
-                        Vắng mặt
-                      </button>
-                      {muc.trangThaiThamDu === 'CO_MAT' && !muc.thoiGianRoiCuocHop && (
-                        <button
-                          type="button"
-                          disabled={dangLuuId !== null || dangRoiSomId !== null}
-                          onClick={() => xuLyRoiSom(muc.nguoiDungId)}
-                          className="rounded-lg border border-amber-200 px-3 py-2 text-xs font-semibold text-amber-800 transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-45"
-                        >
-                          {dangRoiSomId === muc.nguoiDungId ? 'Đang lưu…' : 'Ghi nhận rời sớm'}
-                        </button>
-                      )}
-                    </div>
+                  {!readOnly && muc.trangThaiThamDu === 'CO_MAT' && !muc.thoiGianRoiCuocHop && (
+                    <button type="button" disabled={dangRoiSomId !== null}
+                      onClick={() => xuLyRoiSom(muc.nguoiDungId)}
+                      className="rounded-lg border border-amber-200 px-3 py-2 text-xs font-semibold text-amber-800 transition hover:bg-amber-50 disabled:opacity-45">
+                      {dangRoiSomId === muc.nguoiDungId ? 'Đang lưu…' : 'Ghi nhận rời sớm'}
+                    </button>
                   )}
                 </li>
               )

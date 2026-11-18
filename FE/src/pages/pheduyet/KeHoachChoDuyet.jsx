@@ -1,11 +1,18 @@
 import { useEffect, useState } from 'react'
+import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
 import { layKeHoachChoToiDuyet } from '../../api/cuocHopApi.js'
 import ChiTietKeHoachChoDuyet from './ChiTietKeHoachChoDuyet.jsx'
 
-export default function KeHoachChoDuyet({ token }) {
+export default function KeHoachChoDuyet({ token, cuocHopCanDuyet }) {
+  const phienDongBo = useDongBoDuLieu()
   const [danhSach, setDanhSach] = useState(null)
   const [loi, setLoi] = useState('')
-  const [yeuCauDangXem, setYeuCauDangXem] = useState(null)
+  const [yeuCauDaChon, setYeuCauDangXem] = useState(undefined)
+  const yeuCauMoTuHoSo = cuocHopCanDuyet == null ? null
+    : danhSach?.find((muc) => String(muc.cuocHopId) === String(cuocHopCanDuyet))
+  const yeuCauDangXem = yeuCauDaChon === undefined
+    ? yeuCauMoTuHoSo?.yeuCauPheDuyetId
+    : yeuCauDaChon
   const [thongBao, setThongBao] = useState('')
 
   useEffect(() => {
@@ -22,7 +29,7 @@ export default function KeHoachChoDuyet({ token }) {
 
     taiDanhSach()
     return () => controller.abort()
-  }, [token])
+  }, [token, phienDongBo])
 
   return (
     <section className="space-y-4 rounded-xl border border-[#e2e8f0] bg-white p-5">
@@ -30,6 +37,11 @@ export default function KeHoachChoDuyet({ token }) {
       {thongBao && (
         <p role="status" className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-900">
           {thongBao}
+        </p>
+      )}
+      {!loi && danhSach && cuocHopCanDuyet != null && yeuCauDaChon === undefined && !yeuCauMoTuHoSo && (
+        <p role="status" className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-slate-700">
+          Cuộc họp này hiện không có yêu cầu chờ bạn duyệt.
         </p>
       )}
       {loi ? (

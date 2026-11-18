@@ -1,5 +1,7 @@
 package com.example.demo.service;
 
+import static com.example.demo.service.BienBanService.LOAI_TAI_LIEU_BIEN_BAN;
+
 import java.nio.file.Path;
 import java.util.List;
 
@@ -10,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.example.demo.dto.response.TaiLieuBienBanResponse;
 import com.example.demo.repository.BienBanCuocHopRepository;
 import com.example.demo.repository.CuocHopRepository;
 import com.example.demo.repository.TaiLieuCuocHopRepository;
@@ -21,8 +24,6 @@ import lombok.RequiredArgsConstructor;
 @Service
 @RequiredArgsConstructor
 public class TaiLieuBienBanService {
-    private static final String LOAI_BIEN_BAN = "BIEN_BAN_CUOC_HOP";
-
     private final CuocHopRepository cuocHopRepository;
     private final BienBanCuocHopRepository bienBanRepository;
     private final TaiLieuCuocHopRepository taiLieuRepository;
@@ -33,8 +34,6 @@ public class TaiLieuBienBanService {
 
     @Value("${app.upload.bien-ban-dir:uploads/bien-ban-cuoc-hop}")
     private String thuMucTaiLieu;
-
-    public record TaiLieuBienBan(Integer taiLieuId, String tenFileGoc, String dinhDangFile, Long dungLuongByte) {}
 
     @Transactional
     public Integer taiLen(Integer cuocHopId, Integer nguoiDungId, MultipartFile file) {
@@ -48,16 +47,15 @@ public class TaiLieuBienBanService {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Chỉ thêm tệp khi biên bản đang nháp hoặc bị trả lại");
         }
-        return luuTaiLieuService.luuTaiLieu(cuocHop, nguoiTaiLen, file, LOAI_BIEN_BAN,
+        return luuTaiLieuService.luuTaiLieu(cuocHop, nguoiTaiLen, file, LOAI_TAI_LIEU_BIEN_BAN,
                 Path.of(thuMucTaiLieu).toAbsolutePath().normalize());
     }
 
     @Transactional(readOnly = true)
-    public List<TaiLieuBienBan> layDanhSach(Integer cuocHopId, Integer nguoiDungId) {
+    public List<TaiLieuBienBanResponse> layDanhSach(Integer cuocHopId, Integer nguoiDungId) {
         bienBanService.layBienBanDuocXem(cuocHopId, nguoiDungId);
-        return taiLieuRepository.findByCuocHop_CuocHopIdAndLoaiTaiLieuOrderByTaiLieuIdAsc(cuocHopId, LOAI_BIEN_BAN)
-                .stream().map(tep -> new TaiLieuBienBan(tep.getTaiLieuId(), tep.getTenFileGoc(),
-                        tep.getDinhDangFile(), tep.getDungLuongByte()))
+        return taiLieuRepository.findByCuocHop_CuocHopIdAndLoaiTaiLieuOrderByTaiLieuIdAsc(cuocHopId, LOAI_TAI_LIEU_BIEN_BAN)
+                .stream().map(TaiLieuBienBanResponse::tuTaiLieu)
                 .toList();
     }
 
@@ -66,7 +64,7 @@ public class TaiLieuBienBanService {
         bienBanService.layBienBanDuocXem(cuocHopId, nguoiDungId);
         var taiLieu = taiLieuRepository.findById(taiLieuId)
                 .filter(tep -> cuocHopId.equals(tep.getCuocHop().getCuocHopId()))
-                .filter(tep -> LOAI_BIEN_BAN.equals(tep.getLoaiTaiLieu()))
+                .filter(tep -> LOAI_TAI_LIEU_BIEN_BAN.equals(tep.getLoaiTaiLieu()))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy tệp biên bản"));
         return luuTaiLieuService.docTep(taiLieu, Path.of(thuMucTaiLieu));
     }

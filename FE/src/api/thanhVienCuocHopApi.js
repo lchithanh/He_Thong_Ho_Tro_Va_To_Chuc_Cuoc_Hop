@@ -131,3 +131,16 @@ export async function moiDanhSachThanhVienCuocHop(cuocHopId, nguoiDuocMoiIds, to
   })
   return docPhanHoiJson(response, `Không gửi được lời mời (HTTP ${response.status}).`)
 }
+
+export async function layCuocHopDangDienRaCuaToi(token, signal) {
+  const response = await goiApi('/api/cuoc-hop/thanh-vien/dang-dien-ra-cua-toi', { token, signal })
+  return docPhanHoiJson(response, 'Không tải được cuộc họp đang diễn ra.')
+}
+
+export async function thamGiaCuocHop(cuocHopId, token) {
+  const response = await goiApi(`/api/cuoc-hop/${cuocHopId}/thanh-vien/tham-gia`, {
+    method: 'PUT',
+    token,
+  })
+  return docPhanHoiJson(response, 'Không ghi nhận được lượt tham gia.')
+}

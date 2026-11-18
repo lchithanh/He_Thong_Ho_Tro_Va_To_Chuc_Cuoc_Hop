@@ -333,9 +333,9 @@ public class KetLuanCuocHopService {
                         .existsByCuocHop_CuocHopIdAndNguoiDung_NguoiDungIdAndVaiTroTaiCuocHop(
                                 cuocHopId, nguoiDangNhapId, "THU_KY")
                 || ("DA_PHAT_HANH".equals(ketLuan.getTrangThai())
-                        && thanhVienCuocHopRepository
-                                .existsByCuocHop_CuocHopIdAndNguoiDung_NguoiDungId(
-                                        cuocHopId, nguoiDangNhapId));
+                        && cuocHopRepository.coQuyenDocVanBanDaPhatHanh(
+                                cuocHopId, nguoiDangNhapId,
+                                LoaiYeuCau.KE_HOACH_CUOC_HOP, TrangThai.DA_DUYET));
 
         if (!duocXem) {
             throw new ResponseStatusException(
@@ -374,7 +374,8 @@ public class KetLuanCuocHopService {
         nguoiDungHienTaiService.layTaiKhoanHoatDong(nguoiDungId);
 
         return ketLuanCuocHopRepository
-                .timKetLuanDaPhatHanhDuocXem(nguoiDungId)
+                .timKetLuanDaPhatHanhDuocXem(
+                        nguoiDungId, LoaiYeuCau.KE_HOACH_CUOC_HOP, TrangThai.DA_DUYET)
                 .stream()
                 .map(this::toResponse)
                 .toList();

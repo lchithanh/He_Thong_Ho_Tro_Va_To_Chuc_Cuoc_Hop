@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
 import { LichCuaHoSo } from '../thuky/DanhSachDeXuatThuKy.jsx'
 import {
   layKetLuanChoToiPhatHanh,
@@ -10,6 +11,7 @@ import BanXemTruocVanBan from '../thuky/BanXemTruocVanBan.jsx'
 import KhongGianVanBan from '../thuky/KhongGianVanBan.jsx'
 
 export default function KetLuanChoPhatHanh({ token, cheDo }) {
+  const phienDongBo = useDongBoDuLieu()
   const [danhSach, setDanhSach] = useState(null)
   const [dangMo, setDangMo] = useState({})
   const [loi, setLoi] = useState('')
@@ -22,14 +24,17 @@ export default function KetLuanChoPhatHanh({ token, cheDo }) {
 
     layKetLuanChoToiPhatHanh(token, controller.signal)
       .then((duLieu) => {
-        if (!controller.signal.aborted) setDanhSach(duLieu)
+        if (!controller.signal.aborted) {
+          setDanhSach(duLieu)
+          setLoi('')
+        }
       })
       .catch((loiTai) => {
         if (!controller.signal.aborted) setLoi(loiTai.message)
       })
 
     return () => controller.abort()
-  }, [token, lanTai])
+  }, [token, lanTai, phienDongBo])
 
   async function xuLyPhatHanh(ketLuan) {
     if (dangPhatHanhId !== null) return
@@ -39,13 +44,11 @@ export default function KetLuanChoPhatHanh({ token, cheDo }) {
     setThongBao('')
 
     try {
-      const ketQua = await phatHanhKetLuan(ketLuan.cuocHopId, token)
+      await phatHanhKetLuan(ketLuan.cuocHopId, token)
       setDanhSach((hienTai) =>
         hienTai.filter((muc) => muc.ketLuanId !== ketLuan.ketLuanId),
       )
-      setThongBao(ketQua.trangThai === 'DA_DUYET'
-        ? 'Đã duyệt kết luận. Thư ký cuộc họp có thể phát hành.'
-        : `Đã phát hành kết luận cuộc họp #${ketLuan.cuocHopId}.`)
+      setThongBao('Đã phát hành kết luận cuộc họp.')
     } catch (loiPhatHanh) {
       setLoi(loiPhatHanh.message)
     } finally {

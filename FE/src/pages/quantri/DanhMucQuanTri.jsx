@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
 import { LOP_KHOI, LOP_TRUONG, LOP_NUT_CHINH } from '../../components/lopBieuMau.js'
 import { goiApiQuanTri } from '../../api/quanTriApi.js'
 
@@ -10,6 +11,7 @@ const TINH_TRANG_THIET_BI = {
 }
 
 export default function DanhMucQuanTri({ token, loai }) {
+  const phienDongBo = useDongBoDuLieu()
   const laPhongBan = loai === 'departments'
   const danhTu = laPhongBan ? 'phòng ban' : 'thiết bị'
   const [danhSach, setDanhSach] = useState(null)
@@ -39,7 +41,7 @@ export default function DanhMucQuanTri({ token, loai }) {
       if (!controller.signal.aborted) setLoiTai(error.message)
     })
     return () => controller.abort()
-  }, [loai, laPhongBan, lanTai, token])
+  }, [loai, laPhongBan, lanTai, token, phienDongBo])
 
   useEffect(() => {
     vungBieuMau.current?.focus()

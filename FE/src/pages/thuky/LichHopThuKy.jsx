@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
 import {
   layChiTietLichCalendar,
   layDanhSachDeXuat,
@@ -25,6 +26,7 @@ const TRANG_THAI_PHONG = {
 }
 
 function FormDeXuatLich({ cuocHopId, loaiHinh, token, ngayChon, khungGio, onDaTao }) {
+  const phienDongBo = useDongBoDuLieu()
   const [loiLuu, setLoiLuu] = useState('')
   const [thongBao, setThongBao] = useState('')
   const [dangLuu, setDangLuu] = useState(false)
@@ -59,7 +61,7 @@ function FormDeXuatLich({ cuocHopId, loaiHinh, token, ngayChon, khungGio, onDaTa
         if (!controller.signal.aborted) setLoiPhong({ khoaGio, message: loi.message })
       })
     return () => controller.abort()
-  }, [cuocHopId, token, hopTrucTiep, mocBatDau, mocKetThuc, khoaGio])
+  }, [cuocHopId, token, hopTrucTiep, mocBatDau, mocKetThuc, khoaGio, phienDongBo])
 
   function dienNgayVaoForm() {
     const batDau = formLich.current.elements.namedItem('thoiGianBatDau')
@@ -186,6 +188,7 @@ function FormDeXuatLich({ cuocHopId, loaiHinh, token, ngayChon, khungGio, onDaTa
 }
 
 export function LichHopCaNhan({ token, nguoiDung, cuocHopLapLich }) {
+  const phienDongBo = useDongBoDuLieu()
   const [danhSach, setDanhSach] = useState(null)
   const [loiTai, setLoiTai] = useState('')
   const [ngayChon, setNgayChon] = useState(() => new Date())
@@ -196,7 +199,7 @@ export function LichHopCaNhan({ token, nguoiDung, cuocHopLapLich }) {
       .then((lich) => { if (!controller.signal.aborted) setDanhSach(lich) })
       .catch((loi) => { if (!controller.signal.aborted) setLoiTai(loi.message) })
     return () => controller.abort()
-  }, [token])
+  }, [token, phienDongBo])
 
   const [khungGio, setKhungGio] = useState(null)
   const [moForm, setMoForm] = useState(Boolean(cuocHopLapLich))
@@ -222,7 +225,7 @@ export function LichHopCaNhan({ token, nguoiDung, cuocHopLapLich }) {
       })
       .catch((loi) => { if (!controller.signal.aborted) setLoiDeXuat(loi.message) })
     return () => controller.abort()
-  }, [token, laThuKy, moForm])
+  }, [token, laThuKy, moForm, phienDongBo])
 
   const cuocHop = deXuat?.find((muc) => String(muc.cuocHopId) === String(cuocHopId))
 
@@ -281,6 +284,7 @@ export function LichHopCaNhan({ token, nguoiDung, cuocHopLapLich }) {
 }
 
 function ChiTietLich({ lich, token, onDaXuLy }) {
+  const phienDongBo = useDongBoDuLieu()
   const lichHopId = lich.lichHopId
   const [chiTiet, setChiTiet] = useState(null)
   const [tep, setTep] = useState(null)
@@ -297,7 +301,7 @@ function ChiTietLich({ lich, token, onDaXuLy }) {
       .then((duLieu) => { if (!controller.signal.aborted) setChiTiet(duLieu) })
       .catch((loi) => { if (!controller.signal.aborted) setLoi(loi.message) })
     return () => controller.abort()
-  }, [lichHopId, token])
+  }, [lichHopId, token, phienDongBo])
 
   useEffect(() => {
     if (yeuCauId == null) return
@@ -306,7 +310,7 @@ function ChiTietLich({ lich, token, onDaXuLy }) {
       .then((duLieu) => { if (!controller.signal.aborted) setTep(duLieu) })
       .catch((loi) => { if (!controller.signal.aborted) setLoiTep(loi.message) })
     return () => controller.abort()
-  }, [yeuCauId, token])
+  }, [yeuCauId, token, phienDongBo])
 
   async function xuLy(thaoTac) {
     if (dangLuu) return

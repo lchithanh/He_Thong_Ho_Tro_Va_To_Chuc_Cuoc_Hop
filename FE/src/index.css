@@ -96,3 +96,26 @@ button:enabled {
   padding: 10cqi 9cqi 10cqi 15cqi;
   font-size: clamp(0.75rem, 2.2cqi, 13pt);
 }
+
+
+/* Mật độ 75% trên máy tính. Kích thước đọc và chạm trên màn hình nhỏ giữ ở 100%. */
+:root {
+  --ty-le-giao-dien: 1;
+  --chieu-cao-khong-gian: calc(100dvh / var(--ty-le-giao-dien));
+}
+
+.bo-cuc-cuoc-hop {
+  min-height: var(--chieu-cao-khong-gian);
+  grid-template-columns: 244px minmax(0, 1fr);
+}
+
+@media (min-width: 1024px) {
+  :root { --ty-le-giao-dien: .75; }
+  #root { zoom: var(--ty-le-giao-dien); }
+  .bo-cuc-cuoc-hop { grid-template-columns: 328px minmax(0, 1fr); }
+}
+
+@media (min-width: 1280px) {
+  .bo-cuc-lich-hop { grid-template-columns: 312px minmax(0, 1fr); }
+  .luoi-gio-lich-hop { height: max(340px, calc(var(--chieu-cao-khong-gian) - 270px)); }
+}

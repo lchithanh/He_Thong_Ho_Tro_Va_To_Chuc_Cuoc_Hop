@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
 import {
   dongBieuQuyet,
   layDanhSachBieuQuyetCuaChuTri,
@@ -14,6 +15,7 @@ const TEN_TRANG_THAI = {
 export default function DanhSachBieuQuyetChuTri({
   cuocHopId, token, dangDienRa, lanTao,
 }) {
+  const phienDongBo = useDongBoDuLieu()
   const [danhSach, setDanhSach] = useState(null)
   const [loi, setLoi] = useState('')
   const [idDangMo, setIdDangMo] = useState(null)
@@ -35,7 +37,7 @@ const [ketQuaDangXem, setKetQuaDangXem] = useState(null)
       })
 
     return () => controller.abort()
-  }, [cuocHopId, token, lanTao])
+  }, [cuocHopId, token, lanTao, phienDongBo])
 
   async function xuLyMo(bieuQuyetId) {
     if (idDangMo !== null) return
