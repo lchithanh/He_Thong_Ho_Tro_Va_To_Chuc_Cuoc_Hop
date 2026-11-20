@@ -10,6 +10,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.example.demo.dto.request.TaoNguoiDungRequest;
 import com.example.demo.dto.response.NguoiDungResponse;
+import com.example.demo.dto.response.VaiTroLuaChonResponse;
 import com.example.demo.entity.NguoiDung;
 import com.example.demo.entity.NguoiDungVaiTro;
 import com.example.demo.entity.PhongBan;
@@ -51,6 +52,8 @@ public class NguoiDungService {
                 .map(this::chuyenDoiResponse)
                 .toList();
     }
+
+   
 
     // Thêm người dùng
     @Transactional
@@ -338,4 +341,16 @@ public NguoiDungResponse capNhatVaiTro(
         );
     }
     
+   
+
+    @Transactional(readOnly = true)
+    public List<VaiTroLuaChonResponse> layVaiTroHoatDong() {
+        return vaiTroRepository.findAll().stream()
+                .filter(vaiTro -> "HOAT_DONG".equals(vaiTro.getTrangThai()))
+                .map(vaiTro -> new VaiTroLuaChonResponse(
+                        vaiTro.getVaiTroId(),
+                        vaiTro.getMaVaiTro(),
+                        vaiTro.getTenVaiTro()))
+                .toList();
+    }
     }

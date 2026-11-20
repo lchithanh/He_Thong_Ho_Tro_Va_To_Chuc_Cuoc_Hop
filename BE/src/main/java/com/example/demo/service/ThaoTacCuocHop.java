@@ -1,14 +1,21 @@
 package com.example.demo.service;
 
 import java.time.LocalDateTime;
+import java.util.Objects;
 import java.util.function.Supplier;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.example.demo.entity.CuocHop;
+import com.example.demo.entity.LichHop;
 import com.example.demo.entity.NguoiDung;
 import com.example.demo.entity.PhongBan;
+import com.example.demo.entity.YeuCauPheDuyet;
+import java.time.LocalDateTime;
+import java.util.Objects;
+import com.example.demo.entity.LichHop;
+import com.example.demo.entity.YeuCauPheDuyet;
 
 final class ThaoTacCuocHop {
     private ThaoTacCuocHop() { }
@@ -53,6 +60,8 @@ final class ThaoTacCuocHop {
     static boolean daDuocPheDuyet(CuocHop cuocHop) {
         return "DA_DUYET".equals(cuocHop.getTrangThai());
     }
+
+
 
     static boolean biTuChoi(CuocHop cuocHop) {
         return "TU_CHOI".equals(cuocHop.getTrangThai());
@@ -189,6 +198,20 @@ final class ThaoTacCuocHop {
 
     static boolean coLichDaXacNhan(CuocHop cuocHop) {
         return cuocHop.getDanhSachLichHop().stream().anyMatch(ThaoTacLichHop::daXacNhan);
+    }
+    static boolean coLichMoiThamDu(CuocHop cuocHop, YeuCauPheDuyet yeuCau) {
+        if (!coTheLapLich(cuocHop) || yeuCau == null
+                || yeuCau.getTrangThai() != YeuCauPheDuyet.TrangThai.DA_DUYET) {
+            return false;
+        }
+
+        LichHop lichHop = yeuCau.getLichHop();
+        return lichHop != null
+                && lichHop.getCuocHop() != null
+                && Objects.equals(cuocHop.getCuocHopId(), lichHop.getCuocHop().getCuocHopId())
+                && ThaoTacLichHop.daXacNhan(lichHop)
+                && lichHop.getThoiGianBatDau() != null
+                && lichHop.getThoiGianBatDau().isAfter(LocalDateTime.now());
     }
 
     static CuocHop taoDeXuatNhap(
@@ -344,4 +367,6 @@ final class ThaoTacCuocHop {
             throw new IllegalStateException("Kế hoạch chưa được trình đến người duyệt");
         }
     }
+    
+    
 }

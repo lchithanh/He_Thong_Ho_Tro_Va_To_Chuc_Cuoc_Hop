@@ -1,22 +1,30 @@
 import { useEffect, useState } from 'react'
 import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
-import { LOP_KHOI, LOP_TRUONG, LOP_NUT_CHINH } from '../../components/lopBieuMau.js'
+import { PhanHoi, TieuDeTrang, TimKiem, TrangThai } from './uiQuanTri.jsx'
 import { huyPhanCongThuKy, layDuLieuPhanCongThuKy, luuPhanCongThuKy } from '../../api/cuocHopApi.js'
 
 export default function PhanCongThuKy({ token }) {
   const phienDongBo = useDongBoDuLieu()
   const [duLieu, setDuLieu] = useState(null)
   const [loi, setLoi] = useState('')
+  const [loiTai, setLoiTai] = useState('')
+  const [lanTai, setLanTai] = useState(0)
+  const [tuKhoa, setTuKhoa] = useState('')
+  const [nhom, setNhom] = useState('lanh-dao')
   const [thongBao, setThongBao] = useState('')
   const [dangLuuId, setDangLuuId] = useState(null)
 
   useEffect(() => {
     const controller = new AbortController()
     layDuLieuPhanCongThuKy(token, controller.signal)
-      .then((ketQua) => { if (!controller.signal.aborted) setDuLieu(ketQua) })
-      .catch((error) => { if (!controller.signal.aborted) setLoi(error.message) })
+      .then((ketQua) => {
+        if (controller.signal.aborted) return
+        setDuLieu(ketQua)
+        setLoiTai('')
+      })
+      .catch((error) => { if (!controller.signal.aborted) setLoiTai(error.message) })
     return () => controller.abort()
-  }, [token, phienDongBo])
+  }, [token, phienDongBo, lanTai])
 
   const phongTheoId = new Map(duLieu?.phongBan.map((phong) => [phong.phongBanId, phong]))
   const taiKhoan = duLieu?.nguoiDung.filter((muc) => muc.trangThai === 'HOAT_DONG') ?? []
@@ -61,58 +69,77 @@ export default function PhanCongThuKy({ token }) {
     }
   }
 
+  const tuTim = tuKhoa.trim().toLocaleLowerCase('vi')
+  const phanCongTheoId = new Map(duLieu?.phanCong.map((item) => [item.nguoiDuocHoTroId, item]))
+  const danhSach = (nhom === 'lanh-dao' ? lanhDao : truongPhong).filter((muc) =>
+    [muc.hoTen, muc.tenPhongBan || phongTheoId.get(muc.phongBanId)?.tenPhongBan,
+      phanCongTheoId.get(muc.nguoiDungId)?.tenThuKy]
+      .some((giaTri) => String(giaTri ?? '').toLocaleLowerCase('vi').includes(tuTim)),
+  )
+
   return (
-    <section className="space-y-5">
-      <div>
-        <h1 className="text-2xl font-bold">Phân công thư ký</h1>
-        <p className="mt-1 text-sm text-slate-600">Mỗi lãnh đạo hoặc trưởng phòng có một thư ký mặc định riêng.</p>
-      </div>
-      {loi && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-800">{loi}</p>}
-      {thongBao && <p role="status" className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">{thongBao}</p>}
-      {!duLieu && !loi && <p role="status" className="text-sm text-slate-600">Đang tải dữ liệu phân công…</p>}
-      {duLieu && [
-        { ten: 'Thư ký lãnh đạo', danhSach: lanhDao },
-        { ten: 'Thư ký trưởng phòng', danhSach: truongPhong },
-      ].map(({ ten, danhSach }) => (
-        <section key={ten} className={LOP_KHOI}>
-          <h2 className="text-lg font-bold">{ten}</h2>
-          {danhSach.length === 0 && <p className="text-sm text-slate-600">Chưa có tài khoản phù hợp.</p>}
-          <ul className="divide-y divide-slate-200">
-            {danhSach.map((muc) => {
-              const id = muc.nguoiDungId
-              const dangPhanCong = duLieu.phanCong.find((item) => item.nguoiDuocHoTroId === id)
-              const biDungChung = (chuSoHuuThuKy.get(dangPhanCong?.thuKyId)?.length ?? 0) > 1
-              const coTheChon = thuKy.filter((item) => item.nguoiDungId !== id
-                && !(chuSoHuuThuKy.get(item.nguoiDungId) ?? []).some((nguoiId) => nguoiId !== id))
-              const thuKyDangChon = coTheChon.some((item) => item.nguoiDungId === dangPhanCong?.thuKyId)
-                ? dangPhanCong.thuKyId : ''
-              return (
-                <li key={id} className="grid gap-3 py-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)] sm:items-center">
-                  <div>
-                    <p className="font-semibold">{muc.hoTen}</p>
-                    <p className="text-sm text-slate-600">{muc.tenPhongBan || phongTheoId.get(muc.phongBanId)?.tenPhongBan}</p>
-                    <p className="mt-1 text-xs text-slate-600">{dangPhanCong ? `Đang hỗ trợ · ${dangPhanCong.tenThuKy}` : 'Chưa phân công'}</p>
-                    {biDungChung && <p className="mt-1 text-xs font-medium text-amber-800">Thư ký này đang được gán cho nhiều người.</p>}
-                  </div>
-                  <form key={dangPhanCong?.thuKyId ?? 'chua-phan-cong'} onSubmit={(event) => luu(event, id)} className="flex flex-wrap items-end gap-2">
-                    <label className="min-w-32 flex-1 text-sm font-semibold">
-                      <span className="sr-only">Thư ký cho {muc.hoTen}</span>
-                      <select className={LOP_TRUONG} name="thuKyId" defaultValue={thuKyDangChon} required disabled={coTheChon.length === 0 || dangLuuId !== null}>
+    <section className="adm-page">
+      <TieuDeTrang ten="Phân công thư ký" moTa="Chọn thư ký mặc định cho từng lãnh đạo hoặc trưởng phòng." />
+      <PhanHoi loi={loiTai} onTaiLai={() => setLanTai((lan) => lan + 1)} />
+      <PhanHoi loi={loi} thongBao={thongBao} />
+      {!duLieu && !loiTai && <p role="status" className="adm-empty adm-surface">Đang tải dữ liệu phân công…</p>}
+      {duLieu && (
+        <section className="adm-surface" aria-label="Danh sách phân công">
+          <div className="adm-toolbar">
+            <div className="adm-segments" role="group" aria-label="Nhóm được hỗ trợ">
+              <button type="button" aria-pressed={nhom === 'lanh-dao'} onClick={() => setNhom('lanh-dao')}>
+                Lãnh đạo <span>{lanhDao.length}</span>
+              </button>
+              <button type="button" aria-pressed={nhom === 'truong-phong'} onClick={() => setNhom('truong-phong')}>
+                Trưởng phòng <span>{truongPhong.length}</span>
+              </button>
+            </div>
+            <TimKiem tuKhoa={tuKhoa} onDoi={setTuKhoa} nhan="Tìm người hoặc phòng ban" />
+          </div>
+          {danhSach.length === 0 ? (
+            <p className="adm-empty">{tuTim ? 'Không có kết quả phù hợp.' : 'Chưa có tài khoản phù hợp.'}</p>
+          ) : (
+            <ul className="adm-assign-list">
+              {danhSach.map((muc) => {
+                const id = muc.nguoiDungId
+                const dangPhanCong = phanCongTheoId.get(id)
+                const biDungChung = (chuSoHuuThuKy.get(dangPhanCong?.thuKyId)?.length ?? 0) > 1
+                const coTheChon = thuKy.filter((item) => item.nguoiDungId !== id
+                  && !(chuSoHuuThuKy.get(item.nguoiDungId) ?? []).some((nguoiId) => nguoiId !== id))
+                const thuKyDangChon = coTheChon.some((item) => item.nguoiDungId === dangPhanCong?.thuKyId)
+                  ? dangPhanCong.thuKyId : ''
+                const phong = muc.tenPhongBan || phongTheoId.get(muc.phongBanId)?.tenPhongBan
+                return (
+                  <li key={id}>
+                    <div className="adm-assignee">
+                      <span className="adm-mini-avatar" aria-hidden="true">{muc.hoTen?.trim().split(/\s+/).at(-1)?.[0]?.toLocaleUpperCase('vi')}</span>
+                      <div><strong>{muc.hoTen}</strong>{phong && <small>{phong}</small>}
+                        {biDungChung && <small className="adm-warning">Thư ký này đang được gán cho nhiều người.</small>}
+                      </div>
+                    </div>
+                    <div className="adm-current">
+                      <TrangThai ten={dangPhanCong ? 'Đã phân công' : 'Chưa phân công'} mau={dangPhanCong ? 'xanh' : 'xam'} />
+                      {dangPhanCong && <small>{dangPhanCong.tenThuKy}</small>}
+                    </div>
+                    <form key={dangPhanCong?.thuKyId ?? 'chua-phan-cong'} onSubmit={(event) => luu(event, id)} className="adm-assign-form">
+                      <select className="adm-input" aria-label={`Thư ký cho ${muc.hoTen}`} name="thuKyId" defaultValue={thuKyDangChon}
+                        required disabled={coTheChon.length === 0 || dangLuuId !== null}>
                         <option value="">{coTheChon.length ? 'Chọn thư ký' : 'Hết thư ký khả dụng'}</option>
                         {coTheChon.map((item) => <option key={item.nguoiDungId} value={item.nguoiDungId}>{item.hoTen}</option>)}
                       </select>
-                    </label>
-                    <button type="submit" className={LOP_NUT_CHINH} disabled={coTheChon.length === 0 || dangLuuId !== null}>{dangLuuId === id ? 'Đang lưu…' : 'Lưu phân công'}</button>
-                    {dangPhanCong && (
-                      <button type="submit" value="huy" formNoValidate disabled={dangLuuId !== null} className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold disabled:opacity-50">Bỏ phân công</button>
-                    )}
-                  </form>
-                </li>
-              )
-            })}
-          </ul>
+                      <button type="submit" className="adm-btn adm-primary" disabled={coTheChon.length === 0 || dangLuuId !== null}>
+                        {dangLuuId === id ? 'Đang lưu…' : 'Lưu phân công'}
+                      </button>
+                      {dangPhanCong && <button type="submit" value="huy" formNoValidate disabled={dangLuuId !== null}
+                        className="adm-btn adm-secondary adm-danger-text">Bỏ phân công</button>}
+                    </form>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
         </section>
-      ))}
+      )}
     </section>
   )
 }

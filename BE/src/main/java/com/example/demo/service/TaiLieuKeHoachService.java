@@ -47,6 +47,7 @@ public class TaiLieuKeHoachService {
     private static final Pattern DAU_TEP_PDF = Pattern.compile(
             "(?:\\xEF\\xBB\\xBF)?[ \\t\\r\\n\\f]*%PDF-[0-9]\\.[0-9](?=[\\r\\n])");
     private static final Set<String> DINH_DANG = Set.of("pdf", "doc", "docx", "xls", "xlsx");
+    private final CapNhatHoSoRealtime capNhatRealtime;
     private final CuocHopRepository cuocHopRepository;
     private final TaiLieuCuocHopRepository taiLieuCuocHopRepository;
     private final YeuCauPheDuyetRepository yeuCauPheDuyetRepository;
@@ -93,7 +94,9 @@ public class TaiLieuKeHoachService {
             tl.setTenTaiLieu(ten); tl.setTenFileGoc(ten); tl.setLoaiTaiLieu(LOAI_KE_HOACH);
             tl.setDuongDanFile(fileMoi.toString()); tl.setDinhDangFile(duoi);
             tl.setDungLuongByte(Files.size(fileMoi)); tl.setTrangThaiXuLy("CHUA_XU_LY");
-            return taiLieuCuocHopRepository.saveAndFlush(tl).getTaiLieuId();
+            Integer taiLieuId = taiLieuCuocHopRepository.saveAndFlush(tl).getTaiLieuId();
+            capNhatRealtime.baoCho(nguoiId);
+            return taiLieuId;
         } catch (ResponseStatusException ex) {
             donTep(daTao); throw ex;
         } catch (IOException | RuntimeException ex) {
@@ -165,6 +168,7 @@ public class TaiLieuKeHoachService {
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override public void afterCommit() { donTep(file); }
         });
+        capNhatRealtime.baoCho(nguoiId);
     }
 
     /** Caller QuyTrinhKeHoachService đã khóa cuộc họp; không mở transaction độc lập. */

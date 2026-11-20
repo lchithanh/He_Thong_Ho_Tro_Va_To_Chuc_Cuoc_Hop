@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
 import CalendarDays from 'lucide-react/dist/esm/icons/calendar-days.mjs'
 import CheckCircle2 from 'lucide-react/dist/esm/icons/check-circle-2.mjs'
 import CircleDot from 'lucide-react/dist/esm/icons/circle-dot.mjs'
@@ -18,7 +17,6 @@ export { default as HoSoDaTrinh } from './HoSoDaTrinh.jsx'
 import NguonDeXuat from './NguonDeXuat.jsx'
 
 export default function DanhSachDeXuatThuKy({ token, nguoiDung, onLapLich, chiXemPhanHoi = false, chiXemBanGiao = false, chiXemRaSoat = false, chiXemChuyenCap = false }) {
-  const phienDongBo = useDongBoDuLieu()
   const [danhSach, setDanhSach] = useState(null)
   const [loi, setLoi] = useState('')
   const [lanTai, setLanTai] = useState(0)
@@ -51,18 +49,16 @@ export default function DanhSachDeXuatThuKy({ token, nguoiDung, onLapLich, chiXe
 
     taiDanhSach()
     return () => controller.abort()
-  }, [token, lanTai, chiXemRaSoat, phienDongBo])
+  }, [token, lanTai, chiXemRaSoat])
 
   if (cuocHopDangXem !== null) {
-    const muc = danhSach?.find(({ cuocHopId }) => cuocHopId === cuocHopDangXem)
-    const moTabKeHoach = chiXemChuyenCap || (chiXemPhanHoi && muc?.phanHoiKeHoach?.trangThai === 'TRA_LAI')
     return (
       <ChiTietDeXuat
         cuocHopId={cuocHopDangXem}
         token={token}
         nguoiDung={nguoiDung}
         onLapLich={onLapLich}
-        tabBanDau={moTabKeHoach ? 'ke-hoach' : 'thong-tin'}
+        tabBanDau={chiXemRaSoat || chiXemChuyenCap || chiXemPhanHoi ? 'ke-hoach' : 'thong-tin'}
         onQuayLai={() => {
           setCuocHopDangXem(null)
           setLanTai((lan) => lan + 1)
@@ -128,19 +124,21 @@ export default function DanhSachDeXuatThuKy({ token, nguoiDung, onLapLich, chiXe
   }
 
   if (chiXemChuyenCap) {
-    const hoSo = danhSach?.filter((muc) => muc.yeuCauChoGuiCapTrenId != null)
+    const choChuyenCap = danhSach?.filter((muc) => muc.yeuCauChoGuiCapTrenId != null)
     return (
       <section className="space-y-4">
         <h1 className="text-2xl font-bold">Hồ sơ chờ chuyển cấp</h1>
-        {loi ? <p role="alert">{loi}</p> : !hoSo ? <p role="status">Đang tải hồ sơ…</p>
-          : !hoSo.length && <p>Chưa có hồ sơ chờ bạn chuyển cấp.</p>}
-        {hoSo?.map((muc) => (
-          <article key={muc.cuocHopId} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4">
-            <h2 className="font-semibold">{muc.tieuDe}</h2>
-            <button type="button" onClick={() => setCuocHopDangXem(muc.cuocHopId)}
-              className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-blue-800">
-              Mở hồ sơ chuyển cấp
-            </button>
+        {loi ? <p role="alert">{loi}</p> : !choChuyenCap ? <p role="status">Đang tải hồ sơ…</p>
+          : !choChuyenCap.length && <p>Chưa có hồ sơ được giao cho bạn chuyển cấp.</p>}
+        {choChuyenCap?.map((muc) => (
+          <article key={muc.yeuCauChoGuiCapTrenId}
+            className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4">
+            <div>
+              <h2 className="font-semibold">{muc.tieuDe}</h2>
+              <p className="mt-1 text-sm text-slate-600">Lần trình #{muc.yeuCauChoGuiCapTrenId} · Trưởng phòng đã đồng ý</p>
+            </div>
+            <button type="button" className="rounded-lg border px-3 py-2 text-sm font-semibold text-emerald-800"
+              onClick={() => setCuocHopDangXem(muc.cuocHopId)}>Mở hồ sơ</button>
           </article>
         ))}
       </section>
@@ -157,7 +155,7 @@ export default function DanhSachDeXuatThuKy({ token, nguoiDung, onLapLich, chiXe
         {daGiao?.map((muc) => (
           <article key={muc.cuocHopId} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4">
             <div><h2 className="font-semibold">{muc.tieuDe}</h2>
-              <p className="mt-1 text-sm text-emerald-800">{muc.daHoanTatHoSo ? 'Đã hoàn tất hồ sơ' : 'Đã bàn giao hồ sơ'}</p>
+              <p className="mt-1 text-sm text-emerald-800">{muc.daHoanTatHoSo ? 'Đã hoàn tất hồ sơ' : muc.trangThai === 'DANG_CHUAN_BI' ? 'Đang cập nhật kế hoạch đã bàn giao' : 'Đã bàn giao hồ sơ'}</p>
             </div>
             <button type="button" className="rounded-lg border px-3 py-2 text-sm font-semibold text-emerald-800"
               onClick={() => setCuocHopDangXem(muc.cuocHopId)}>Mở hồ sơ</button>

@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
 import XemTruocTepKeHoach from './XemTruocTepKeHoach.jsx'
 import {
   layChiTietDeXuat,
@@ -15,25 +14,28 @@ export default function TaiLieuKeHoachThuKy({
   onDaTrinh,
   luaChonKeHoach,
   nguoiChuTriId,
+  lichHopIdKeHoachDaDuyet,
   loaiHinh,
   vaiTroNguoiDeXuat,
   onLapLich,
   choPhepThaoTac = true,
 }) {
-  const phienDongBo = useDongBoDuLieu()
   const [danhSach, setDanhSach] = useState(null)
   const [lanTai, setLanTai] = useState(0)
   const [dangTaiLen, setDangTaiLen] = useState(false)
   const [loiDanhSach, setLoiDanhSach] = useState('')
   const [loiTaiLen, setLoiTaiLen] = useState('')
 
-  const [lichDeXuat, setLichDeXuat] = useState(null)
+  const [danhSachLich, setDanhSachLich] = useState(null)
   const [loiLich, setLoiLich] = useState('')
   const [dangTaiLich, setDangTaiLich] = useState(true)
+  const [lichHopIdDangChon, setLichHopIdDangChon] = useState('')
   const [lanTaiLich, setLanTaiLich] = useState(0)
 
-  const lichCoTheTrinh = lichDeXuat?.filter((lich) =>
-    new Date(lich.thoiGianBatDau).getTime() > Date.now()
+  const lichCoTheTrinh = danhSachLich?.filter((lich) =>
+    (lich.trangThai === 'DE_XUAT'
+      || (lich.trangThai === 'DA_XAC_NHAN' && lich.lichHopId === lichHopIdKeHoachDaDuyet))
+    && new Date(lich.thoiGianBatDau).getTime() > Date.now()
     && (loaiHinh !== 'TRUC_TIEP' || lich.phongHopId != null)
     && (loaiHinh !== 'TRUC_TUYEN' || lich.phongHopId == null),
   )
@@ -42,7 +44,7 @@ export default function TaiLieuKeHoachThuKy({
     layLichTheoCuocHop(cuocHopId, token, controller.signal)
       .then((lich) => {
         if (!controller.signal.aborted) {
-          setLichDeXuat(lich.filter((muc) => muc.trangThai === 'DE_XUAT'))
+          setDanhSachLich(lich)
         }
       })
       .catch((loi) => {
@@ -52,8 +54,15 @@ export default function TaiLieuKeHoachThuKy({
         if (!controller.signal.aborted) setDangTaiLich(false)
       })
     return () => controller.abort()
-  }, [cuocHopId, token, lanTaiLich, phienDongBo])
+  }, [cuocHopId, token, lanTaiLich])
 
+  const lichDangChon = lichCoTheTrinh?.find((lich) => String(lich.lichHopId) === lichHopIdDangChon)
+  const dangDoiLich = lichHopIdKeHoachDaDuyet != null && lichDangChon != null
+    && lichDangChon.lichHopId !== lichHopIdKeHoachDaDuyet
+  const dangGiuLich = lichDangChon?.trangThai === 'DA_XAC_NHAN'
+  const canNhapLyDo = dangGiuLich || (dangDoiLich && !lichDangChon.lyDoThayDoi?.trim())
+  const nhanGhiChu = dangGiuLich ? 'Lý do cập nhật kế hoạch (bắt buộc)'
+    : canNhapLyDo ? 'Lý do đề xuất lịch thay thế (bắt buộc)' : 'Ghi chú trình'
   const [dangTrinh, setDangTrinh] = useState(false)
   const [daTrinh, setDaTrinh] = useState(false)
   const [loiTrinh, setLoiTrinh] = useState('')
@@ -81,7 +90,7 @@ export default function TaiLieuKeHoachThuKy({
 
     taiDanhSach()
     return () => controller.abort()
-  }, [cuocHopId, token, lanTai, phienDongBo])
+  }, [cuocHopId, token, lanTai])
 
   async function xuLyTaiLen(event) {
     event.preventDefault()
@@ -120,12 +129,16 @@ export default function TaiLieuKeHoachThuKy({
       ghiChuTrinh: form.get('ghiChuTrinh').trim() || null,
       lanhDaoDuyetId: null,
     }
+    if (canNhapLyDo && !duLieu.ghiChuTrinh) {
+      setLoiTrinh('Nhập lý do thay đổi trước khi trình.')
+      return
+    }
     const daChonLichPhuHop = lichCoTheTrinh?.some(
       (lich) => Number(lich.lichHopId) === duLieu.lichHopId,
     )
 
     if (!daChonLichPhuHop) {
-      setLoiTrinh('Chọn một lịch đề xuất còn hiệu lực để trình.')
+      setLoiTrinh('Chọn lịch còn hiệu lực để trình.')
       return
     }
 
@@ -189,11 +202,11 @@ export default function TaiLieuKeHoachThuKy({
       {vaiTroNguoiDeXuat === 'LANH_DAO'
         ? 'Hồ sơ gửi thẳng tới lãnh đạo đề xuất để duyệt kế hoạch và lịch.'
         : luaChonKeHoach?.canChonLanhDao
-          ? 'Hồ sơ gửi trưởng phòng trước. Sau khi trưởng phòng đồng ý, thư ký sẽ chọn lãnh đạo nhận hồ sơ.'
+          ? 'Hồ sơ gửi trưởng phòng trước. Sau khi trưởng phòng đồng ý, thư ký ban đầu chuyển hồ sơ đến thư ký lãnh đạo để rà soát và trình duyệt cuối.'
           : 'Hồ sơ gửi trưởng phòng để duyệt kế hoạch và lịch.'}
     </p>
     <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">
-      Chọn lịch đề xuất còn hiệu lực. Khi người có thẩm quyền duyệt cuối, hệ thống sẽ xác nhận luôn lịch này.
+      Nếu chỉ sửa nội dung, chọn Giữ lịch đã xác nhận. Để đổi lịch, chọn lịch đề xuất mới. Lịch mới có hiệu lực sau khi duyệt cuối.
     </p>
 
     <button
@@ -216,17 +229,19 @@ export default function TaiLieuKeHoachThuKy({
   <p role="status" className="text-sm text-slate-600">{dangTaiLich ? 'Đang tải lịch…' : 'Chưa tải được danh sách lịch.'}</p>
 ) : lichCoTheTrinh.length > 0 ? (
   <label className="block text-sm font-medium">
-    Chọn lịch đề xuất để trình
+    Lịch của lần trình
     <select
       name="lichHopId"
       required
-      defaultValue=""
+      value={lichDangChon ? lichHopIdDangChon : ''}
+      onChange={(event) => setLichHopIdDangChon(event.target.value)}
       className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
     >
       <option value="">Chọn lịch để trình</option>
       {lichCoTheTrinh.map((lich) => (
         <option key={lich.lichHopId} value={lich.lichHopId}>
-          {new Date(lich.thoiGianBatDau).toLocaleString('vi-VN')}
+          {lich.trangThai === 'DA_XAC_NHAN' ? 'Giữ lịch đã xác nhận' : 'Đề xuất lịch mới'} #{lich.lichHopId}
+          {' · '}{new Date(lich.thoiGianBatDau).toLocaleString('vi-VN')}
           {' – '}{new Date(lich.thoiGianKetThuc).toLocaleString('vi-VN')}
           {' · '}{lich.tenPhongHop
             || (loaiHinh === 'TRUC_TUYEN' ? 'Trực tuyến' : `Phòng #${lich.phongHopId}`)}
@@ -237,7 +252,7 @@ export default function TaiLieuKeHoachThuKy({
 ) : (
   <div className="space-y-2">
     <p className="text-sm text-amber-900">
-      Chưa có lịch đề xuất phù hợp để trình. Kiểm tra thời gian và phòng họp.
+      Chưa có lịch còn hiệu lực để trình. Kiểm tra thời gian và phòng họp.
     </p>
     {choPhepThaoTac && onLapLich && (
       <button
@@ -265,9 +280,10 @@ export default function TaiLieuKeHoachThuKy({
       )}
 
       <label className="block text-sm font-medium">
-        Ghi chú trình
+        {nhanGhiChu}
         <textarea
           name="ghiChuTrinh"
+          required={canNhapLyDo}
           rows={2}
           className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
         />

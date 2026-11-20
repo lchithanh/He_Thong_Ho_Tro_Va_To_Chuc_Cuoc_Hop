@@ -22,6 +22,10 @@ function capNhatKhiDangXem() {
   if (document.visibilityState !== 'hidden') henCapNhat()
 }
 
+export function capNhatKhiMayChuBaoThayDoi() {
+  capNhatKhiDangXem()
+}
+
 export function docPhienDongBo() {
   return phienBan
 }

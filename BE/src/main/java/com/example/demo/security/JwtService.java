@@ -1,6 +1,7 @@
 package com.example.demo.security;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.Date;
 
 import javax.crypto.SecretKey;
@@ -52,6 +53,16 @@ public class JwtService {
 
         return extractClaims(token).getSubject();
     }
+
+    public PhienJwt docPhien(String token) {
+        Claims claims = extractClaims(token);
+        if (claims.getSubject() == null || claims.getSubject().isBlank() || claims.getExpiration() == null) {
+            throw new JwtException("JWT thiếu thông tin phiên");
+        }
+        return new PhienJwt(claims.getSubject(), claims.getExpiration().toInstant());
+    }
+
+    public record PhienJwt(String tenDangNhap, Instant hetHanLuc) {}
 
     // Kiểm tra token hợp lệ và chưa hết hạn
     public boolean isTokenValid(String token, String username) {

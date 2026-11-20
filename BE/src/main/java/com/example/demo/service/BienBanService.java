@@ -26,8 +26,6 @@ import com.example.demo.repository.CuocHopRepository;
 import com.example.demo.repository.PhienBanBienBanRepository;
 import com.example.demo.repository.PhienBanBienBanRepository.SoPhienBanMoiNhat;
 import com.example.demo.repository.TaiLieuCuocHopRepository;
-import com.example.demo.repository.ThanhVienCuocHopRepository;
-import com.example.demo.entity.ThanhVienCuocHop;
 
 import lombok.RequiredArgsConstructor;
 
@@ -37,6 +35,7 @@ public class BienBanService {
 
     static final String LOAI_TAI_LIEU_BIEN_BAN = "BIEN_BAN_CUOC_HOP";
 
+    private final CapNhatHoSoRealtime capNhatRealtime;
     private final BienBanCuocHopRepository bienBanRepository;
     private final TaiLieuCuocHopRepository taiLieuCuocHopRepository;
     private final PhienBanBienBanRepository phienBanRepository;
@@ -45,7 +44,6 @@ public class BienBanService {
     private final QuyenBienBanService quyenBienBanService;
 
     private final CuocHopRepository cuocHopRepository;
-    private final ThanhVienCuocHopRepository thanhVienCuocHopRepository;
     private final ThongBaoService thongBaoService;
     private final PhanCongXuLyKeHoachService phanCongXuLyKeHoachService;
 
@@ -98,6 +96,7 @@ public class BienBanService {
                 request.getGhiChuThayDoi(),
                 "Tạo bản nháp biên bản");
 
+        capNhatRealtime.baoCho(nguoiDungId);
         return chuyenResponse(bienBan);
     }
 
@@ -133,6 +132,7 @@ public class BienBanService {
                 request.getGhiChuThayDoi(),
                 "Cập nhật nội dung biên bản");
 
+        capNhatRealtime.baoCho(nguoiDungId);
         return chuyenResponse(bienBan);
     }
 
@@ -227,12 +227,9 @@ public class BienBanService {
                     "Biên bản chỉ được phát hành sau khi đã duyệt cuối");
         }
         bienBan.setTrangThai("DA_PHAT_HANH");
-        for (ThanhVienCuocHop thanhVien : thanhVienCuocHopRepository
-                .findByCuocHop_CuocHopIdOrderById_NguoiDungIdAsc(cuocHopId)) {
-            thongBaoService.gui(cuocHop, nguoiDungId, "BIEN_BAN_DA_PHAT_HANH",
-                    "Biên bản cuộc họp đã được phát hành",
-                    bienBan.getTieuDe(), thanhVien.getNguoiDung());
-        }
+        thongBaoService.gui(cuocHop, nguoiDungId, "BIEN_BAN_DA_PHAT_HANH",
+                "Biên bản cuộc họp đã được phát hành",
+                bienBan.getTieuDe(), capNhatRealtime.nguoiDocVanBan(cuocHop));
         return chuyenResponse(bienBan);
     }
 
@@ -315,8 +312,9 @@ public class BienBanService {
         kiemTraNoiDung(bienBan.getTieuDe(), noiDung);
         ThaoTacBienBan.thucHien(() -> ThaoTacBienBan.capNhatNoiDung(bienBan,
                 bienBan.getTieuDe(), bienBan.getNoiDungGoc(), noiDung));
-        return luuPhienBan(bienBan, nguoiCapNhat,
-                ghiChu, "Cập nhật nội dung biên bản");
+        var phienBan = luuPhienBan(bienBan, nguoiCapNhat, ghiChu, "Cập nhật nội dung biên bản");
+        capNhatRealtime.baoCho(nguoiDungId);
+        return phienBan;
     }
 
     private PhienBanBienBan luuPhienBan(

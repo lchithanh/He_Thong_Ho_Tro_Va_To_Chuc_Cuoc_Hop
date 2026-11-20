@@ -91,6 +91,15 @@ export async function taiLenTaiLieuKeHoach(cuocHopId, file, token) {
   return docPhanHoiTaiLieu(response)
 }
 
+export async function trinhLaiLichSauHuy(cuocHopId, lichHopId, token) {
+  const response = await goiApi(`/api/quy-trinh-ke-hoach/${cuocHopId}/trinh-lai-lich`, {
+    method: 'POST',
+    token,
+    duLieu: { lichHopId },
+  })
+  return docPhanHoiJson(response, 'Không trình duyệt lại được lịch.')
+}
+
 export async function trinhKeHoach(cuocHopId, duLieu, token) {
   const response = await goiApi(`/api/quy-trinh-ke-hoach/${cuocHopId}/trinh`, {
     method: 'POST',
@@ -245,6 +254,24 @@ export async function xacNhanLichHop(lichHopId, token) {
   })
 
   return docPhanHoiLichHop(response)
+}
+
+export async function huyLichHop(lichHopId, lyDoHuy, token) {
+  const query = new URLSearchParams({ lyDoHuy })
+  const response = await goiApi(`/api/lich-hop/${lichHopId}/huy?${query}`, {
+    method: 'PUT',
+    token,
+  })
+  return docPhanHoiLichHop(response)
+}
+
+export async function huyCuocHop(cuocHopId, lyDo, token) {
+  const response = await goiApi(`/api/cuoc-hop/${cuocHopId}/huy`, {
+    method: 'POST',
+    token,
+    duLieu: { lyDo },
+  })
+  return docPhanHoiJson(response, 'Không hủy được cuộc họp.')
 }
 
 export async function batDauCuocHop(cuocHopId, token) {

@@ -24,6 +24,9 @@ import org.springframework.web.server.ResponseStatusException;
 @RequiredArgsConstructor
 @Transactional
 public class LichHopService {
+    private final CapNhatHoSoRealtime capNhatRealtime;
+    private final ThongBaoEmailCuocHop thongBaoEmail;
+    private final HuyCuocHopService huyCuocHopService;
     private final LichHopRepository lichHopRepository;
     private final QuyTrinhKeHoachService quyTrinhKeHoachService;
     private final XacNhanLichHopService xacNhanLichHopService;
@@ -109,7 +112,8 @@ public class LichHopService {
     }
     public record ChiTietLichCalendar(LichHopResponse lich, LuaChonPhongHop phong,
             String mucTieu, String noiDungDuKien, Integer yeuCauPheDuyetId,
-            String ghiChuTrinh, boolean duocXacNhan, boolean duocXemThanhVien) {}
+            String ghiChuTrinh, boolean duocXacNhan, boolean duocXemThanhVien,
+            boolean duocHuyLich, boolean duocHuyCuocHop) {}
 
     @Transactional(readOnly = true)
     public ChiTietLichCalendar layChiTietCalendar(Integer lichHopId, Integer nguoiDungId) {
@@ -140,7 +144,8 @@ public class LichHopService {
                 phong.getMoTa(), phong.getTrangThai(), null),
                 xemKeHoach ? ch.getMucTieu() : null, xemKeHoach ? ch.getNoiDungDuKien() : null,
                 xemTep ? yc.getYeuCauPheDuyetId() : null,
-                xemTep ? yc.getGhiChuTrinh() : null, duocXacNhan, xemThanhVien);
+                xemTep ? yc.getGhiChuTrinh() : null, duocXacNhan, xemThanhVien,
+                duocHuyLich(lich, nguoiDungId), huyCuocHopService.duocHuy(ch, nguoiDungId));
     }
 
     /** Xác nhận riêng cho hồ sơ đã được duyệt trước khi áp dụng duyệt kèm lịch. */
@@ -162,6 +167,7 @@ public class LichHopService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Hãy trình lịch đề xuất cùng kế hoạch để duyệt.");
         }
         xacNhanLichHopService.xacNhan(cuocHop, lich, timNguoiDung(nguoiXacNhanId), null);
+        capNhatRealtime.baoCuocHop(cuocHop, nguoiXacNhanId);
         return chuyenDoiResponse(lich);
     }
 
@@ -203,6 +209,7 @@ public class LichHopService {
         LichHop daLuu = lichHopRepository.save(lich);
         lichSuPheDuyetService.ghiNhan(lich.getCuocHop().getCuocHopId(), lichHopId,
                 null, nguoiXacNhanId, "LICH_HOP", hanhDong, lyDoTuChoi.trim());
+        capNhatRealtime.baoNguoiPhuTrach(lich.getCuocHop(), nguoiXacNhanId);
         return chuyenDoiResponse(daLuu);
     }
 
@@ -289,7 +296,12 @@ LichHop saved = lichHopRepository.save(lichHop);
          "HUY",
          lyDoHuy.trim()
  );
- // 7. Trả về kết quả
+ if ("DA_XAC_NHAN".equals(trangThai)) {
+     capNhatRealtime.baoCuocHop(cuocHop, nguoiDungId);
+     thongBaoEmail.huyLich(saved, lyDoHuy.trim());
+ } else {
+     capNhatRealtime.baoNguoiPhuTrach(cuocHop, nguoiDungId);
+ }
  return chuyenDoiResponse(saved);
 }
     // =====================================================
@@ -510,6 +522,21 @@ LichHop saved = lichHopRepository.save(lichHop);
                 lichHop.getNgayTao()
         );
     }
+    private boolean duocHuyLich(LichHop lich, Integer nguoiDungId) {
+        CuocHop cuocHop = lich.getCuocHop();
+        if (ThaoTacCuocHop.daBatDau(cuocHop) || ThaoTacCuocHop.daKetThuc(cuocHop)
+                || !ThaoTacCuocHop.coTheTiepTucXuLy(cuocHop) || !ThaoTacLichHop.coTheHuy(lich)
+                || yeuCauPheDuyetRepository.existsByLichHop_LichHopIdAndLoaiYeuCauAndTrangThai(
+                        lich.getLichHopId(), LoaiYeuCau.KE_HOACH_CUOC_HOP, TrangThai.CHO_DUYET)) {
+            return false;
+        }
+        if (ThaoTacLichHop.daXacNhan(lich)) {
+            return quyTrinhKeHoachService.coQuyenXacNhanLich(cuocHop, nguoiDungId);
+        }
+        return lich.getNguoiDeXuat() != null && nguoiDungId.equals(lich.getNguoiDeXuat().getNguoiDungId())
+                && phanQuyenCuocHopService.laThuKyDuocPhanCong(cuocHop.getCuocHopId(), nguoiDungId);
+    }
+
     void kiemTraLichKhongChoDuyetKeHoach(Integer lichHopId) {
         boolean dangChoDuyet = yeuCauPheDuyetRepository
                 .existsByLichHop_LichHopIdAndLoaiYeuCauAndTrangThai(

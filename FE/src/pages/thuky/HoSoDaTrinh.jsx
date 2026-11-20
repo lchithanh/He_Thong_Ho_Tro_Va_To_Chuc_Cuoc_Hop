@@ -1,5 +1,5 @@
+import ThaoTacKeHoach from './ThaoTacKeHoach.jsx'
 import XemTruocTepKeHoach from './XemTruocTepKeHoach.jsx'
-import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
 import { useEffect, useState } from 'react'
 import {
   layChiTietKeHoachChoDuyet,
@@ -13,8 +13,9 @@ const TEN_TRANG_THAI = {
   TRA_LAI: 'Đã trả lại', TU_CHOI: 'Đã từ chối', DA_HUY: 'Đã hủy',
 }
 
-export default function HoSoDaTrinh({ yeuCauId, cuocHopId, token, children }) {
-  const phienDongBo = useDongBoDuLieu()
+export default function HoSoDaTrinh({
+  yeuCauId, cuocHopId, token, yeuCauDuyet, onDaXuLy, onDangXuLy, children,
+}) {
   const [hoSo, setHoSo] = useState(undefined)
   const [tep, setTep] = useState(null)
   const [loi, setLoi] = useState('')
@@ -30,7 +31,7 @@ export default function HoSoDaTrinh({ yeuCauId, cuocHopId, token, children }) {
       .then((duLieu) => { if (!controller.signal.aborted) setHoSo(duLieu) })
       .catch((error) => { if (!controller.signal.aborted) setLoi(error.message) })
     return () => controller.abort()
-  }, [yeuCauId, cuocHopId, token, phienDongBo])
+  }, [yeuCauId, cuocHopId, token])
 
   useEffect(() => {
     if (lanTrinhId == null) return
@@ -39,11 +40,14 @@ export default function HoSoDaTrinh({ yeuCauId, cuocHopId, token, children }) {
       .then((duLieu) => { if (!controller.signal.aborted) setTep(duLieu) })
       .catch((error) => { if (!controller.signal.aborted) setLoiTep(error.message) })
     return () => controller.abort()
-  }, [lanTrinhId, token, phienDongBo])
+  }, [lanTrinhId, token])
 
   if (loi) return <p role="alert" className="text-sm text-red-800">{loi}</p>
   if (hoSo === undefined) return <p role="status" className="text-sm">Đang tải hồ sơ…</p>
   if (!hoSo) return <p className="text-sm text-slate-600">Chưa có lần trình kế hoạch.</p>
+  const duocDuyet = hoSo.trangThai === 'CHO_DUYET'
+    && yeuCauDuyet?.yeuCauPheDuyetId === lanTrinhId
+    && yeuCauDuyet?.cuocHopId === hoSo.cuocHopId
   const gio = (moc) => moc ? new Date(moc).toLocaleString('vi-VN') : null
 
   return (
@@ -53,7 +57,19 @@ export default function HoSoDaTrinh({ yeuCauId, cuocHopId, token, children }) {
         <h3 className="mt-1 font-bold">{hoSo.tieuDe}</h3>
         <p className="mt-1 text-xs text-slate-600">Lần trình #{lanTrinhId}</p>
       </header>
-      <XemTruocTepKeHoach key={lanTrinhId} danhSach={tep} yeuCauId={lanTrinhId} token={token} loiDanhSach={loiTep}>
+      {duocDuyet && (
+        <ThaoTacKeHoach
+          key={'thao-tac-' + lanTrinhId}
+          cuocHopId={hoSo.cuocHopId}
+          yeuCauPheDuyetId={lanTrinhId}
+          token={token}
+          cheDo="duyet"
+          choPhepTrinhCapTren={yeuCauDuyet.choPhepTrinhCapTren}
+          onDaXuLy={onDaXuLy}
+          onDangXuLy={onDangXuLy}
+        />
+      )}
+      <XemTruocTepKeHoach key={'xem-truoc-' + lanTrinhId} danhSach={tep} yeuCauId={lanTrinhId} token={token} loiDanhSach={loiTep}>
         <dl className="grid gap-3 text-sm sm:grid-cols-2">
           {[
             ['Người đề xuất', hoSo.tenNguoiDeXuat],
@@ -72,7 +88,7 @@ export default function HoSoDaTrinh({ yeuCauId, cuocHopId, token, children }) {
             ['Kết thúc theo lần trình', gio(hoSo.thoiGianKetThuc)],
             ['Phòng họp', hoSo.loaiHinh === 'TRUC_TUYEN' ? 'Trực tuyến' : [hoSo.tenPhongHop, hoSo.viTriPhongHop].filter(Boolean).join(' · ')],
             ['Ghi chú trình', hoSo.ghiChuTrinh || 'Không có ghi chú'],
-            ['Người duyệt', hoSo.quyetDinh?.hoTenNguoiDuyet || hoSo.tenNguoiDuocChiDinhDuyet],
+            ['Người duyệt', hoSo.quyetDinh?.hoTenNguoiDuyet || hoSo.tenNguoiDuyet || hoSo.tenNguoiDuocChiDinhDuyet],
             ['Thời điểm duyệt', gio(hoSo.quyetDinh?.thoiGianDuyet) || 'Chưa ghi nhận quyết định'],
             ['Ý kiến phê duyệt', hoSo.quyetDinh?.yKien],
           ].map(([nhan, giaTri]) => (

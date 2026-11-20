@@ -81,7 +81,7 @@ public class LichSuPheDuyetService {
         hanhDong = hanhDong.trim().toUpperCase(Locale.ROOT);
 
         switch (loaiPheDuyet) {
-            case "KE_HOACH", "LICH_HOP", "BIEN_BAN", "KET_LUAN" -> {
+            case "CUOC_HOP", "KE_HOACH", "LICH_HOP", "BIEN_BAN", "KET_LUAN" -> {
                 // Loại phê duyệt hợp lệ.
             }
             default -> throw new RuntimeException("Loại phê duyệt không hợp lệ");

@@ -33,6 +33,7 @@ public class LuuTaiLieuCuocHopService {
     private static final Set<String> DINH_DANG_HO_TRO =
             Set.of("pdf", "doc", "docx", "xls", "xlsx");
 
+    private final CapNhatHoSoRealtime capNhatRealtime;
     private final TaiLieuCuocHopRepository taiLieuCuocHopRepository;
 
     @Transactional(propagation = Propagation.MANDATORY)
@@ -95,7 +96,9 @@ public class LuuTaiLieuCuocHopService {
             taiLieu.setDungLuongByte(file.getSize());
             taiLieu.setTrangThaiXuLy("CHUA_XU_LY");
 
-            return taiLieuCuocHopRepository.saveAndFlush(taiLieu).getTaiLieuId();
+            Integer taiLieuId = taiLieuCuocHopRepository.saveAndFlush(taiLieu).getTaiLieuId();
+            capNhatRealtime.baoCho(nguoiTaiLen.getNguoiDungId());
+            return taiLieuId;
         } catch (IOException | RuntimeException ex) {
             if (duongDan != null) {
                 xoaFileVaGhiLog(duongDan);

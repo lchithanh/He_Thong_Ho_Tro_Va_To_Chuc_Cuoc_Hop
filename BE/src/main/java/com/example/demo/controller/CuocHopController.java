@@ -25,6 +25,7 @@ import com.example.demo.dto.response.KeHoachPheDuyetResponse;
 import com.example.demo.dto.response.LichSuKeHoachResponse;
 import com.example.demo.dto.response.TrinhKeHoachResponse;
 import com.example.demo.service.CuocHopService;
+import com.example.demo.service.HuyCuocHopService;
 import com.example.demo.service.DeXuatCuocHopService;
 import com.example.demo.service.PheDuyetKeHoachService;
 import com.example.demo.dto.response.ChiTietKeHoachPheDuyetResponse;
@@ -37,6 +38,7 @@ import lombok.RequiredArgsConstructor;
 public class CuocHopController {
 
     private final CuocHopService cuocHopService;
+    private final HuyCuocHopService huyCuocHopService;
     private final DeXuatCuocHopService deXuatCuocHopService;
     private final NguoiDungHienTaiService nguoiDungHienTaiService;
     private final PheDuyetKeHoachService pheDuyetKeHoachService;
@@ -258,6 +260,15 @@ public class CuocHopController {
 
     private Integer layNguoiDungId(Authentication authentication) {
         return nguoiDungHienTaiService.layNguoiDungId(authentication);
+    }
+
+    @PostMapping("/{cuocHopId}/huy")
+    public ResponseEntity<BuocXuLyCuocHopResponse> huyCuocHop(
+            @PathVariable("cuocHopId") Integer cuocHopId,
+            @RequestBody TraLaiKeHoachRequest request, Authentication authentication) {
+        huyCuocHopService.huy(cuocHopId, layNguoiDungId(authentication), request.getLyDo());
+        return ResponseEntity.ok(new BuocXuLyCuocHopResponse(
+                "Đã hủy cuộc họp", cuocHopId, "DA_HUY", "DA_HUY"));
     }
 
     @PostMapping("/{cuocHopId}/bat-dau")

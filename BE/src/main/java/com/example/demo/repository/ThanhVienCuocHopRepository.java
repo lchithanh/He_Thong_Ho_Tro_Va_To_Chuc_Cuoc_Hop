@@ -57,6 +57,19 @@ public interface ThanhVienCuocHopRepository
     
     List<ThanhVienCuocHop> findById_NguoiDungIdAndVaiTroTaiCuocHopAndTrangThaiMoi(
             Integer nguoiDungId, String vaiTroTaiCuocHop, String trangThaiMoi);
+    
+    @Query("""
+            SELECT tv
+            FROM ThanhVienCuocHop tv
+            JOIN FETCH tv.cuocHop ch
+            LEFT JOIN FETCH ch.nguoiChuTri
+            WHERE tv.id.nguoiDungId = :nguoiDungId
+              AND tv.trangThaiMoi = 'DA_XAC_NHAN'
+              AND ch.trangThai = 'DANG_DIEN_RA'
+            ORDER BY ch.thoiGianBatDauThucTe DESC, ch.cuocHopId DESC
+            """)
+    List<ThanhVienCuocHop> findCuocHopDangDienRaDaXacNhan(
+            @Param("nguoiDungId") Integer nguoiDungId);
 }
 
 interface ThanhVienCuocHopThemMoiRepository {

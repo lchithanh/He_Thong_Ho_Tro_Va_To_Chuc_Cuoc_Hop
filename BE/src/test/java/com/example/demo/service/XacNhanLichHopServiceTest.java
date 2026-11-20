@@ -26,9 +26,11 @@ import com.example.demo.repository.LichHopRepository;
 class XacNhanLichHopServiceTest {
     private final LichHopRepository lichHopRepository = mock(LichHopRepository.class);
     private final LichSuPheDuyetService lichSuPheDuyetService = mock(LichSuPheDuyetService.class);
-    private final XacNhanLichHopService service = new XacNhanLichHopService(
-            lichHopRepository, lichSuPheDuyetService);
+    private final ThongBaoEmailCuocHop thongBaoEmail =
+            mock(ThongBaoEmailCuocHop.class);
 
+    private final XacNhanLichHopService service = new XacNhanLichHopService(
+            lichHopRepository, lichSuPheDuyetService, thongBaoEmail);
     @Test
     void finalApprovalConfirmsTheSubmittedScheduleAndReplacesThePreviousOne() {
         CuocHop cuocHop = new CuocHop();

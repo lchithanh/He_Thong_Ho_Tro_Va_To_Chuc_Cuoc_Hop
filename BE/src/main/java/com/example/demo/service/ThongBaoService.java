@@ -19,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 public class ThongBaoService {
 
     private final ThongBaoRepository thongBaoRepository;
+    private final CapNhatHoSoRealtime capNhatRealtime;
 
     @Transactional(propagation = Propagation.MANDATORY)
     public void gui(
@@ -45,5 +46,7 @@ public class ThongBaoService {
             thongBao.setNoiDung(noiDung);
             thongBaoRepository.save(thongBao);
         }
+
+        capNhatRealtime.baoCho(daThem, loai != null && loai.startsWith("KE_HOACH_"));
     }
 }

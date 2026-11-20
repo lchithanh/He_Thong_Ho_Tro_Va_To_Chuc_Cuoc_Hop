@@ -23,6 +23,7 @@ public class ThietBiService {
 
     private final ThietBiRepository thietBiRepository;
     private final PhongHopRepository phongHopRepository;
+    private final CapNhatHoSoRealtime capNhatRealtime;
 
     private static final List<String> TINH_TRANG_HOP_LE = List.of(
             "TOT",
@@ -78,6 +79,8 @@ public class ThietBiService {
         thietBi.setGhiChu(request.ghiChu());
 
         ThietBi daLuu = thietBiRepository.save(thietBi);
+        
+        capNhatRealtime.baoDanhMucPhongVaThietBiThayDoi();
 
         return chuyenDoiResponse(daLuu);
     }
@@ -110,6 +113,8 @@ public class ThietBiService {
         thietBi.setGhiChu(request.ghiChu());
 
         ThietBi daCapNhat = thietBiRepository.save(thietBi);
+        
+        capNhatRealtime.baoDanhMucPhongVaThietBiThayDoi();
 
         return chuyenDoiResponse(daCapNhat);
     }
@@ -127,6 +132,8 @@ public class ThietBiService {
         thietBi.setTinhTrang(tinhTrangMoi);
 
         ThietBi daCapNhat = thietBiRepository.save(thietBi);
+        
+        capNhatRealtime.baoDanhMucPhongVaThietBiThayDoi();
 
         return chuyenDoiResponse(daCapNhat);
     }

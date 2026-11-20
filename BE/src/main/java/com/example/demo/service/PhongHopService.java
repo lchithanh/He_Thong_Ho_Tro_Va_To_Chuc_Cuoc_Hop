@@ -1,6 +1,7 @@
 package com.example.demo.service;
 
 import com.example.demo.dto.request.*;
+
 import com.example.demo.dto.response.*;
 import com.example.demo.entity.PhongHop;
 import com.example.demo.repository.PhongHopRepository;
@@ -11,15 +12,20 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+
 import java.util.List;
 
 @Service
 public class PhongHopService {
 
     private final PhongHopRepository phongHopRepository;
-
-    public PhongHopService(PhongHopRepository phongHopRepository) {
+    private final CapNhatHoSoRealtime capNhatRealtime;
+    
+    public PhongHopService(
+            PhongHopRepository phongHopRepository,
+            CapNhatHoSoRealtime capNhatRealtime) {
         this.phongHopRepository = phongHopRepository;
+        this.capNhatRealtime = capNhatRealtime;
     }
 
     // Chuyển Entity sang Response DTO
@@ -69,6 +75,9 @@ public class PhongHopService {
         phongHop.setTrangThai("SAN_SANG");
 
         PhongHop saved = phongHopRepository.save(phongHop);
+        
+        capNhatRealtime.baoDanhMucPhongVaThietBiThayDoi();
+        
 
         return toResponse(saved);
     }
@@ -99,8 +108,9 @@ public class PhongHopService {
         phongHop.setSucChua(request.sucChua());
         phongHop.setMoTa(request.moTa());
 
-        return toResponse(phongHopRepository.save(phongHop));
-    }
+        PhongHop daLuu = phongHopRepository.save(phongHop);
+        capNhatRealtime.baoDanhMucPhongVaThietBiThayDoi();
+        return toResponse(daLuu);    }
 
     // 5. Cập nhật trạng thái phòng họp
     @Transactional
@@ -125,8 +135,9 @@ public class PhongHopService {
 
         phongHop.setTrangThai(trangThai);
 
-        return toResponse(phongHopRepository.save(phongHop));
-    }
+        PhongHop daLuu = phongHopRepository.save(phongHop);
+        capNhatRealtime.baoDanhMucPhongVaThietBiThayDoi();
+        return toResponse(daLuu);    }
 
     // Hàm dùng chung để tìm phòng họp
     private PhongHop timPhongHop(Integer phongHopId) {

@@ -11,6 +11,7 @@ import com.example.demo.dto.request.TaoNguoiDungRequest;
 import com.example.demo.dto.request.CapNhatNguoiDungRequest;
 import com.example.demo.dto.request.CapNhatVaiTroRequest;
 import com.example.demo.dto.response.NguoiDungResponse;
+import com.example.demo.dto.response.VaiTroLuaChonResponse;
 import com.example.demo.service.NguoiDungService;
 
 @RestController
@@ -31,6 +32,8 @@ public class NguoiDungController {
                 nguoiDungService.layDanhSachNguoiDung()
         );
     }
+
+   
 
     // Thêm người dùng
     @PostMapping
@@ -73,5 +76,9 @@ public class NguoiDungController {
         return ResponseEntity.ok(
                 nguoiDungService.capNhatVaiTro(id, request)
         );
+    }
+    @GetMapping("/roles")
+    public List<VaiTroLuaChonResponse> layVaiTroHoatDong() {
+        return nguoiDungService.layVaiTroHoatDong();
     }
 }

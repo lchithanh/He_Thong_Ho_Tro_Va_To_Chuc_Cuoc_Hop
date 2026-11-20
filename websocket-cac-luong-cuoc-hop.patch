@@ -1,0 +1,765 @@
+diff --git a/BE/src/main/java/com/example/demo/repository/ThanhVienBieuQuyetRepository.java b/BE/src/main/java/com/example/demo/repository/ThanhVienBieuQuyetRepository.java
+index 2b45432..42d887d 100644
+--- a/BE/src/main/java/com/example/demo/repository/ThanhVienBieuQuyetRepository.java
++++ b/BE/src/main/java/com/example/demo/repository/ThanhVienBieuQuyetRepository.java
+@@ -1,5 +1,7 @@
+ package com.example.demo.repository;
+ 
++import java.util.List;
++
+ import org.springframework.data.jpa.repository.JpaRepository;
+ import org.springframework.data.jpa.repository.Modifying;
+ import org.springframework.data.jpa.repository.Query;
+@@ -11,6 +13,13 @@ import com.example.demo.entity.ThanhVienBieuQuyetId;
+ public interface ThanhVienBieuQuyetRepository
+         extends JpaRepository<ThanhVienBieuQuyet, ThanhVienBieuQuyetId> {
+ 
++    @Query("""
++            SELECT tv.id.nguoiDungId
++            FROM ThanhVienBieuQuyet tv
++            WHERE tv.id.bieuQuyetId = :bieuQuyetId
++            """)
++    List<Integer> timNguoiDuocBieuQuyet(@Param("bieuQuyetId") Integer bieuQuyetId);
++
+     @Modifying
+     @Query(value = """
+             INSERT INTO thanh_vien_bieu_quyet (bieu_quyet_id, nguoi_dung_id)
+diff --git a/BE/src/main/java/com/example/demo/repository/YeuCauPheDuyetRepository.java b/BE/src/main/java/com/example/demo/repository/YeuCauPheDuyetRepository.java
+index 87e8772..bc693fe 100644
+--- a/BE/src/main/java/com/example/demo/repository/YeuCauPheDuyetRepository.java
++++ b/BE/src/main/java/com/example/demo/repository/YeuCauPheDuyetRepository.java
+@@ -71,6 +71,10 @@ public interface YeuCauPheDuyetRepository
+             LoaiYeuCau loaiYeuCau
+     );
+ 
++    Optional<YeuCauPheDuyet>
++    findFirstByCuocHop_CuocHopIdAndLoaiYeuCauAndTrangThaiOrderByYeuCauPheDuyetIdDesc(
++            Integer cuocHopId, LoaiYeuCau loaiYeuCau, TrangThai trangThai);
++
+     @Lock(LockModeType.PESSIMISTIC_WRITE)
+     @Query("SELECT yc FROM YeuCauPheDuyet yc WHERE yc.yeuCauPheDuyetId = :id")
+     Optional<YeuCauPheDuyet> findByIdForUpdate(@Param("id") Integer id);
+diff --git a/BE/src/main/java/com/example/demo/service/BienBanService.java b/BE/src/main/java/com/example/demo/service/BienBanService.java
+index 91c5906..4d273f3 100644
+--- a/BE/src/main/java/com/example/demo/service/BienBanService.java
++++ b/BE/src/main/java/com/example/demo/service/BienBanService.java
+@@ -26,8 +26,6 @@ import com.example.demo.repository.CuocHopRepository;
+ import com.example.demo.repository.PhienBanBienBanRepository;
+ import com.example.demo.repository.PhienBanBienBanRepository.SoPhienBanMoiNhat;
+ import com.example.demo.repository.TaiLieuCuocHopRepository;
+-import com.example.demo.repository.ThanhVienCuocHopRepository;
+-import com.example.demo.entity.ThanhVienCuocHop;
+ 
+ import lombok.RequiredArgsConstructor;
+ 
+@@ -37,6 +35,7 @@ public class BienBanService {
+ 
+     static final String LOAI_TAI_LIEU_BIEN_BAN = "BIEN_BAN_CUOC_HOP";
+ 
++    private final CapNhatHoSoRealtime capNhatRealtime;
+     private final BienBanCuocHopRepository bienBanRepository;
+     private final TaiLieuCuocHopRepository taiLieuCuocHopRepository;
+     private final PhienBanBienBanRepository phienBanRepository;
+@@ -45,7 +44,6 @@ public class BienBanService {
+     private final QuyenBienBanService quyenBienBanService;
+ 
+     private final CuocHopRepository cuocHopRepository;
+-    private final ThanhVienCuocHopRepository thanhVienCuocHopRepository;
+     private final ThongBaoService thongBaoService;
+     private final PhanCongXuLyKeHoachService phanCongXuLyKeHoachService;
+ 
+@@ -98,6 +96,7 @@ public class BienBanService {
+                 request.getGhiChuThayDoi(),
+                 "Tạo bản nháp biên bản");
+ 
++        capNhatRealtime.baoCho(nguoiDungId);
+         return chuyenResponse(bienBan);
+     }
+ 
+@@ -133,6 +132,7 @@ public class BienBanService {
+                 request.getGhiChuThayDoi(),
+                 "Cập nhật nội dung biên bản");
+ 
++        capNhatRealtime.baoCho(nguoiDungId);
+         return chuyenResponse(bienBan);
+     }
+ 
+@@ -227,12 +227,9 @@ public class BienBanService {
+                     "Biên bản chỉ được phát hành sau khi đã duyệt cuối");
+         }
+         bienBan.setTrangThai("DA_PHAT_HANH");
+-        for (ThanhVienCuocHop thanhVien : thanhVienCuocHopRepository
+-                .findByCuocHop_CuocHopIdOrderById_NguoiDungIdAsc(cuocHopId)) {
+-            thongBaoService.gui(cuocHop, nguoiDungId, "BIEN_BAN_DA_PHAT_HANH",
+-                    "Biên bản cuộc họp đã được phát hành",
+-                    bienBan.getTieuDe(), thanhVien.getNguoiDung());
+-        }
++        thongBaoService.gui(cuocHop, nguoiDungId, "BIEN_BAN_DA_PHAT_HANH",
++                "Biên bản cuộc họp đã được phát hành",
++                bienBan.getTieuDe(), capNhatRealtime.nguoiDocVanBan(cuocHop));
+         return chuyenResponse(bienBan);
+     }
+ 
+@@ -315,8 +312,9 @@ public class BienBanService {
+         kiemTraNoiDung(bienBan.getTieuDe(), noiDung);
+         ThaoTacBienBan.thucHien(() -> ThaoTacBienBan.capNhatNoiDung(bienBan,
+                 bienBan.getTieuDe(), bienBan.getNoiDungGoc(), noiDung));
+-        return luuPhienBan(bienBan, nguoiCapNhat,
+-                ghiChu, "Cập nhật nội dung biên bản");
++        var phienBan = luuPhienBan(bienBan, nguoiCapNhat, ghiChu, "Cập nhật nội dung biên bản");
++        capNhatRealtime.baoCho(nguoiDungId);
++        return phienBan;
+     }
+ 
+     private PhienBanBienBan luuPhienBan(
+diff --git a/BE/src/main/java/com/example/demo/service/BieuQuyetService.java b/BE/src/main/java/com/example/demo/service/BieuQuyetService.java
+index 5a8505e..58a88b1 100644
+--- a/BE/src/main/java/com/example/demo/service/BieuQuyetService.java
++++ b/BE/src/main/java/com/example/demo/service/BieuQuyetService.java
+@@ -48,6 +48,7 @@ import lombok.RequiredArgsConstructor;
+ @RequiredArgsConstructor
+ public class BieuQuyetService {
+ 
++    private final CapNhatHoSoRealtime capNhatRealtime;
+     private final CuocHopRepository cuocHopRepository;
+     private final BieuQuyetRepository bieuQuyetRepository;
+     private final LuaChonBieuQuyetRepository luaChonBieuQuyetRepository;
+@@ -132,6 +133,7 @@ public class BieuQuyetService {
+                 taoLuaChon(daLuu, "Không ý kiến", 3, true)
+         ));
+ 
++        capNhatRealtime.baoCho(nguoiDangNhapId);
+         return daLuu.getBieuQuyetId();
+     }
+ 
+@@ -194,6 +196,9 @@ public class BieuQuyetService {
+         }
+ 
+         bieuQuyet.setTrangThai("DANG_MO");
++        var nguoiNhan = new HashSet<>(thanhVienBieuQuyetRepository.timNguoiDuocBieuQuyet(bieuQuyetId));
++        nguoiNhan.add(nguoiDangNhapId);
++        capNhatRealtime.baoCho(nguoiNhan, false);
+     }
+     
+     
+@@ -289,6 +294,7 @@ public class BieuQuyetService {
+         }
+ 
+         phieuBieuQuyetRepository.save(phieu);
++        capNhatRealtime.baoCho(nguoiDangNhapId);
+     }
+     
+     
+@@ -353,6 +359,16 @@ public class BieuQuyetService {
+ 
+         bieuQuyet.setSoThanhVienCoMatKhiDong(soThanhVienCoMat);
+         bieuQuyet.setTrangThai("DA_DONG");
++        Set<Integer> nguoiNhan = new HashSet<>();
++        for (var thanhVien : thanhVienCuocHopRepository
++                .findByCuocHop_CuocHopIdOrderById_NguoiDungIdAsc(cuocHopId)) {
++            nguoiNhan.add(thanhVien.getId().getNguoiDungId());
++        }
++        NguoiDung chuTri = bieuQuyet.getCuocHop().getNguoiChuTri();
++        if (chuTri != null) {
++            nguoiNhan.add(chuTri.getNguoiDungId());
++        }
++        capNhatRealtime.baoCho(nguoiNhan, false);
+     }
+     
+     @Transactional(readOnly = true)
+diff --git a/BE/src/main/java/com/example/demo/service/CapNhatHoSoRealtime.java b/BE/src/main/java/com/example/demo/service/CapNhatHoSoRealtime.java
+index 2dcf8ed..660e00b 100644
+--- a/BE/src/main/java/com/example/demo/service/CapNhatHoSoRealtime.java
++++ b/BE/src/main/java/com/example/demo/service/CapNhatHoSoRealtime.java
+@@ -1,13 +1,25 @@
+ package com.example.demo.service;
+ 
++import java.util.ArrayList;
++import java.util.Arrays;
++import java.util.Collection;
++import java.util.HashSet;
+ import java.util.Set;
+ 
++import org.springframework.context.ApplicationEventPublisher;
+ import org.springframework.messaging.MessagingException;
+ import org.springframework.messaging.simp.SimpMessagingTemplate;
+ import org.springframework.stereotype.Component;
+ import org.springframework.transaction.event.TransactionPhase;
+ import org.springframework.transaction.event.TransactionalEventListener;
+ 
++import com.example.demo.entity.CuocHop;
++import com.example.demo.entity.NguoiDung;
++import com.example.demo.entity.YeuCauPheDuyet.LoaiYeuCau;
++import com.example.demo.entity.YeuCauPheDuyet.TrangThai;
++import com.example.demo.repository.ThanhVienCuocHopRepository;
++import com.example.demo.repository.YeuCauPheDuyetRepository;
++
+ import lombok.RequiredArgsConstructor;
+ import lombok.extern.slf4j.Slf4j;
+ 
+@@ -17,16 +29,80 @@ import lombok.extern.slf4j.Slf4j;
+ public class CapNhatHoSoRealtime {
+ 
+     private final SimpMessagingTemplate kenhGui;
++    private final ApplicationEventPublisher suKien;
++    private final ThanhVienCuocHopRepository thanhVienRepository;
++    private final YeuCauPheDuyetRepository yeuCauRepository;
++
++    public void baoCho(Integer... nguoiNhanIds) {
++        baoCho(Arrays.asList(nguoiNhanIds), false);
++    }
++
++    void baoCho(Collection<Integer> nguoiNhanIds, boolean laKeHoach) {
++        Set<Integer> ids = new HashSet<>(nguoiNhanIds);
++        ids.remove(null);
++        if (!ids.isEmpty()) {
++            suKien.publishEvent(new DuLieuThayDoi(Set.copyOf(ids), laKeHoach));
++        }
++    }
++
++    public void baoNguoiPhuTrach(CuocHop cuocHop, Integer... nguoiNhanThem) {
++        Set<Integer> ids = nguoiPhuTrach(cuocHop);
++        ids.addAll(Arrays.asList(nguoiNhanThem));
++        baoCho(ids, false);
++    }
++
++    public void baoCuocHop(CuocHop cuocHop, Integer nguoiThaoTacId) {
++        Set<Integer> ids = nguoiPhuTrach(cuocHop);
++        ids.add(nguoiThaoTacId);
++        for (var thanhVien : thanhVienRepository
++                .findByCuocHop_CuocHopIdOrderById_NguoiDungIdAsc(cuocHop.getCuocHopId())) {
++            if ("CHO_PHAN_HOI".equals(thanhVien.getTrangThaiMoi())
++                    || "DA_XAC_NHAN".equals(thanhVien.getTrangThaiMoi())) {
++                ids.add(thanhVien.getId().getNguoiDungId());
++            }
++        }
++        baoCho(ids, false);
++    }
++
++    NguoiDung[] nguoiDocVanBan(CuocHop cuocHop) {
++        var nguoiNhan = new ArrayList<>(thanhVienRepository
++                .findByCuocHop_CuocHopIdOrderById_NguoiDungIdAsc(cuocHop.getCuocHopId())
++                .stream().map(thanhVien -> thanhVien.getNguoiDung()).toList());
++        nguoiNhan.add(cuocHop.getThuKyCuocHop());
++        yeuCauRepository.findFirstByCuocHop_CuocHopIdAndLoaiYeuCauAndTrangThaiOrderByYeuCauPheDuyetIdDesc(
++                cuocHop.getCuocHopId(), LoaiYeuCau.KE_HOACH_CUOC_HOP, TrangThai.DA_DUYET)
++                .ifPresent(yc -> nguoiNhan.add(yc.getThuKyBanGiao()));
++        return nguoiNhan.toArray(NguoiDung[]::new);
++    }
++
++    private Set<Integer> nguoiPhuTrach(CuocHop cuocHop) {
++        Set<Integer> ids = new HashSet<>();
++        themId(ids, cuocHop.getNguoiDeXuat());
++        themId(ids, cuocHop.getNguoiChuTri());
++        themId(ids, cuocHop.getThuKyCuocHop());
++        for (var thuKy : thanhVienRepository.findByCuocHop_CuocHopIdAndVaiTroTaiCuocHop(
++                cuocHop.getCuocHopId(), "THU_KY")) {
++            ids.add(thuKy.getId().getNguoiDungId());
++        }
++        return ids;
++    }
++
++    private void themId(Set<Integer> ids, NguoiDung nguoiDung) {
++        if (nguoiDung != null) {
++            ids.add(nguoiDung.getNguoiDungId());
++        }
++    }
+ 
+-    public record KeHoachThayDoi(Set<Integer> nguoiNhanIds) {}
++    public record DuLieuThayDoi(Set<Integer> nguoiNhanIds, boolean laKeHoach) {}
+ 
+     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+-    public void guiTinHieu(KeHoachThayDoi suKien) {
+-        for (Integer nguoiNhanId : suKien.nguoiNhanIds()) {
++    public void guiTinHieu(DuLieuThayDoi thayDoi) {
++        String tinHieu = thayDoi.laKeHoach() ? "KE_HOACH_CAP_NHAT" : "DU_LIEU_CAP_NHAT";
++        for (Integer nguoiNhanId : thayDoi.nguoiNhanIds()) {
+             try {
+-                kenhGui.convertAndSendToUser(nguoiNhanId.toString(), "/queue/cap-nhat", "KE_HOACH_CAP_NHAT");
++                kenhGui.convertAndSendToUser(nguoiNhanId.toString(), "/queue/cap-nhat", tinHieu);
+             } catch (MessagingException ex) {
+-                log.warn("Không gửi được tín hiệu cập nhật kế hoạch cho tài khoản {}", nguoiNhanId, ex);
++                log.warn("Không gửi được tín hiệu cập nhật cho tài khoản {}", nguoiNhanId, ex);
+             }
+         }
+     }
+diff --git a/BE/src/main/java/com/example/demo/service/CuocHopService.java b/BE/src/main/java/com/example/demo/service/CuocHopService.java
+index 6b157da..5284db0 100644
+--- a/BE/src/main/java/com/example/demo/service/CuocHopService.java
++++ b/BE/src/main/java/com/example/demo/service/CuocHopService.java
+@@ -20,6 +20,7 @@ import lombok.RequiredArgsConstructor;
+ @RequiredArgsConstructor
+ @Transactional
+ public class CuocHopService {
++    private final CapNhatHoSoRealtime capNhatRealtime;
+     private final NguoiDungRepository nguoiDungRepository;
+     private final PhanQuyenCuocHopService phanQuyenCuocHopService;
+     private final CuocHopRepository cuocHopRepository;
+@@ -113,6 +114,7 @@ public class CuocHopService {
+                 request.getTieuDe().trim(), request.getMucTieu(), request.getNoiDungDuKien(),
+                 request.getLoaiHinh(), chuTriDaChon, request.isCoKhachMoiBenNgoai()));
+         ch.setThuKyCuocHop(phanCongXuLyKeHoachService.chonThuKyCuocHop(ch, request.getThuKyCuocHopId()));
++        capNhatRealtime.baoNguoiPhuTrach(ch, nguoiDangNhapId);
+     }
+     
+     public void batDauCuocHop(
+@@ -148,6 +150,7 @@ public class CuocHopService {
+                     ex.getMessage(),
+                     ex);
+         }
++        capNhatRealtime.baoCuocHop(cuocHop, nguoiDangNhapId);
+     }
+ 
+     public void ketThucCuocHop(
+@@ -177,6 +180,7 @@ public class CuocHopService {
+                     ex.getMessage(),
+                     ex);
+         }
++        capNhatRealtime.baoCuocHop(cuocHop, nguoiDangNhapId);
+     }
+ 
+     private CuocHop timCuocHopVaKhoa(Integer cuocHopId) {
+diff --git a/BE/src/main/java/com/example/demo/service/DeXuatCuocHopService.java b/BE/src/main/java/com/example/demo/service/DeXuatCuocHopService.java
+index a190d40..bde5313 100644
+--- a/BE/src/main/java/com/example/demo/service/DeXuatCuocHopService.java
++++ b/BE/src/main/java/com/example/demo/service/DeXuatCuocHopService.java
+@@ -30,6 +30,7 @@ import lombok.RequiredArgsConstructor;
+ @RequiredArgsConstructor
+ @Transactional
+ public class DeXuatCuocHopService {
++    private final CapNhatHoSoRealtime capNhatRealtime;
+     private final CuocHopRepository cuocHopRepository;
+     private final NguoiDungRepository nguoiDungRepository;
+     private final PhongBanRepository phongBanRepository;
+@@ -113,11 +114,16 @@ public class DeXuatCuocHopService {
+         if (request.isGuiNgay()) {
+             ThaoTacCuocHop.thucHien(() -> ThaoTacCuocHop.guiDeXuat(cuocHop));
+         }
+-     CuocHop daLuu = cuocHopRepository.save(cuocHop);
+-     if (thuKy != null) {
+-         ganThuKy(daLuu, thuKy);
+-     }
+-     return daLuu.getCuocHopId();
++        CuocHop daLuu = cuocHopRepository.save(cuocHop);
++        if (thuKy != null) {
++            ganThuKy(daLuu, thuKy);
++        }
++        if (request.isGuiNgay()) {
++            capNhatRealtime.baoNguoiPhuTrach(daLuu, nguoiDangNhapId);
++        } else {
++            capNhatRealtime.baoCho(nguoiDangNhapId);
++        }
++        return daLuu.getCuocHopId();
+     }
+ 
+     public void capNhatDeXuat(
+@@ -197,6 +203,7 @@ public class DeXuatCuocHopService {
+             cuocHop.setThuKyCuocHop(phanCongXuLyKeHoachService.chonThuKyCuocHop(cuocHop, request.getThuKyCuocHopId()));
+         }
+         cuocHopRepository.save(cuocHop);
++        capNhatRealtime.baoCho(nguoiDangNhapId);
+     }
+ 
+     public void guiDeXuat(
+@@ -265,6 +272,7 @@ public class DeXuatCuocHopService {
+         ganThuKy(cuocHop, thuKy);
+         ThaoTacCuocHop.thucHien(() -> ThaoTacCuocHop.guiDeXuat(cuocHop));
+         cuocHopRepository.save(cuocHop);
++        capNhatRealtime.baoNguoiPhuTrach(cuocHop, nguoiDangNhapId);
+     }
+     // TIẾP NHẬN ĐỀ XUẤT
+     public void tiepNhanDeXuat(
+@@ -293,6 +301,7 @@ public class DeXuatCuocHopService {
+         }
+         ThaoTacCuocHop.thucHien(() -> ThaoTacCuocHop.tiepNhanDeXuat(cuocHop));
+         cuocHopRepository.save(cuocHop);
++        capNhatRealtime.baoNguoiPhuTrach(cuocHop, nguoiDangNhapId);
+     }
+ 
+     @Transactional(readOnly = true)
+diff --git a/BE/src/main/java/com/example/demo/service/DeXuatLichHopService.java b/BE/src/main/java/com/example/demo/service/DeXuatLichHopService.java
+index 3f30725..fe96ea3 100644
+--- a/BE/src/main/java/com/example/demo/service/DeXuatLichHopService.java
++++ b/BE/src/main/java/com/example/demo/service/DeXuatLichHopService.java
+@@ -19,6 +19,7 @@ import lombok.RequiredArgsConstructor;
+ @RequiredArgsConstructor
+ @Transactional
+ public class DeXuatLichHopService {
++    private final CapNhatHoSoRealtime capNhatRealtime;
+     private final LichHopRepository lichHopRepository;
+     private final LichHopService lichHopService;
+     private final CuocHopRepository cuocHopRepository;
+@@ -40,7 +41,9 @@ public class DeXuatLichHopService {
+         LichHop lich = ThaoTacCuocHop.thucHien(() -> ThaoTacLichHop.taoDeXuat(
+                 ch, phongDaChon, nguoiDeXuat, request.thoiGianBatDau(),
+                 request.thoiGianKetThuc(), request.lyDoThayDoi()));
+-        return lichHopService.chuyenDoiResponse(lichHopRepository.save(lich));
++        LichHop daLuu = lichHopRepository.save(lich);
++        capNhatRealtime.baoNguoiPhuTrach(ch, nguoiDeXuatId);
++        return lichHopService.chuyenDoiResponse(daLuu);
+     }
+ 
+     public LichHopResponse capNhatLichHop(Integer lichHopId,
+@@ -65,7 +68,9 @@ public class DeXuatLichHopService {
+         PhongHop phongDaChon = phong;
+         ThaoTacCuocHop.thucHien(() -> ThaoTacLichHop.capNhatLich(lichDaKhoa, phongDaChon,
+                 request.thoiGianBatDau(), request.thoiGianKetThuc(), request.lyDoThayDoi()));
+-        return lichHopService.chuyenDoiResponse(lichHopRepository.save(lich));
++        LichHop daLuu = lichHopRepository.save(lich);
++        capNhatRealtime.baoNguoiPhuTrach(ch, nguoiDungId);
++        return lichHopService.chuyenDoiResponse(daLuu);
+     }
+ 
+     public LichHopResponse thayTheLichHop(Integer lichHopCuId, Integer lichHopMoiId, Integer nguoiDungId) {
+@@ -104,7 +109,9 @@ public class DeXuatLichHopService {
+         }
+         LichHop lichCuDaKhoa = cu;
+         ThaoTacCuocHop.thucHien(() -> ThaoTacLichHop.ganVoiLichBiThayThe(moi, lichCuDaKhoa));
+-        return lichHopService.chuyenDoiResponse(lichHopRepository.save(moi));
++        LichHop daLuu = lichHopRepository.save(moi);
++        capNhatRealtime.baoNguoiPhuTrach(ch, nguoiDungId);
++        return lichHopService.chuyenDoiResponse(daLuu);
+     }
+ 
+     private CuocHop khoaCuocHop(Integer id) {
+diff --git a/BE/src/main/java/com/example/demo/service/KetLuanCuocHopService.java b/BE/src/main/java/com/example/demo/service/KetLuanCuocHopService.java
+index 72d40fe..c56bb79 100644
+--- a/BE/src/main/java/com/example/demo/service/KetLuanCuocHopService.java
++++ b/BE/src/main/java/com/example/demo/service/KetLuanCuocHopService.java
+@@ -33,6 +33,7 @@ import lombok.RequiredArgsConstructor;
+ @RequiredArgsConstructor
+ public class KetLuanCuocHopService {
+ 
++    private final CapNhatHoSoRealtime capNhatRealtime;
+     private final CuocHopRepository cuocHopRepository;
+     private final KetLuanCuocHopRepository ketLuanCuocHopRepository;
+     private final ThanhVienCuocHopRepository thanhVienCuocHopRepository;
+@@ -96,6 +97,7 @@ public class KetLuanCuocHopService {
+ 
+         KetLuanCuocHop daLuu = ketLuanCuocHopRepository.save(ketLuan);
+ 
++        capNhatRealtime.baoCho(nguoiDangNhapId);
+         return toResponse(daLuu);
+     }
+ 
+@@ -121,6 +123,7 @@ public class KetLuanCuocHopService {
+         ketLuan.setTieuDe(request.tieuDe().strip());
+         ketLuan.setNoiDung(request.noiDung() == null || request.noiDung().isBlank()
+                 ? null : request.noiDung().strip());
++        capNhatRealtime.baoCho(nguoiDangNhapId);
+         return toResponse(ketLuan);
+     }
+ 
+@@ -299,13 +302,9 @@ public class KetLuanCuocHopService {
+         ketLuan.setNguoiPhatHanh(nguoiPhatHanh);
+         ketLuan.setNgayPhatHanh(LocalDateTime.now());
+         ketLuan.setTrangThai("DA_PHAT_HANH");
+-        for (var thanhVien : thanhVienCuocHopRepository
+-                .findByCuocHop_CuocHopIdOrderById_NguoiDungIdAsc(cuocHopId)) {
+-            thongBaoService.gui(cuocHop, nguoiDangNhapId,
+-                    "KET_LUAN_DA_PHAT_HANH",
+-                    "Kết luận cuộc họp đã được phát hành",
+-                    ketLuan.getTieuDe(), thanhVien.getNguoiDung());
+-        }
++        thongBaoService.gui(cuocHop, nguoiDangNhapId, "KET_LUAN_DA_PHAT_HANH",
++                "Kết luận cuộc họp đã được phát hành",
++                ketLuan.getTieuDe(), capNhatRealtime.nguoiDocVanBan(cuocHop));
+ 
+         return toResponse(ketLuan);
+     }
+@@ -458,13 +457,9 @@ public class KetLuanCuocHopService {
+ 
+     private void thongBaoChoThuKy(
+             CuocHop cuocHop, Integer nguoiThaoTacId, KetLuanCuocHop ketLuan) {
+-        thanhVienCuocHopRepository
+-                .findByCuocHop_CuocHopIdAndVaiTroTaiCuocHop(
+-                        cuocHop.getCuocHopId(), "THU_KY")
+-                .forEach(thanhVien -> thongBaoService.gui(
+-                        cuocHop, nguoiThaoTacId, "KET_LUAN_DA_DUYET",
+-                        "Kết luận đã được duyệt và chờ chủ trì phát hành",
+-                        ketLuan.getTieuDe(), thanhVien.getNguoiDung()));
++        thongBaoService.gui(cuocHop, nguoiThaoTacId, "KET_LUAN_DA_DUYET",
++                "Kết luận đã được duyệt và chờ chủ trì phát hành",
++                ketLuan.getTieuDe(), ketLuan.getNguoiSoan());
+     }
+ }
+ 
+diff --git a/BE/src/main/java/com/example/demo/service/LichHopService.java b/BE/src/main/java/com/example/demo/service/LichHopService.java
+index 44b634c..384ad61 100644
+--- a/BE/src/main/java/com/example/demo/service/LichHopService.java
++++ b/BE/src/main/java/com/example/demo/service/LichHopService.java
+@@ -24,6 +24,7 @@ import org.springframework.web.server.ResponseStatusException;
+ @RequiredArgsConstructor
+ @Transactional
+ public class LichHopService {
++    private final CapNhatHoSoRealtime capNhatRealtime;
+     private final LichHopRepository lichHopRepository;
+     private final QuyTrinhKeHoachService quyTrinhKeHoachService;
+     private final XacNhanLichHopService xacNhanLichHopService;
+@@ -162,6 +163,7 @@ public class LichHopService {
+             throw new ResponseStatusException(HttpStatus.CONFLICT, "Hãy trình lịch đề xuất cùng kế hoạch để duyệt.");
+         }
+         xacNhanLichHopService.xacNhan(cuocHop, lich, timNguoiDung(nguoiXacNhanId), null);
++        capNhatRealtime.baoCuocHop(cuocHop, nguoiXacNhanId);
+         return chuyenDoiResponse(lich);
+     }
+ 
+@@ -203,6 +205,7 @@ public class LichHopService {
+         LichHop daLuu = lichHopRepository.save(lich);
+         lichSuPheDuyetService.ghiNhan(lich.getCuocHop().getCuocHopId(), lichHopId,
+                 null, nguoiXacNhanId, "LICH_HOP", hanhDong, lyDoTuChoi.trim());
++        capNhatRealtime.baoNguoiPhuTrach(lich.getCuocHop(), nguoiXacNhanId);
+         return chuyenDoiResponse(daLuu);
+     }
+ 
+@@ -289,7 +292,11 @@ LichHop saved = lichHopRepository.save(lichHop);
+          "HUY",
+          lyDoHuy.trim()
+  );
+- // 7. Trả về kết quả
++ if ("DA_XAC_NHAN".equals(trangThai)) {
++     capNhatRealtime.baoCuocHop(cuocHop, nguoiDungId);
++ } else {
++     capNhatRealtime.baoNguoiPhuTrach(cuocHop, nguoiDungId);
++ }
+  return chuyenDoiResponse(saved);
+ }
+     // =====================================================
+diff --git a/BE/src/main/java/com/example/demo/service/LuuTaiLieuCuocHopService.java b/BE/src/main/java/com/example/demo/service/LuuTaiLieuCuocHopService.java
+index 8ccff7c..277cf1e 100644
+--- a/BE/src/main/java/com/example/demo/service/LuuTaiLieuCuocHopService.java
++++ b/BE/src/main/java/com/example/demo/service/LuuTaiLieuCuocHopService.java
+@@ -33,6 +33,7 @@ public class LuuTaiLieuCuocHopService {
+     private static final Set<String> DINH_DANG_HO_TRO =
+             Set.of("pdf", "doc", "docx", "xls", "xlsx");
+ 
++    private final CapNhatHoSoRealtime capNhatRealtime;
+     private final TaiLieuCuocHopRepository taiLieuCuocHopRepository;
+ 
+     @Transactional(propagation = Propagation.MANDATORY)
+@@ -95,7 +96,9 @@ public class LuuTaiLieuCuocHopService {
+             taiLieu.setDungLuongByte(file.getSize());
+             taiLieu.setTrangThaiXuLy("CHUA_XU_LY");
+ 
+-            return taiLieuCuocHopRepository.saveAndFlush(taiLieu).getTaiLieuId();
++            Integer taiLieuId = taiLieuCuocHopRepository.saveAndFlush(taiLieu).getTaiLieuId();
++            capNhatRealtime.baoCho(nguoiTaiLen.getNguoiDungId());
++            return taiLieuId;
+         } catch (IOException | RuntimeException ex) {
+             if (duongDan != null) {
+                 xoaFileVaGhiLog(duongDan);
+diff --git a/BE/src/main/java/com/example/demo/service/QuyTrinhKeHoachService.java b/BE/src/main/java/com/example/demo/service/QuyTrinhKeHoachService.java
+index 84afee3..a9a31a2 100644
+--- a/BE/src/main/java/com/example/demo/service/QuyTrinhKeHoachService.java
++++ b/BE/src/main/java/com/example/demo/service/QuyTrinhKeHoachService.java
+@@ -25,6 +25,7 @@ import lombok.RequiredArgsConstructor;
+ @RequiredArgsConstructor
+ @Transactional
+ public class QuyTrinhKeHoachService {
++    private final CapNhatHoSoRealtime capNhatRealtime;
+     private final CuocHopRepository cuocHopRepository;
+     private final KhachMoiCuocHopRepository khachMoiCuocHopRepository;
+     private final LichHopRepository lichHopRepository;
+@@ -211,6 +212,7 @@ public class QuyTrinhKeHoachService {
+         ThaoTacCuocHop.thucHien(() -> ThaoTacCuocHop.moLaiKeHoachChoChuyenCap(ch));
+         lichSuPheDuyetService.ghiNhan(cuocHopId, null, null, thuKyId, "KE_HOACH",
+                 "YEU_CAU_CHINH_SUA", "Thư ký mở lại hồ sơ để đề xuất lịch mới", yeuCau);
++        capNhatRealtime.baoNguoiPhuTrach(ch, thuKyId);
+         return new TrinhKeHoachResponse("Đã mở lại kế hoạch. Hãy chọn lịch mới và trình lại trưởng phòng.",
+                 yeuCauId, ch.getTrangThai(), ch.getBuocXuLyHienTai());
+     }
+@@ -237,6 +239,8 @@ public class QuyTrinhKeHoachService {
+         ThaoTacCuocHop.thucHien(() -> ThaoTacCuocHop.tiepNhanHoSoLanhDao(ch));
+         lichSuPheDuyetService.ghiNhan(cuocHopId, null, null, thuKyId,
+                 "KE_HOACH", "TIEP_NHAN", "Thư ký lãnh đạo tiếp nhận hồ sơ", yc);
++        capNhatRealtime.baoNguoiPhuTrach(ch, thuKyId,
++                yc.getNguoiDuyet() == null ? null : yc.getNguoiDuyet().getNguoiDungId());
+     }
+ 
+     public void trinhLanhDao(Integer cuocHopId, Integer yeuCauId, Integer thuKyId, String ghiChu) {
+@@ -298,6 +302,7 @@ public class QuyTrinhKeHoachService {
+         thongBaoService.gui(ch, nguoiDuyetId, "KE_HOACH_DA_DUYET",
+                 "Kế hoạch và lịch họp đã được duyệt", ch.getTieuDe(),
+                 ch.getNguoiDeXuat(), yc.getNguoiTrinh(), yc.getThuKyBanGiao());
++        capNhatRealtime.baoCuocHop(ch, nguoiDuyetId);
+         return true;
+     }
+ 
+@@ -412,6 +417,7 @@ public class QuyTrinhKeHoachService {
+         lichSuPheDuyetService.ghiNhan(cuocHopId, null, null, nguoiId, "KE_HOACH",
+                 "YEU_CAU_CHINH_SUA", "Mở lại để bổ sung khách ngoài: " + lyDo.trim(),
+                 phanCongXuLyKeHoachService.layLanTrinhMoiNhat(cuocHopId));
++        capNhatRealtime.baoCuocHop(ch, nguoiId);
+     }
+ 
+     private void kiemTraNguoiDuyet(YeuCauPheDuyet yc, Integer nguoiId) {
+diff --git a/BE/src/main/java/com/example/demo/service/TaiLieuCuocHopService.java b/BE/src/main/java/com/example/demo/service/TaiLieuCuocHopService.java
+index e4c2ebe..24bb168 100644
+--- a/BE/src/main/java/com/example/demo/service/TaiLieuCuocHopService.java
++++ b/BE/src/main/java/com/example/demo/service/TaiLieuCuocHopService.java
+@@ -40,6 +40,7 @@ public class TaiLieuCuocHopService {
+     private static final Set<String> DINH_DANG_HO_TRO =
+             Set.of("pdf", "doc", "docx", "xls", "xlsx");
+ 
++    private final CapNhatHoSoRealtime capNhatRealtime;
+     private final CuocHopRepository cuocHopRepository;
+     private final TaiLieuCuocHopRepository taiLieuCuocHopRepository;
+     private final PhanQuyenCuocHopService phanQuyenCuocHopService;
+@@ -223,6 +224,7 @@ public class TaiLieuCuocHopService {
+                     }
+             );
+         }
++        capNhatRealtime.baoCho(nguoiDungId);
+     }
+ 
+     // =====================================================
+diff --git a/BE/src/main/java/com/example/demo/service/TaiLieuKeHoachService.java b/BE/src/main/java/com/example/demo/service/TaiLieuKeHoachService.java
+index 5304e67..c916b2b 100644
+--- a/BE/src/main/java/com/example/demo/service/TaiLieuKeHoachService.java
++++ b/BE/src/main/java/com/example/demo/service/TaiLieuKeHoachService.java
+@@ -47,6 +47,7 @@ public class TaiLieuKeHoachService {
+     private static final Pattern DAU_TEP_PDF = Pattern.compile(
+             "(?:\\xEF\\xBB\\xBF)?[ \\t\\r\\n\\f]*%PDF-[0-9]\\.[0-9](?=[\\r\\n])");
+     private static final Set<String> DINH_DANG = Set.of("pdf", "doc", "docx", "xls", "xlsx");
++    private final CapNhatHoSoRealtime capNhatRealtime;
+     private final CuocHopRepository cuocHopRepository;
+     private final TaiLieuCuocHopRepository taiLieuCuocHopRepository;
+     private final YeuCauPheDuyetRepository yeuCauPheDuyetRepository;
+@@ -93,7 +94,9 @@ public class TaiLieuKeHoachService {
+             tl.setTenTaiLieu(ten); tl.setTenFileGoc(ten); tl.setLoaiTaiLieu(LOAI_KE_HOACH);
+             tl.setDuongDanFile(fileMoi.toString()); tl.setDinhDangFile(duoi);
+             tl.setDungLuongByte(Files.size(fileMoi)); tl.setTrangThaiXuLy("CHUA_XU_LY");
+-            return taiLieuCuocHopRepository.saveAndFlush(tl).getTaiLieuId();
++            Integer taiLieuId = taiLieuCuocHopRepository.saveAndFlush(tl).getTaiLieuId();
++            capNhatRealtime.baoCho(nguoiId);
++            return taiLieuId;
+         } catch (ResponseStatusException ex) {
+             donTep(daTao); throw ex;
+         } catch (IOException | RuntimeException ex) {
+@@ -165,6 +168,7 @@ public class TaiLieuKeHoachService {
+         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+             @Override public void afterCommit() { donTep(file); }
+         });
++        capNhatRealtime.baoCho(nguoiId);
+     }
+ 
+     /** Caller QuyTrinhKeHoachService đã khóa cuộc họp; không mở transaction độc lập. */
+diff --git a/BE/src/main/java/com/example/demo/service/ThanhVienCuocHopService.java b/BE/src/main/java/com/example/demo/service/ThanhVienCuocHopService.java
+index f654d01..5550737 100644
+--- a/BE/src/main/java/com/example/demo/service/ThanhVienCuocHopService.java
++++ b/BE/src/main/java/com/example/demo/service/ThanhVienCuocHopService.java
+@@ -33,6 +33,7 @@ import com.example.demo.dto.response.NguoiCoTheMoiResponse;
+ public class ThanhVienCuocHopService {
+     private static final Set<String> LOI_MOI_HOP_LE = Set.of("CHO_PHAN_HOI", "DA_XAC_NHAN");
+ 
++    private final CapNhatHoSoRealtime capNhatRealtime;
+     private final CuocHopRepository cuocHopRepository;
+     private final NguoiDungRepository nguoiDungRepository;
+     private final ThanhVienCuocHopRepository thanhVienCuocHopRepository;
+@@ -59,9 +60,12 @@ public class ThanhVienCuocHopService {
+             throw loi(HttpStatus.CONFLICT,
+                     "Cần kế hoạch đã duyệt và lịch gắn với bản kế hoạch đó đã xác nhận trước khi mời");
+         }
+-        for (Integer nguoiDuocMoiId : new java.util.LinkedHashSet<>(nguoiDuocMoiIds)) {
++        var ids = new java.util.LinkedHashSet<>(nguoiDuocMoiIds);
++        for (Integer nguoiDuocMoiId : ids) {
+             themThanhVienDuocMoi(ch, nguoiDuocMoiId);
+         }
++        ids.add(thuKyId);
++        capNhatRealtime.baoNguoiPhuTrach(ch, ids.toArray(Integer[]::new));
+     }
+ 
+     private void themThanhVienDuocMoi(CuocHop ch, Integer nguoiDuocMoiId) {
+@@ -159,6 +163,7 @@ public class ThanhVienCuocHopService {
+         }
+         if (!"CHO_PHAN_HOI".equals(tv.getTrangThaiMoi())) throw loi(HttpStatus.CONFLICT, "Lời mời đã được phản hồi");
+         tv.setTrangThaiMoi(thamDu ? "DA_XAC_NHAN" : "TU_CHOI");
++        capNhatRealtime.baoNguoiPhuTrach(ch, nguoiDungId);
+     }
+ 
+ 	@Transactional(readOnly = true)
+@@ -252,14 +257,20 @@ public class ThanhVienCuocHopService {
+             throw loi(HttpStatus.CONFLICT, "Bạn đã được ghi nhận rời cuộc họp");
+         }
+ 
++        boolean doiLoiMoi = !"DA_XAC_NHAN".equals(thanhVien.getTrangThaiMoi());
++        boolean doiDiemDanh = !"CO_MAT".equals(thanhVien.getTrangThaiThamDu())
++                || thanhVien.getThoiGianDiemDanh() == null;
+         thanhVien.setTrangThaiMoi("DA_XAC_NHAN");
+-        if (!"CO_MAT".equals(thanhVien.getTrangThaiThamDu()) || thanhVien.getThoiGianDiemDanh() == null) {
++        if (doiDiemDanh) {
+             thanhVien.setTrangThaiThamDu("CO_MAT");
+             thanhVien.setThoiGianDiemDanh(LocalDateTime.now());
+         }
+         if (themChuTri) {
+             thanhVienCuocHopRepository.themMoi(thanhVien);
+         }
++        if (doiLoiMoi || doiDiemDanh) {
++            capNhatRealtime.baoNguoiPhuTrach(cuocHop, nguoiDungId);
++        }
+         return thanhVien.getThoiGianDiemDanh();
+     }
+ 
+@@ -284,6 +295,7 @@ public class ThanhVienCuocHopService {
+         if (!trangThai.equals(tv.getTrangThaiThamDu())) {
+             tv.setTrangThaiThamDu(trangThai);
+             tv.setThoiGianDiemDanh(LocalDateTime.now());
++            capNhatRealtime.baoNguoiPhuTrach(ch, nguoiDuocDiemDanhId, thuKyId);
+         }
+     }
+     
+@@ -311,6 +323,7 @@ public class ThanhVienCuocHopService {
+ 
+         if (thanhVien.getThoiGianRoiCuocHop() == null) {
+             thanhVien.setThoiGianRoiCuocHop(LocalDateTime.now());
++            capNhatRealtime.baoNguoiPhuTrach(cuocHop, nguoiDungId, thuKyId);
+         }
+     }
+ 
+diff --git a/BE/src/main/java/com/example/demo/service/ThongBaoService.java b/BE/src/main/java/com/example/demo/service/ThongBaoService.java
+index 76c3692..84ca453 100644
+--- a/BE/src/main/java/com/example/demo/service/ThongBaoService.java
++++ b/BE/src/main/java/com/example/demo/service/ThongBaoService.java
+@@ -3,7 +3,6 @@ package com.example.demo.service;
+ import java.util.HashSet;
+ import java.util.Set;
+ 
+-import org.springframework.context.ApplicationEventPublisher;
+ import org.springframework.stereotype.Service;
+ import org.springframework.transaction.annotation.Propagation;
+ import org.springframework.transaction.annotation.Transactional;
+@@ -20,7 +19,7 @@ import lombok.RequiredArgsConstructor;
+ public class ThongBaoService {
+ 
+     private final ThongBaoRepository thongBaoRepository;
+-    private final ApplicationEventPublisher suKien;
++    private final CapNhatHoSoRealtime capNhatRealtime;
+ 
+     @Transactional(propagation = Propagation.MANDATORY)
+     public void gui(
+@@ -48,9 +47,6 @@ public class ThongBaoService {
+             thongBaoRepository.save(thongBao);
+         }
+ 
+-        if (loai != null && loai.startsWith("KE_HOACH_")) {
+-            daThem.remove(null);
+-            suKien.publishEvent(new CapNhatHoSoRealtime.KeHoachThayDoi(Set.copyOf(daThem)));
+-        }
++        capNhatRealtime.baoCho(daThem, loai != null && loai.startsWith("KE_HOACH_"));
+     }
+ }
+diff --git a/FE/src/services/useKetNoiHoSo.js b/FE/src/services/useKetNoiHoSo.js
+index f9b33da..e7a1117 100644
+--- a/FE/src/services/useKetNoiHoSo.js
++++ b/FE/src/services/useKetNoiHoSo.js
+@@ -17,7 +17,9 @@ export function useKetNoiHoSo(token) {
+       heartbeatOutgoing: 10000,
+       onConnect: () => {
+         client.subscribe('/user/queue/cap-nhat', (tinNhan) => {
+-          if (client.active && tinNhan.body === 'KE_HOACH_CAP_NHAT') capNhatKhiMayChuBaoThayDoi()
++          if (client.active && ['KE_HOACH_CAP_NHAT', 'DU_LIEU_CAP_NHAT'].includes(tinNhan.body)) {
++            capNhatKhiMayChuBaoThayDoi()
++          }
+         })
+         capNhatKhiMayChuBaoThayDoi()
+       },

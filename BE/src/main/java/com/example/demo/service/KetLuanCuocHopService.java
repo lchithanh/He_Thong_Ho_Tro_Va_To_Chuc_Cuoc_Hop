@@ -33,6 +33,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class KetLuanCuocHopService {
 
+    private final CapNhatHoSoRealtime capNhatRealtime;
     private final CuocHopRepository cuocHopRepository;
     private final KetLuanCuocHopRepository ketLuanCuocHopRepository;
     private final ThanhVienCuocHopRepository thanhVienCuocHopRepository;
@@ -96,6 +97,7 @@ public class KetLuanCuocHopService {
 
         KetLuanCuocHop daLuu = ketLuanCuocHopRepository.save(ketLuan);
 
+        capNhatRealtime.baoCho(nguoiDangNhapId);
         return toResponse(daLuu);
     }
 
@@ -121,6 +123,7 @@ public class KetLuanCuocHopService {
         ketLuan.setTieuDe(request.tieuDe().strip());
         ketLuan.setNoiDung(request.noiDung() == null || request.noiDung().isBlank()
                 ? null : request.noiDung().strip());
+        capNhatRealtime.baoCho(nguoiDangNhapId);
         return toResponse(ketLuan);
     }
 
@@ -299,13 +302,9 @@ public class KetLuanCuocHopService {
         ketLuan.setNguoiPhatHanh(nguoiPhatHanh);
         ketLuan.setNgayPhatHanh(LocalDateTime.now());
         ketLuan.setTrangThai("DA_PHAT_HANH");
-        for (var thanhVien : thanhVienCuocHopRepository
-                .findByCuocHop_CuocHopIdOrderById_NguoiDungIdAsc(cuocHopId)) {
-            thongBaoService.gui(cuocHop, nguoiDangNhapId,
-                    "KET_LUAN_DA_PHAT_HANH",
-                    "Kết luận cuộc họp đã được phát hành",
-                    ketLuan.getTieuDe(), thanhVien.getNguoiDung());
-        }
+        thongBaoService.gui(cuocHop, nguoiDangNhapId, "KET_LUAN_DA_PHAT_HANH",
+                "Kết luận cuộc họp đã được phát hành",
+                ketLuan.getTieuDe(), capNhatRealtime.nguoiDocVanBan(cuocHop));
 
         return toResponse(ketLuan);
     }
@@ -458,13 +457,9 @@ public class KetLuanCuocHopService {
 
     private void thongBaoChoThuKy(
             CuocHop cuocHop, Integer nguoiThaoTacId, KetLuanCuocHop ketLuan) {
-        thanhVienCuocHopRepository
-                .findByCuocHop_CuocHopIdAndVaiTroTaiCuocHop(
-                        cuocHop.getCuocHopId(), "THU_KY")
-                .forEach(thanhVien -> thongBaoService.gui(
-                        cuocHop, nguoiThaoTacId, "KET_LUAN_DA_DUYET",
-                        "Kết luận đã được duyệt và chờ chủ trì phát hành",
-                        ketLuan.getTieuDe(), thanhVien.getNguoiDung()));
+        thongBaoService.gui(cuocHop, nguoiThaoTacId, "KET_LUAN_DA_DUYET",
+                "Kết luận đã được duyệt và chờ chủ trì phát hành",
+                ketLuan.getTieuDe(), ketLuan.getNguoiSoan());
     }
 }
 

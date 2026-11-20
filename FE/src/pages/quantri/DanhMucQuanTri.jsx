@@ -1,64 +1,91 @@
-import { useEffect, useRef, useState } from 'react'
-import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
-import { LOP_KHOI, LOP_TRUONG, LOP_NUT_CHINH } from '../../components/lopBieuMau.js'
+import { useEffect, useId, useState } from 'react'
+import Pencil from 'lucide-react/dist/esm/icons/pencil.mjs'
+import Plus from 'lucide-react/dist/esm/icons/plus.mjs'
 import { goiApiQuanTri } from '../../api/quanTriApi.js'
+import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
+import { TINH_TRANG_THIET_BI, TRANG_THAI_PHONG, TRANG_THAI_TAI_KHOAN } from './danhMucQuanTri.js'
+import { NganChinhSua, PhanHoi, TieuDeTrang, TimKiem, TrangThai } from './uiQuanTri.jsx'
 
-const TINH_TRANG_THIET_BI = {
-  TOT: 'Tốt',
-  HU_HONG: 'Hư hỏng',
-  BAO_TRI: 'Bảo trì',
-  NGUNG_SU_DUNG: 'Ngừng sử dụng',
+const TRANG_THAI_PHONG_CO_THE_LUU = ['SAN_SANG', 'BAO_TRI', 'NGUNG_SU_DUNG']
+const TEN_VAI_TRO = { ADMIN: 'Quản trị viên', LANH_DAO: 'Lãnh đạo', THU_KY: 'Thư ký', CAN_BO: 'Cán bộ' }
+
+const CAU_HINH = {
+  users: {
+    ten: 'Tài khoản', khoa: 'nguoiDungId', tenChinh: 'hoTen', truongPhu: 'tenDangNhap',
+    moTa: 'Quản lý hồ sơ người dùng, phòng ban và vai trò.',
+    cot: [['Phòng ban', 'tenPhongBan'], ['Vai trò', 'tenVaiTro']], trangThai: TRANG_THAI_TAI_KHOAN,
+    danhMucLienQuan: 'departments',
+  },
+  departments: {
+    ten: 'Phòng ban', khoa: 'phongBanId', tenChinh: 'tenPhongBan', truongPhu: 'moTa',
+    moTa: 'Cập nhật thông tin phòng ban và phân công trưởng phòng.',
+    cot: [['Trưởng phòng', 'tenTruongPhong']], trangThai: TRANG_THAI_TAI_KHOAN,
+    danhMucLienQuan: 'users',
+  },
+  'meeting-rooms': {
+    ten: 'Phòng họp', khoa: 'phongHopId', tenChinh: 'tenPhongHop', truongPhu: 'moTa',
+    moTa: 'Quản lý địa điểm, sức chứa và trạng thái phục vụ.',
+    cot: [['Vị trí', 'viTri'], ['Sức chứa', 'sucChua']], trangThai: TRANG_THAI_PHONG,
+  },
+  equipment: {
+    ten: 'Thiết bị', khoa: 'thietBiId', tenChinh: 'tenThietBi', truongPhu: 'maThietBi',
+    moTa: 'Quản lý thiết bị, số lượng và phòng được trang bị.',
+    cot: [['Phòng họp', 'tenPhongHop'], ['Số lượng', 'soLuong']], trangThai: TINH_TRANG_THIET_BI,
+    danhMucLienQuan: 'meeting-rooms',
+  },
+}
+
+function text(form, key) {
+  return String(form.get(key) ?? '').trim()
+}
+
+function so(form, key) {
+  return Number(form.get(key)) || null
 }
 
 export default function DanhMucQuanTri({ token, loai }) {
   const phienDongBo = useDongBoDuLieu()
-  const laPhongBan = loai === 'departments'
-  const danhTu = laPhongBan ? 'phòng ban' : 'thiết bị'
+  const { ten, khoa, tenChinh, truongPhu, moTa, cot, trangThai, danhMucLienQuan } = CAU_HINH[loai]
+  const danhTu = ten.toLocaleLowerCase('vi')
   const [danhSach, setDanhSach] = useState(null)
-  const [danhSachLienQuan, setDanhSachLienQuan] = useState([])
+  const [lienQuan, setLienQuan] = useState(null)
+  const [vaiTro, setVaiTro] = useState(null)
   const [loiTai, setLoiTai] = useState('')
   const [loi, setLoi] = useState('')
   const [thongBao, setThongBao] = useState('')
   const [mucChon, setMucChon] = useState(null)
   const [dangLuu, setDangLuu] = useState(false)
   const [tuKhoa, setTuKhoa] = useState('')
-  const [tinhTrang, setTinhTrang] = useState('')
+  const [loc, setLoc] = useState('')
   const [lanTai, setLanTai] = useState(0)
-  const vungBieuMau = useRef(null)
 
   useEffect(() => {
     const controller = new AbortController()
     const tuyChon = { signal: controller.signal }
-    Promise.all([
+    Promise.allSettled([
       goiApiQuanTri(loai, token, tuyChon),
-      goiApiQuanTri(laPhongBan ? 'users' : 'meeting-rooms', token, tuyChon),
-    ]).then(([muc, lienQuan]) => {
+      danhMucLienQuan ? goiApiQuanTri(danhMucLienQuan, token, tuyChon) : [],
+      loai === 'users' ? goiApiQuanTri('users/roles', token, tuyChon) : [],
+    ]).then(([chinh, phu, quyen]) => {
       if (controller.signal.aborted) return
-      setDanhSach(muc)
-      setDanhSachLienQuan(lienQuan)
-      setLoiTai('')
-    }).catch((error) => {
-      if (!controller.signal.aborted) setLoiTai(error.message)
+      if (chinh.status === 'fulfilled') setDanhSach(chinh.value)
+      if (phu.status === 'fulfilled') setLienQuan(phu.value)
+      if (quyen.status === 'fulfilled') setVaiTro(quyen.value)
+      setLoiTai(chinh.status === 'rejected' ? chinh.reason.message
+        : phu.status === 'rejected' ? 'Chưa tải được danh mục liên quan.'
+          : quyen.status === 'rejected' ? 'Chưa tải được danh sách vai trò.' : '')
     })
     return () => controller.abort()
-  }, [loai, laPhongBan, lanTai, token, phienDongBo])
+  }, [loai, danhMucLienQuan, lanTai, token, phienDongBo])
 
-  useEffect(() => {
-    vungBieuMau.current?.focus()
-  }, [mucChon])
-
-  const id = laPhongBan ? mucChon?.phongBanId : mucChon?.thietBiId
-  const idCua = (muc) => laPhongBan ? muc.phongBanId : muc.thietBiId
-  const tenCua = (muc) => laPhongBan ? muc.tenPhongBan : muc.tenThietBi
-  const truongPhong = danhSachLienQuan.filter((nguoi) =>
-    nguoi.phongBanId === id && nguoi.maVaiTro === 'CAN_BO' && nguoi.trangThai === 'HOAT_DONG',
-  )
   const dangLoc = tuKhoa.trim().toLocaleLowerCase('vi')
+  const khoaTrangThai = loai === 'equipment' ? 'tinhTrang' : 'trangThai'
   const ketQua = danhSach?.filter((muc) =>
-    (!tinhTrang || muc.tinhTrang === tinhTrang)
-    && [tenCua(muc), muc.maThietBi, muc.tenPhongHop, muc.tenTruongPhong]
-      .some((giaTri) => giaTri?.toLocaleLowerCase('vi').includes(dangLoc)),
+    (!loc || muc[khoaTrangThai] === loc)
+    && [muc[tenChinh], muc[truongPhu], muc.email, ...cot.map(([, key]) => muc[key])]
+      .some((giaTri) => String(giaTri ?? '').toLocaleLowerCase('vi').includes(dangLoc)),
   )
+  const id = mucChon?.[khoa]
 
   function moForm(muc) {
     setMucChon(muc)
@@ -66,45 +93,18 @@ export default function DanhMucQuanTri({ token, loai }) {
     setThongBao('')
   }
 
-  async function luu(event) {
-    event.preventDefault()
+  async function luu(url, method, duLieu, nhan) {
     if (dangLuu) return
-    const form = new FormData(event.currentTarget)
-    const duLieu = laPhongBan
-      ? { tenPhongBan: form.get('tenPhongBan').trim(), moTa: form.get('moTa').trim() }
-      : {
-        tenThietBi: form.get('tenThietBi').trim(),
-        maThietBi: form.get('maThietBi').trim(),
-        soLuong: Number(form.get('soLuong')),
-        tinhTrang: form.get('tinhTrang'),
-        phongHopId: Number(form.get('phongHopId')) || null,
-        ghiChu: form.get('ghiChu').trim(),
-      }
-    await capNhatDanhSach(id ? `${loai}/${id}` : loai, id ? 'PUT' : 'POST', duLieu)
-  }
-
-  async function phanCongTruongPhong(event) {
-    event.preventDefault()
-    if (dangLuu || !id) return
-    const truongPhongId = Number(new FormData(event.currentTarget).get('truongPhongId'))
-    if (!truongPhong.some((nguoi) => nguoi.nguoiDungId === truongPhongId)) return
-    await capNhatDanhSach(`${loai}/${id}/leader`, 'PATCH', { truongPhongId })
-  }
-
-  async function capNhatDanhSach(url, method, duLieu) {
     setDangLuu(true)
     setLoi('')
     setThongBao('')
     try {
-      const daLuu = await goiApiQuanTri(url, token, { method, duLieu })
-      const nguoi = truongPhong.find((muc) => muc.nguoiDungId === daLuu.truongPhongId)
-      const muc = laPhongBan && nguoi ? { ...daLuu, tenTruongPhong: nguoi.hoTen } : daLuu
-      setDanhSach((hienTai) => id
-        ? hienTai.map((item) => idCua(item) === id ? muc : item)
-        : [...hienTai, muc])
-      setMucChon(muc)
-      setThongBao(method === 'PATCH' ? 'Đã phân công trưởng phòng.' : `Đã lưu ${danhTu}.`)
-      if (method === 'PATCH') setLanTai((lan) => lan + 1)
+      const muc = await goiApiQuanTri(url, token, { method, duLieu })
+      setDanhSach((cu) => cu.some((item) => item[khoa] === muc[khoa])
+        ? cu.map((item) => item[khoa] === muc[khoa] ? muc : item) : [...cu, muc])
+      setMucChon(null)
+      setThongBao(nhan)
+      setLanTai((lan) => lan + 1)
     } catch (error) {
       setLoi(error.message)
     } finally {
@@ -112,111 +112,191 @@ export default function DanhMucQuanTri({ token, loai }) {
     }
   }
 
+  function luuThongTin(event) {
+    event.preventDefault()
+    const form = new FormData(event.currentTarget)
+    let duLieu
+    switch (loai) {
+      case 'users':
+        duLieu = {
+          hoTen: text(form, 'hoTen'), email: text(form, 'email'),
+          maNhanVien: text(form, 'maNhanVien') || null, soDienThoai: text(form, 'soDienThoai'),
+          chucVu: text(form, 'chucVu'), phongBanId: so(form, 'phongBanId'),
+        }
+        if (!id) Object.assign(duLieu, {
+          tenDangNhap: text(form, 'tenDangNhap'), matKhau: form.get('matKhau'), vaiTroId: so(form, 'vaiTroId'),
+        })
+        break
+      case 'meeting-rooms':
+        duLieu = { tenPhongHop: text(form, 'tenPhongHop'), viTri: text(form, 'viTri'),
+          sucChua: so(form, 'sucChua'), moTa: text(form, 'moTa') }
+        break
+      case 'equipment':
+        duLieu = { tenThietBi: text(form, 'tenThietBi'), maThietBi: text(form, 'maThietBi'),
+          soLuong: so(form, 'soLuong'), tinhTrang: text(form, 'tinhTrang'), phongHopId: so(form, 'phongHopId'),
+          ghiChu: text(form, 'ghiChu') }
+        break
+      default:
+        duLieu = { tenPhongBan: text(form, 'tenPhongBan'), moTa: text(form, 'moTa') }
+    }
+    luu(id ? `${loai}/${id}` : loai, id ? 'PUT' : 'POST', duLieu, `Đã lưu ${danhTu}.`)
+  }
+
+  function luuThaoTac(event, duongDan, tenTruong, laSo, thanhCong) {
+    event.preventDefault()
+    const form = new FormData(event.currentTarget)
+    luu(`${loai}/${id}/${duongDan}`, 'PATCH', { [tenTruong]: laSo ? so(form, tenTruong) : text(form, tenTruong) }, thanhCong)
+  }
+
+  const phongBan = loai === 'users' ? (lienQuan ?? []).filter((phong) =>
+    phong.trangThai === 'HOAT_DONG' || phong.phongBanId === mucChon?.phongBanId) : []
+  const truongPhong = loai === 'departments' && id ? (lienQuan ?? []).filter((nguoi) =>
+    nguoi.phongBanId === id && nguoi.maVaiTro === 'CAN_BO' && nguoi.trangThai === 'HOAT_DONG') : []
+  const chuaCoLuaChon = loai === 'users' && !id && !vaiTro?.length
+
   return (
-    <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold">Quản lý {danhTu}</h1>
-        <button type="button" className={LOP_NUT_CHINH} disabled={!danhSach || dangLuu} onClick={() => moForm({})}>Thêm {danhTu}</button>
-      </div>
-      {loiTai && (
-        <div className="flex flex-wrap items-center gap-3 rounded-lg bg-red-50 p-3 text-sm text-red-800">
-          <p role="alert">{loiTai}</p>
-          <button type="button" className="font-semibold underline" onClick={() => setLanTai((lan) => lan + 1)}>Tải lại</button>
-        </div>
-      )}
-      {!danhSach && !loiTai && <p role="status" className="text-sm text-slate-600">Đang tải {danhTu}…</p>}
-      {danhSach && (
-        <div className={LOP_KHOI}>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="text-sm font-semibold">Tìm {danhTu}
-              <input type="search" className={LOP_TRUONG} value={tuKhoa} onChange={(event) => setTuKhoa(event.target.value)} />
-            </label>
-            {!laPhongBan && (
-              <label className="text-sm font-semibold">Tình trạng
-                <select className={LOP_TRUONG} value={tinhTrang} onChange={(event) => setTinhTrang(event.target.value)}>
-                  <option value="">Tất cả tình trạng</option>
-                  {Object.entries(TINH_TRANG_THIET_BI).map(([ma, ten]) => <option key={ma} value={ma}>{ten}</option>)}
-                </select>
-              </label>
-            )}
+    <div className="adm-page">
+      <TieuDeTrang ten={ten} moTa={moTa}>
+        <button type="button" className="adm-btn adm-primary" disabled={!danhSach} onClick={() => moForm({})}>
+          <Plus size={18} aria-hidden="true" /> Thêm {danhTu}
+        </button>
+      </TieuDeTrang>
+      <PhanHoi loi={loiTai} thongBao={thongBao} onTaiLai={() => setLanTai((lan) => lan + 1)} />
+      {danhSach ? (
+        <section className="adm-surface" aria-label={`Danh sách ${danhTu}`}>
+          <div className="adm-toolbar">
+            <TimKiem tuKhoa={tuKhoa} onDoi={setTuKhoa} nhan={`Tìm ${danhTu}`} />
+            <select className="adm-input adm-filter" aria-label="Lọc theo trạng thái" value={loc} onChange={(event) => setLoc(event.target.value)}>
+              <option value="">Tất cả trạng thái</option>
+              {Object.entries(trangThai).map(([ma, [nhan]]) => <option key={ma} value={ma}>{nhan}</option>)}
+            </select>
+            <p className="adm-result" aria-live="polite">{ketQua.length} / {danhSach.length} {danhTu}</p>
           </div>
-          {ketQua.length === 0 && <p className="text-sm text-slate-600">{danhSach.length ? 'Không tìm thấy kết quả.' : `Chưa có ${danhTu}.`}</p>}
-          <ul className="divide-y divide-slate-100">
-            {ketQua.map((muc) => (
-              <li key={idCua(muc)} className="flex flex-wrap items-center justify-between gap-3 py-3">
-                <div className="min-w-0">
-                  <p className="break-words font-semibold">{tenCua(muc)}</p>
-                  <p className="text-sm text-slate-600">
-                    {laPhongBan
-                      ? `Trưởng phòng · ${muc.tenTruongPhong || (muc.truongPhongId ? `#${muc.truongPhongId}` : 'Chưa phân công')}`
-                      : [muc.maThietBi, muc.tenPhongHop || 'Chưa gắn phòng họp', `SL ${muc.soLuong}`, TINH_TRANG_THIET_BI[muc.tinhTrang] || muc.tinhTrang].filter(Boolean).join(' · ')}
-                  </p>
-                </div>
-                <button type="button" className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold hover:bg-slate-50 disabled:opacity-50" disabled={dangLuu} onClick={() => moForm(muc)}>Chỉnh sửa</button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+          {ketQua.length ? (
+            <div className="adm-table-scroll" tabIndex={0} role="region" aria-label={`Bảng ${danhTu}`}>
+              <table className="adm-table">
+                <thead><tr><th scope="col">{ten}</th>
+                  {cot.map(([nhan, key]) => <th key={key} scope="col">{nhan}</th>)}
+                  <th scope="col">Trạng thái</th><th scope="col" className="adm-actions">Thao tác</th>
+                </tr></thead>
+                <tbody>{ketQua.map((muc) => {
+                  const [nhan, mau] = trangThai[muc[khoaTrangThai]] ?? [muc[khoaTrangThai] || 'Chưa cập nhật']
+                  return (
+                    <tr key={muc[khoa]}>
+                      <th scope="row"><strong>{muc[tenChinh]}</strong><small>{muc.email || muc[truongPhu]}</small></th>
+                      {cot.map(([, key]) => <td key={key}>{muc[key] ?? (key === 'tenTruongPhong' && muc.truongPhongId ? `#${muc.truongPhongId}` : '—')}</td>)}
+                      <td><TrangThai ten={nhan} mau={mau} /></td>
+                      <td className="adm-actions"><button type="button" className="adm-btn adm-edit"
+                        aria-label={`Chỉnh sửa ${muc[tenChinh]}`} onClick={() => moForm(muc)}>
+                        <Pencil size={15} aria-hidden="true" /> Sửa
+                      </button></td>
+                    </tr>
+                  )
+                })}</tbody>
+              </table>
+            </div>
+          ) : <p className="adm-empty">{danhSach.length ? 'Không có kết quả phù hợp.' : `Chưa có ${danhTu}.`}</p>}
+        </section>
+      ) : !loiTai && <p role="status" className="adm-empty adm-surface">Đang tải {danhTu}…</p>}
 
       {mucChon && (
-        <section ref={vungBieuMau} tabIndex={-1} className={`${LOP_KHOI} scroll-mt-24`} aria-label={`Biểu mẫu ${danhTu}`}>
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="text-lg font-bold">{id ? 'Cập nhật' : 'Thêm'} {danhTu}</h2>
-            <button type="button" className="text-sm font-semibold text-slate-600 disabled:opacity-50" disabled={dangLuu} onClick={() => moForm(null)}>Đóng</button>
-          </div>
-          <form key={id ?? 'moi'} onSubmit={luu} className="space-y-4">
-            <fieldset disabled={dangLuu} className="grid gap-4 sm:grid-cols-2">
-              <label className="text-sm font-semibold">Tên {danhTu}
-                <input className={LOP_TRUONG} name={laPhongBan ? 'tenPhongBan' : 'tenThietBi'} defaultValue={tenCua(mucChon) ?? ''} maxLength={150} required />
-              </label>
-              {laPhongBan ? (
-                <label className="text-sm font-semibold sm:col-span-2">Mô tả
-                  <textarea className={LOP_TRUONG} name="moTa" defaultValue={mucChon.moTa ?? ''} rows={3} />
-                </label>
+        <NganChinhSua tieuDe={id ? `Chỉnh sửa ${danhTu}` : `Thêm ${danhTu}`}
+          moTa={id ? mucChon[tenChinh] : undefined} dangLuu={dangLuu} onDong={() => moForm(null)}>
+          <PhanHoi loi={loi} />
+          <form onSubmit={luuThongTin} className="adm-form">
+            <fieldset disabled={dangLuu} className="adm-form-grid">
+              {loai === 'users' ? (
+                <>
+                  <Truong ten="hoTen" nhan="Họ và tên" muc={mucChon} required maxLength={150} />
+                  <Truong ten="email" nhan="Email" muc={mucChon} type="email" required maxLength={190} />
+                  <Truong ten="maNhanVien" nhan="Mã nhân viên" muc={mucChon} maxLength={30} />
+                  <Truong ten="soDienThoai" nhan="Số điện thoại" muc={mucChon} type="tel" maxLength={25} />
+                  <Truong ten="chucVu" nhan="Chức vụ" muc={mucChon} maxLength={120} />
+                  <LuaChon ten="phongBanId" nhan="Phòng ban" giaTri={mucChon.phongBanId}
+                    tuyChon={phongBan.map((muc) => [muc.phongBanId, muc.tenPhongBan])}
+                    disabled={!lienQuan} trong="Chưa gán phòng ban" />
+                  {!id && <>
+                    <Truong ten="tenDangNhap" nhan="Tên đăng nhập" muc={mucChon} required maxLength={80} />
+                    <Truong ten="matKhau" nhan="Mật khẩu ban đầu" muc={mucChon} type="password" autoComplete="new-password" required />
+                    <LuaChon ten="vaiTroId" nhan="Vai trò" tuyChon={(vaiTro ?? []).map((muc) => [muc.vaiTroId, muc.tenVaiTro || TEN_VAI_TRO[muc.maVaiTro]])}
+                      trong={vaiTro?.length ? 'Chọn vai trò' : 'Chưa có vai trò khả dụng'} required />
+                  </>}
+                </>
               ) : (
                 <>
-                  <label className="text-sm font-semibold">Mã thiết bị
-                    <input className={LOP_TRUONG} name="maThietBi" defaultValue={mucChon.maThietBi ?? ''} maxLength={50} />
-                  </label>
-                  <label className="text-sm font-semibold">Số lượng
-                    <input className={LOP_TRUONG} name="soLuong" type="number" min="1" step="1" defaultValue={mucChon.soLuong ?? 1} required />
-                  </label>
-                  <label className="text-sm font-semibold">Tình trạng
-                    <select className={LOP_TRUONG} name="tinhTrang" defaultValue={mucChon.tinhTrang ?? 'TOT'} required>
-                      {Object.entries(TINH_TRANG_THIET_BI).map(([ma, ten]) => <option key={ma} value={ma}>{ten}</option>)}
-                    </select>
-                  </label>
-                  <label className="text-sm font-semibold">Phòng họp
-                    <select className={LOP_TRUONG} name="phongHopId" defaultValue={mucChon.phongHopId ?? ''}>
-                      <option value="">Chưa gắn phòng họp</option>
-                      {danhSachLienQuan.map((muc) => <option key={muc.phongHopId} value={muc.phongHopId}>{muc.tenPhongHop}</option>)}
-                    </select>
-                  </label>
-                  <label className="text-sm font-semibold sm:col-span-2">Ghi chú
-                    <textarea className={LOP_TRUONG} name="ghiChu" defaultValue={mucChon.ghiChu ?? ''} rows={3} />
-                  </label>
+                  <Truong ten={tenChinh} nhan={`Tên ${danhTu}`} muc={mucChon} required maxLength={loai === 'meeting-rooms' ? 120 : 150} rong />
+                  {loai === 'meeting-rooms' && <>
+                    <Truong ten="viTri" nhan="Vị trí" muc={mucChon} maxLength={255} />
+                    <Truong ten="sucChua" nhan="Sức chứa (người)" muc={mucChon} type="number" min="1" required />
+                  </>}
+                  {loai === 'equipment' && <>
+                    <Truong ten="maThietBi" nhan="Mã thiết bị" muc={mucChon} maxLength={50} />
+                    <Truong ten="soLuong" nhan="Số lượng" muc={mucChon} type="number" min="1" macDinh={1} required />
+                    <LuaChon ten="tinhTrang" nhan="Tình trạng" giaTri={mucChon.tinhTrang ?? 'TOT'}
+                      tuyChon={Object.entries(TINH_TRANG_THIET_BI).map(([ma, [nhan]]) => [ma, nhan])} required />
+                    <LuaChon ten="phongHopId" nhan="Phòng họp" giaTri={mucChon.phongHopId} trong="Chưa gắn phòng họp" disabled={!lienQuan}
+                      tuyChon={(lienQuan ?? []).map((muc) => [muc.phongHopId, muc.tenPhongHop])} />
+                  </>}
+                  <Truong ten={loai === 'equipment' ? 'ghiChu' : 'moTa'} nhan={loai === 'equipment' ? 'Ghi chú' : 'Mô tả'} muc={mucChon} nhieuDong rong />
                 </>
               )}
             </fieldset>
-            <button type="submit" className={LOP_NUT_CHINH} disabled={dangLuu}>{dangLuu ? 'Đang lưu…' : 'Lưu thay đổi'}</button>
+            <div className="adm-form-actions">
+              <button type="button" className="adm-btn adm-secondary" onClick={() => moForm(null)} disabled={dangLuu}>Đóng</button>
+              <button type="submit" className="adm-btn adm-primary"
+                disabled={dangLuu || chuaCoLuaChon || ((loai === 'users' || loai === 'equipment') && !lienQuan)}>
+                {dangLuu ? 'Đang lưu…' : id ? 'Lưu thông tin' : `Thêm ${danhTu}`}
+              </button>
+            </div>
           </form>
 
-          {laPhongBan && id && (
-            <form key={`truong-phong-${id}-${mucChon.truongPhongId ?? ''}`} onSubmit={phanCongTruongPhong} className="flex flex-wrap items-end gap-3 border-t border-slate-100 pt-4">
-              <label className="min-w-48 flex-1 text-sm font-semibold">Trưởng phòng
-                <select className={LOP_TRUONG} name="truongPhongId" defaultValue={mucChon.truongPhongId ?? ''} disabled={dangLuu || !truongPhong.length} required>
-                  <option value="">{truongPhong.length ? 'Chọn cán bộ trong phòng ban' : 'Chưa có cán bộ đủ điều kiện'}</option>
-                  {truongPhong.map((nguoi) => <option key={nguoi.nguoiDungId} value={nguoi.nguoiDungId}>{nguoi.hoTen}</option>)}
-                </select>
-              </label>
-              <button type="submit" className={LOP_NUT_CHINH} disabled={dangLuu || !truongPhong.length}>Phân công trưởng phòng</button>
+          {id && loai === 'departments' && (
+            <form className="adm-subform" onSubmit={(event) => luuThaoTac(event, 'leader', 'truongPhongId', true, 'Đã phân công trưởng phòng.')}>
+              <LuaChon ten="truongPhongId" nhan="Trưởng phòng" giaTri={mucChon.truongPhongId}
+                trong={truongPhong.length ? 'Chọn cán bộ trong phòng ban' : 'Chưa có cán bộ đủ điều kiện'}
+                tuyChon={truongPhong.map((muc) => [muc.nguoiDungId, muc.hoTen])} disabled={dangLuu || !truongPhong.length} required />
+              <button type="submit" className="adm-btn adm-secondary" disabled={dangLuu || !truongPhong.length}>Phân công</button>
             </form>
           )}
-          {loi && <p role="alert" className="text-sm text-red-800">{loi}</p>}
-          {thongBao && <p role="status" className="text-sm text-emerald-800">{thongBao}</p>}
-        </section>
+          {id && loai === 'meeting-rooms' && (
+            <form className="adm-subform" onSubmit={(event) => luuThaoTac(event, 'status', 'trangThai', false, 'Đã cập nhật trạng thái phòng.')}>
+              <LuaChon ten="trangThai" nhan="Trạng thái phòng" giaTri={mucChon.trangThai}
+                trong={TRANG_THAI_PHONG_CO_THE_LUU.includes(mucChon.trangThai) ? undefined : 'Chọn trạng thái mới'}
+                tuyChon={TRANG_THAI_PHONG_CO_THE_LUU.map((ma) => [ma, TRANG_THAI_PHONG[ma][0]])} disabled={dangLuu} required />
+              <button type="submit" className="adm-btn adm-secondary" disabled={dangLuu}>Lưu trạng thái</button>
+            </form>
+          )}
+          {id && loai === 'users' && (
+            <form className="adm-subform" onSubmit={(event) => luuThaoTac(event, 'vai-tro', 'vaiTroId', true, 'Đã cập nhật vai trò.')}>
+              <LuaChon ten="vaiTroId" nhan="Vai trò" giaTri={mucChon.vaiTroId}
+                trong={vaiTro?.length ? 'Chọn vai trò' : 'Chưa có vai trò khả dụng'}
+                tuyChon={(vaiTro ?? []).map((muc) => [muc.vaiTroId, muc.tenVaiTro || TEN_VAI_TRO[muc.maVaiTro]])}
+                disabled={dangLuu || !vaiTro?.length} required />
+              <button type="submit" className="adm-btn adm-secondary" disabled={dangLuu || !vaiTro?.length}>Lưu vai trò</button>
+            </form>
+          )}
+        </NganChinhSua>
       )}
     </div>
   )
+}
+
+function Truong({ ten, nhan, muc, rong, nhieuDong, macDinh = '', ...props }) {
+  const giaTri = muc[ten] ?? macDinh
+  return <label className={`adm-field ${rong ? 'adm-field-wide' : ''}`}>
+    {nhan}
+    {nhieuDong ? <textarea className="adm-input" name={ten} defaultValue={giaTri} rows={3} {...props} />
+      : <input className="adm-input" name={ten} defaultValue={giaTri} {...props} />}
+  </label>
+}
+
+function LuaChon({ ten, nhan, giaTri, tuyChon, trong, ...props }) {
+  const id = useId()
+  return <label className="adm-field" htmlFor={id}>
+    {nhan}
+    <select id={id} className="adm-input" name={ten} defaultValue={giaTri ?? ''} {...props}>
+      {trong && <option value="">{trong}</option>}
+      {tuyChon.map(([ma, nhanLuaChon]) => <option key={ma} value={ma}>{nhanLuaChon}</option>)}
+    </select>
+  </label>
 }

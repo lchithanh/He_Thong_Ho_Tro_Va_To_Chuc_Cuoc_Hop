@@ -40,6 +40,7 @@ public class TaiLieuCuocHopService {
     private static final Set<String> DINH_DANG_HO_TRO =
             Set.of("pdf", "doc", "docx", "xls", "xlsx");
 
+    private final CapNhatHoSoRealtime capNhatRealtime;
     private final CuocHopRepository cuocHopRepository;
     private final TaiLieuCuocHopRepository taiLieuCuocHopRepository;
     private final PhanQuyenCuocHopService phanQuyenCuocHopService;
@@ -223,6 +224,7 @@ public class TaiLieuCuocHopService {
                     }
             );
         }
+        capNhatRealtime.baoCho(nguoiDungId);
     }
 
     // =====================================================

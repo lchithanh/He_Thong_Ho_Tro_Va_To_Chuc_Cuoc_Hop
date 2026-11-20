@@ -3,6 +3,7 @@ package com.example.demo.config;
 
 import com.example.demo.security.JwtAuthenticationFilter;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
+import org.springframework.http.HttpMethod;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -82,6 +83,8 @@ public class SecurityConfig {
             )
 
             .authorizeHttpRequests(auth -> auth
+                    // JWT được kiểm tra ở gói STOMP CONNECT sau khi nâng cấp WebSocket.
+                    .requestMatchers(HttpMethod.GET, "/ws").permitAll()
             	    .requestMatchers("/api/auth/**").permitAll()
             	    .requestMatchers("/error").permitAll()
             	    .requestMatchers("/api/admin/**").hasRole("ADMIN")

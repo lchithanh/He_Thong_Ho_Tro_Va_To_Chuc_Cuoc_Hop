@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
-import { layLichTheoCuocHop } from '../../api/cuocHopApi.js'
+import { layLichTheoCuocHop, trinhLaiLichSauHuy } from '../../api/cuocHopApi.js'
 
 const TEN_TRANG_THAI = {
   DA_XAC_NHAN: 'Đã xác nhận',
@@ -14,7 +14,7 @@ function dinhDangThoiGian(thoiGian) {
   return thoiGian ? new Date(thoiGian).toLocaleString('vi-VN') : 'Chưa có thông tin'
 }
 
-function DanhSachLich({ lich, loaiHinh }) {
+function DanhSachLich({ lich, loaiHinh, onTrinhLai, dangTrinh, thoiDiemTai }) {
   return (
     <ul className="divide-y divide-slate-100">
       {lich.map((muc) => (
@@ -22,6 +22,13 @@ function DanhSachLich({ lich, loaiHinh }) {
           <div className="flex flex-wrap items-center gap-2">
             <strong>{TEN_TRANG_THAI[muc.trangThai] || muc.trangThai}</strong>
             <span className="text-slate-500">Lịch #{muc.lichHopId}</span>
+            {onTrinhLai && muc.trangThai === 'DE_XUAT' && Date.parse(muc.thoiGianBatDau) > thoiDiemTai && (
+              <button type="button" disabled={dangTrinh != null}
+                className="rounded-lg bg-emerald-800 px-3 py-2 text-xs font-semibold text-white disabled:opacity-60"
+                onClick={() => onTrinhLai(muc.lichHopId)}>
+                {dangTrinh === muc.lichHopId ? 'Đang trình…' : 'Trình duyệt lại lịch'}
+              </button>
+            )}
           </div>
           <dl className="grid gap-x-3 gap-y-1.5 sm:grid-cols-2">
             {[
@@ -45,14 +52,38 @@ function DanhSachLich({ lich, loaiHinh }) {
   )
 }
 
-export default function LichCuaHoSo({ cuocHopId, loaiHinh, token, lichHopIdKeHoachDaDuyet }) {
+export default function LichCuaHoSo({
+  cuocHopId, loaiHinh, token, lichHopIdKeHoachDaDuyet, coQuyenTrinhLai, onDaTrinhLai,
+}) {
   const phienDongBo = useDongBoDuLieu()
-  const [lich, setLich] = useState(null)
+  const [duLieuLich, setDuLieuLich] = useState(null)
+  const lich = duLieuLich?.danhSach
   const [loi, setLoi] = useState('')
+  const [dangTrinh, setDangTrinh] = useState(null)
+  const [loiTrinh, setLoiTrinh] = useState('')
+
+  async function trinhLai(lichHopId) {
+    if (dangTrinh != null) return
+    setDangTrinh(lichHopId)
+    setLoiTrinh('')
+    try {
+      const ketQua = await trinhLaiLichSauHuy(cuocHopId, lichHopId, token)
+      onDaTrinhLai?.(ketQua)
+    } catch (error) {
+      setLoiTrinh(error.message)
+    } finally {
+      setDangTrinh(null)
+    }
+  }
   useEffect(() => {
     const controller = new AbortController()
     layLichTheoCuocHop(cuocHopId, token, controller.signal)
-      .then((duLieu) => { if (!controller.signal.aborted) setLich(duLieu) })
+      .then((duLieu) => {
+        if (!controller.signal.aborted) {
+          setDuLieuLich({ danhSach: duLieu, thoiDiemTai: Date.now() })
+          setLoi('')
+        }
+      })
       .catch((error) => {
         if (!controller.signal.aborted) setLoi(error.status === 403 ? 'Bạn không có quyền xem lịch của cuộc họp này.' : error.message)
       })
@@ -65,6 +96,8 @@ export default function LichCuaHoSo({ cuocHopId, loaiHinh, token, lichHopIdKeHoa
   )
 
   const lichSu = lich?.filter((muc) => !hienTai.includes(muc))
+  const hienNutTrinhLai = !loi && coQuyenTrinhLai && !hienTai?.some((muc) => muc.trangThai === 'DA_XAC_NHAN')
+    && lichSu?.some((muc) => muc.lichHopId === lichHopIdKeHoachDaDuyet && muc.trangThai === 'DA_HUY')
   return (
     <section className="space-y-2 rounded-xl border border-slate-200 p-4 text-sm">
       <div className="flex flex-wrap items-center gap-2">
@@ -76,9 +109,15 @@ export default function LichCuaHoSo({ cuocHopId, loaiHinh, token, lichHopIdKeHoa
         )}
       </div>      
         {loi ? <p role="alert" className="text-red-800">{loi}</p>
-        : lich === null ? <p role="status">Đang tải lịch…</p>
+        : !duLieuLich ? <p role="status">Đang tải lịch…</p>
           : hienTai.length === 0 && <p className="text-slate-600">Chưa có lịch hiện hành.</p>}
-      {hienTai?.length > 0 && <DanhSachLich lich={hienTai} loaiHinh={loaiHinh} />}
+      {loiTrinh && <p role="alert" className="text-red-800">{loiTrinh}</p>}
+      {hienNutTrinhLai && <p className="text-slate-600">
+        Lịch đã duyệt bị hủy. Bạn có thể trình lịch đề xuất mới cùng kế hoạch và tài liệu đã lưu.
+      </p>}
+      {hienTai?.length > 0 && <DanhSachLich lich={hienTai} loaiHinh={loaiHinh}
+        onTrinhLai={hienNutTrinhLai ? trinhLai : undefined} dangTrinh={dangTrinh}
+        thoiDiemTai={duLieuLich.thoiDiemTai} />}
       {lichSu?.length > 0 && (
         <details className="border-t border-slate-100 pt-2">
           <summary className="cursor-pointer font-medium text-slate-700">Lịch sử thay đổi lịch ({lichSu.length})</summary>

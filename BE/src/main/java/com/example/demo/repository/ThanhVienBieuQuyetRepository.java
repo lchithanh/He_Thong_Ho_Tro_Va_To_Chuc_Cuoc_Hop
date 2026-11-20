@@ -1,5 +1,7 @@
 package com.example.demo.repository;
 
+import java.util.List;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -10,6 +12,13 @@ import com.example.demo.entity.ThanhVienBieuQuyetId;
 
 public interface ThanhVienBieuQuyetRepository
         extends JpaRepository<ThanhVienBieuQuyet, ThanhVienBieuQuyetId> {
+
+    @Query("""
+            SELECT tv.id.nguoiDungId
+            FROM ThanhVienBieuQuyet tv
+            WHERE tv.id.bieuQuyetId = :bieuQuyetId
+            """)
+    List<Integer> timNguoiDuocBieuQuyet(@Param("bieuQuyetId") Integer bieuQuyetId);
 
     @Modifying
     @Query(value = """

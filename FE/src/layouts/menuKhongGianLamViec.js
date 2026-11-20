@@ -4,9 +4,6 @@ import FileCheck2 from 'lucide-react/dist/esm/icons/file-check-2.mjs'
 import FileClock from 'lucide-react/dist/esm/icons/file-clock.mjs'
 import FileText from 'lucide-react/dist/esm/icons/file-text.mjs'
 import Mail from 'lucide-react/dist/esm/icons/mail.mjs'
-import Building2 from 'lucide-react/dist/esm/icons/building-2.mjs'
-import Monitor from 'lucide-react/dist/esm/icons/monitor.mjs'
-import Users from 'lucide-react/dist/esm/icons/users.mjs'
 import Vote from 'lucide-react/dist/esm/icons/vote.mjs'
 import { LichHopCaNhan } from '../pages/thuky/LichHopThuKy.jsx'
 import DanhSachDeXuatThuKy from '../pages/thuky/DanhSachDeXuatThuKy.jsx'
@@ -16,9 +13,6 @@ import PhanHoiLoiMoi from '../pages/thamdu/PhanHoiLoiMoi.jsx'
 import BieuQuyetThamDu from '../pages/thamdu/BieuQuyetThamDu.jsx'
 import VanBanDaPhatHanh from '../pages/thamdu/VanBanDaPhatHanh.jsx'
 import DeXuatCuaToi from '../pages/dexuat/DeXuatCuaToi.jsx'
-import PhanCongThuKy from '../pages/quantri/PhanCongThuKy.jsx'
-import QuanLyPhongBan from '../pages/quantri/QuanLyPhongBan.jsx'
-import QuanLyThietBi from '../pages/quantri/QuanLyThietBi.jsx'
 
 const MUC_BAN_GIAO = { id: 'cuoc-hop-duoc-giao', ten: 'Cuộc họp được giao', Trang: DanhSachDeXuatThuKy, BieuTuong: ClipboardCheck }
 
@@ -61,12 +55,6 @@ export function layMenuKhongGianLamViec(maVaiTro, laQuanLy) {
       MUC_LICH_HOP, MUC_BAN_GIAO,
       MUC_CHUYEN_CAP, ...MUC_VAN_BAN_CHU_TRI, MUC_TAO_BIEU_QUYET,
       ...MUC_THAM_DU,
-    ]
-  } else if (maVaiTro === 'ADMIN') {
-    return [
-      { id: 'phong-ban', ten: 'Quản lý phòng ban', Trang: QuanLyPhongBan, BieuTuong: Building2 },
-      { id: 'thiet-bi', ten: 'Quản lý thiết bị', Trang: QuanLyThietBi, BieuTuong: Monitor },
-      { id: 'phan-cong-thu-ky', ten: 'Phân công thư ký', Trang: PhanCongThuKy, BieuTuong: Users },
     ]
   }
 

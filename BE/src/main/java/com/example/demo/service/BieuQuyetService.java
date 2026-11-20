@@ -48,6 +48,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class BieuQuyetService {
 
+    private final CapNhatHoSoRealtime capNhatRealtime;
     private final CuocHopRepository cuocHopRepository;
     private final BieuQuyetRepository bieuQuyetRepository;
     private final LuaChonBieuQuyetRepository luaChonBieuQuyetRepository;
@@ -132,6 +133,7 @@ public class BieuQuyetService {
                 taoLuaChon(daLuu, "Không ý kiến", 3, true)
         ));
 
+        capNhatRealtime.baoCho(nguoiDangNhapId);
         return daLuu.getBieuQuyetId();
     }
 
@@ -194,6 +196,9 @@ public class BieuQuyetService {
         }
 
         bieuQuyet.setTrangThai("DANG_MO");
+        var nguoiNhan = new HashSet<>(thanhVienBieuQuyetRepository.timNguoiDuocBieuQuyet(bieuQuyetId));
+        nguoiNhan.add(nguoiDangNhapId);
+        capNhatRealtime.baoCho(nguoiNhan, false);
     }
     
     
@@ -289,6 +294,7 @@ public class BieuQuyetService {
         }
 
         phieuBieuQuyetRepository.save(phieu);
+        capNhatRealtime.baoCho(nguoiDangNhapId);
     }
     
     
@@ -353,6 +359,16 @@ public class BieuQuyetService {
 
         bieuQuyet.setSoThanhVienCoMatKhiDong(soThanhVienCoMat);
         bieuQuyet.setTrangThai("DA_DONG");
+        Set<Integer> nguoiNhan = new HashSet<>();
+        for (var thanhVien : thanhVienCuocHopRepository
+                .findByCuocHop_CuocHopIdOrderById_NguoiDungIdAsc(cuocHopId)) {
+            nguoiNhan.add(thanhVien.getId().getNguoiDungId());
+        }
+        NguoiDung chuTri = bieuQuyet.getCuocHop().getNguoiChuTri();
+        if (chuTri != null) {
+            nguoiNhan.add(chuTri.getNguoiDungId());
+        }
+        capNhatRealtime.baoCho(nguoiNhan, false);
     }
     
     @Transactional(readOnly = true)

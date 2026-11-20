@@ -17,6 +17,10 @@ public interface LichSuPheDuyetRepository
     // Lấy lịch sử phê duyệt của một cuộc họp
     List<LichSuPheDuyet> findByCuocHop_CuocHopId(Integer cuocHopId);
 
+    Optional<LichSuPheDuyet>
+    findFirstByCuocHop_CuocHopIdAndLoaiPheDuyetAndHanhDongOrderByLichSuPheDuyetIdDesc(
+            Integer cuocHopId, String loaiPheDuyet, String hanhDong);
+
     // Lấy lịch sử phê duyệt của một người
     List<LichSuPheDuyet> findByNguoiPheDuyet_NguoiDungId(
             Integer nguoiDungId

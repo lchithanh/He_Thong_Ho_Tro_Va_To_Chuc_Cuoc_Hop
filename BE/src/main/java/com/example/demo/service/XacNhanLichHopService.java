@@ -51,6 +51,17 @@ class XacNhanLichHopService {
                 yeuCau);
     }
 
+    void kiemTraLichCuaLanTrinh(CuocHop cuocHop, LichHop lich, LichHop lichDaDuyet, HttpStatus status) {
+        if (lich == null || !ThaoTacLichHop.daXacNhan(lich)) {
+            kiemTraLichTruocKhiTrinh(cuocHop, lich, status);
+            return;
+        }
+        if (lichDaDuyet == null || !lichDaDuyet.getLichHopId().equals(lich.getLichHopId())
+                || !lichPhuHop(cuocHop, lich)) {
+            throw loi(status, "Lịch đã xác nhận không còn phù hợp. Chọn lịch đề xuất còn hiệu lực.");
+        }
+    }
+
     void kiemTraLichTruocKhiTrinh(CuocHop cuocHop, LichHop lich, HttpStatus status) {
         kiemTraLichDeXuat(cuocHop, lich, status);
         LichHop lichCu = layLichBiThayThe(lich);
@@ -66,17 +77,18 @@ class XacNhanLichHopService {
     }
 
     private void kiemTraLichDeXuat(CuocHop cuocHop, LichHop lich, HttpStatus status) {
-        if (lich == null || lich.getCuocHop() == null
-                || !cuocHop.getCuocHopId().equals(lich.getCuocHop().getCuocHopId())
-                || !ThaoTacLichHop.dangDeXuat(lich)
-                || lich.getThoiGianBatDau() == null
-                || !lich.getThoiGianBatDau().isAfter(LocalDateTime.now())
-                || lich.getThoiGianKetThuc() == null
-                || !lich.getThoiGianKetThuc().isAfter(lich.getThoiGianBatDau())
-                || ("TRUC_TIEP".equals(cuocHop.getLoaiHinh()) && lich.getPhongHop() == null)
-                || ("TRUC_TUYEN".equals(cuocHop.getLoaiHinh()) && lich.getPhongHop() != null)) {
+        if (lich == null || !ThaoTacLichHop.dangDeXuat(lich) || !lichPhuHop(cuocHop, lich)) {
             throw loi(status, "Chọn lịch đề xuất còn hiệu lực và phù hợp với hình thức họp.");
         }
+    }
+
+    private boolean lichPhuHop(CuocHop cuocHop, LichHop lich) {
+        return lich.getCuocHop() != null
+                && cuocHop.getCuocHopId().equals(lich.getCuocHop().getCuocHopId())
+                && lich.getThoiGianBatDau() != null && lich.getThoiGianBatDau().isAfter(LocalDateTime.now())
+                && lich.getThoiGianKetThuc() != null && lich.getThoiGianKetThuc().isAfter(lich.getThoiGianBatDau())
+                && (!"TRUC_TIEP".equals(cuocHop.getLoaiHinh()) || lich.getPhongHop() != null)
+                && (!"TRUC_TUYEN".equals(cuocHop.getLoaiHinh()) || lich.getPhongHop() == null);
     }
 
     private LichHop layLichBiThayThe(LichHop lich) {

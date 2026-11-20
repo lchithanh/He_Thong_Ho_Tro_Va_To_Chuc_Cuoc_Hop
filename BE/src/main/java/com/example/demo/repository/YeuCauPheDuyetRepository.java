@@ -5,6 +5,7 @@ import java.util.Optional;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
@@ -70,6 +71,22 @@ public interface YeuCauPheDuyetRepository
             Integer cuocHopId,
             LoaiYeuCau loaiYeuCau
     );
+
+    @Query("""
+            SELECT yc FROM YeuCauPheDuyet yc
+            JOIN FETCH yc.lichHop lh
+            WHERE yc.cuocHop.cuocHopId = :cuocHopId
+              AND yc.loaiYeuCau = :loai AND yc.trangThai = :trangThai
+              AND lh.thoiGianXacNhan IS NOT NULL
+              AND NOT EXISTS (
+                  SELECT ls FROM LichSuPheDuyet ls
+                  WHERE ls.yeuCauPheDuyet = yc AND ls.hanhDong = 'DONG_Y_TRINH_CAP_TREN'
+              )
+            ORDER BY yc.yeuCauPheDuyetId DESC
+            """)
+    List<YeuCauPheDuyet> timLanDuyetCoLichDaXacNhan(
+            @Param("cuocHopId") Integer cuocHopId, @Param("loai") LoaiYeuCau loai,
+            @Param("trangThai") TrangThai trangThai, Pageable gioiHan);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT yc FROM YeuCauPheDuyet yc WHERE yc.yeuCauPheDuyetId = :id")

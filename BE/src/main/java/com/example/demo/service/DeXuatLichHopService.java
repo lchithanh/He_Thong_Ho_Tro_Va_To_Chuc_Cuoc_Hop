@@ -19,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 @Transactional
 public class DeXuatLichHopService {
+    private final CapNhatHoSoRealtime capNhatRealtime;
     private final LichHopRepository lichHopRepository;
     private final LichHopService lichHopService;
     private final CuocHopRepository cuocHopRepository;
@@ -40,7 +41,9 @@ public class DeXuatLichHopService {
         LichHop lich = ThaoTacCuocHop.thucHien(() -> ThaoTacLichHop.taoDeXuat(
                 ch, phongDaChon, nguoiDeXuat, request.thoiGianBatDau(),
                 request.thoiGianKetThuc(), request.lyDoThayDoi()));
-        return lichHopService.chuyenDoiResponse(lichHopRepository.save(lich));
+        LichHop daLuu = lichHopRepository.save(lich);
+        capNhatRealtime.baoNguoiPhuTrach(ch, nguoiDeXuatId);
+        return lichHopService.chuyenDoiResponse(daLuu);
     }
 
     public LichHopResponse capNhatLichHop(Integer lichHopId,
@@ -65,7 +68,9 @@ public class DeXuatLichHopService {
         PhongHop phongDaChon = phong;
         ThaoTacCuocHop.thucHien(() -> ThaoTacLichHop.capNhatLich(lichDaKhoa, phongDaChon,
                 request.thoiGianBatDau(), request.thoiGianKetThuc(), request.lyDoThayDoi()));
-        return lichHopService.chuyenDoiResponse(lichHopRepository.save(lich));
+        LichHop daLuu = lichHopRepository.save(lich);
+        capNhatRealtime.baoNguoiPhuTrach(ch, nguoiDungId);
+        return lichHopService.chuyenDoiResponse(daLuu);
     }
 
     public LichHopResponse thayTheLichHop(Integer lichHopCuId, Integer lichHopMoiId, Integer nguoiDungId) {
@@ -104,7 +109,9 @@ public class DeXuatLichHopService {
         }
         LichHop lichCuDaKhoa = cu;
         ThaoTacCuocHop.thucHien(() -> ThaoTacLichHop.ganVoiLichBiThayThe(moi, lichCuDaKhoa));
-        return lichHopService.chuyenDoiResponse(lichHopRepository.save(moi));
+        LichHop daLuu = lichHopRepository.save(moi);
+        capNhatRealtime.baoNguoiPhuTrach(ch, nguoiDungId);
+        return lichHopService.chuyenDoiResponse(daLuu);
     }
 
     private CuocHop khoaCuocHop(Integer id) {

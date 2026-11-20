@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import LichCuaHoSo from '../thuky/LichCuaHoSo.jsx'
 import HoSoDaTrinh from '../thuky/HoSoDaTrinh.jsx'
-import ThaoTacKeHoach from '../thuky/ThaoTacKeHoach.jsx'
 import TienDoCuocHop from '../thuky/TienDoCuocHop.jsx'
 import LichSuKeHoach from '../thuky/LichSuKeHoach.jsx'
 
@@ -26,16 +25,14 @@ export default function ChiTietKeHoachChoDuyet({ keHoach, token, onDong, onDaXuL
           ? 'Lần trình cấp 1 đang chờ bạn xử lý.'
           : 'Lần trình cấp cuối đang chờ bạn xử lý.'}
       />
-      <HoSoDaTrinh key={yeuCauPheDuyetId} yeuCauId={yeuCauPheDuyetId} token={token}>
-        <ThaoTacKeHoach
-          cuocHopId={cuocHopId}
-          yeuCauPheDuyetId={yeuCauPheDuyetId}
-          token={token}
-          cheDo="duyet"
-          choPhepTrinhCapTren={keHoach.choPhepTrinhCapTren}
-          onDangXuLy={setDangXuLy}
-          onDaXuLy={onDaXuLy}
-        />
+      <HoSoDaTrinh
+        key={yeuCauPheDuyetId}
+        yeuCauId={yeuCauPheDuyetId}
+        token={token}
+        yeuCauDuyet={keHoach}
+        onDangXuLy={setDangXuLy}
+        onDaXuLy={onDaXuLy}
+      >
         <details className="rounded-lg border border-slate-200 bg-white p-4">
           <summary className="cursor-pointer font-semibold">Lịch sử các lần trình và quyết định</summary>
           <div className="mt-4"><LichSuKeHoach cuocHopId={cuocHopId} token={token} /></div>

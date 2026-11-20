@@ -20,6 +20,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 @Transactional
 public class CuocHopService {
+    private final CapNhatHoSoRealtime capNhatRealtime;
     private final NguoiDungRepository nguoiDungRepository;
     private final PhanQuyenCuocHopService phanQuyenCuocHopService;
     private final CuocHopRepository cuocHopRepository;
@@ -113,6 +114,7 @@ public class CuocHopService {
                 request.getTieuDe().trim(), request.getMucTieu(), request.getNoiDungDuKien(),
                 request.getLoaiHinh(), chuTriDaChon, request.isCoKhachMoiBenNgoai()));
         ch.setThuKyCuocHop(phanCongXuLyKeHoachService.chonThuKyCuocHop(ch, request.getThuKyCuocHopId()));
+        capNhatRealtime.baoNguoiPhuTrach(ch, nguoiDangNhapId);
     }
     
     public void batDauCuocHop(
@@ -148,6 +150,7 @@ public class CuocHopService {
                     ex.getMessage(),
                     ex);
         }
+        capNhatRealtime.baoCuocHop(cuocHop, nguoiDangNhapId);
     }
 
     public void ketThucCuocHop(
@@ -177,6 +180,7 @@ public class CuocHopService {
                     ex.getMessage(),
                     ex);
         }
+        capNhatRealtime.baoCuocHop(cuocHop, nguoiDangNhapId);
     }
 
     private CuocHop timCuocHopVaKhoa(Integer cuocHopId) {

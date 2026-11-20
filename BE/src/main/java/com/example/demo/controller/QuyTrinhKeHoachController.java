@@ -42,6 +42,13 @@ public class QuyTrinhKeHoachController {
                 cuocHopId, yeuCauId, layNguoiDungId(auth));
     }
 
+    @PostMapping("/{cuocHopId}/trinh-lai-lich")
+    public TrinhKeHoachResponse trinhLaiLich(@PathVariable("cuocHopId") Integer cuocHopId,
+            @RequestBody TrinhKeHoachRequest request, Authentication auth) {
+        return quyTrinhKeHoachService.trinhLaiLichSauHuy(
+                cuocHopId, request.getLichHopId(), layNguoiDungId(auth));
+    }
+
     @PostMapping("/{cuocHopId}/trinh")
 
     public TrinhKeHoachResponse trinh(@PathVariable Integer cuocHopId,

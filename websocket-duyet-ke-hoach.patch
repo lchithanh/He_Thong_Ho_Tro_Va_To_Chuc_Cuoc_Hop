@@ -1,0 +1,431 @@
+diff --git a/BE/pom.xml b/BE/pom.xml
+index 4a04188..cf28571 100644
+--- a/BE/pom.xml
++++ b/BE/pom.xml
+@@ -43,6 +43,10 @@
+ 			<groupId>org.springframework.boot</groupId>
+ 			<artifactId>spring-boot-starter-webmvc</artifactId>
+ 		</dependency>
++		<dependency>
++			<groupId>org.springframework.boot</groupId>
++			<artifactId>spring-boot-starter-websocket</artifactId>
++		</dependency>
+ 
+ 		<dependency>
+ 			<groupId>org.springframework.boot</groupId>
+diff --git a/BE/src/main/java/com/example/demo/config/SecurityConfig.java b/BE/src/main/java/com/example/demo/config/SecurityConfig.java
+index 50591e6..91043f0 100644
+--- a/BE/src/main/java/com/example/demo/config/SecurityConfig.java
++++ b/BE/src/main/java/com/example/demo/config/SecurityConfig.java
+@@ -3,6 +3,7 @@ package com.example.demo.config;
+ 
+ import com.example.demo.security.JwtAuthenticationFilter;
+ import org.springframework.boot.web.servlet.FilterRegistrationBean;
++import org.springframework.http.HttpMethod;
+ import org.springframework.context.annotation.Bean;
+ import org.springframework.context.annotation.Configuration;
+ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+@@ -82,6 +83,8 @@ public class SecurityConfig {
+             )
+ 
+             .authorizeHttpRequests(auth -> auth
++                    // JWT được kiểm tra ở gói STOMP CONNECT sau khi nâng cấp WebSocket.
++                    .requestMatchers(HttpMethod.GET, "/ws").permitAll()
+             	    .requestMatchers("/api/auth/**").permitAll()
+             	    .requestMatchers("/error").permitAll()
+             	    .requestMatchers("/api/admin/**").hasRole("ADMIN")
+diff --git a/BE/src/main/java/com/example/demo/config/WebSocketConfig.java b/BE/src/main/java/com/example/demo/config/WebSocketConfig.java
+new file mode 100644
+index 0000000..f1b377f
+--- /dev/null
++++ b/BE/src/main/java/com/example/demo/config/WebSocketConfig.java
+@@ -0,0 +1,53 @@
++package com.example.demo.config;
++
++import org.springframework.beans.factory.annotation.Qualifier;
++import org.springframework.beans.factory.annotation.Value;
++import org.springframework.context.annotation.Configuration;
++import org.springframework.context.annotation.Lazy;
++import org.springframework.messaging.simp.config.ChannelRegistration;
++import org.springframework.messaging.simp.config.MessageBrokerRegistry;
++import org.springframework.scheduling.TaskScheduler;
++import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
++import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
++import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
++
++import com.example.demo.security.XacThucWebSocket;
++
++@Configuration
++@EnableWebSocketMessageBroker
++public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
++
++    private final XacThucWebSocket xacThuc;
++    private final String[] nguonChoPhep;
++    private final TaskScheduler lichNhipKetNoi;
++
++    public WebSocketConfig(XacThucWebSocket xacThuc,
++            @Lazy @Qualifier("messageBrokerTaskScheduler") TaskScheduler lichNhipKetNoi,
++            @Value("${app.websocket.allowed-origins:http://localhost:5173,http://127.0.0.1:5173}")
++            String[] nguonChoPhep) {
++        this.xacThuc = xacThuc;
++        this.lichNhipKetNoi = lichNhipKetNoi;
++        this.nguonChoPhep = nguonChoPhep;
++    }
++
++    @Override
++    public void registerStompEndpoints(StompEndpointRegistry registry) {
++        registry.addEndpoint("/ws").setAllowedOrigins(nguonChoPhep);
++    }
++
++    @Override
++    public void configureMessageBroker(MessageBrokerRegistry registry) {
++        registry.enableSimpleBroker("/queue").setTaskScheduler(lichNhipKetNoi);
++        registry.setUserDestinationPrefix("/user");
++    }
++
++    @Override
++    public void configureClientInboundChannel(ChannelRegistration registration) {
++        registration.interceptors(xacThuc);
++    }
++
++    @Override
++    public void configureClientOutboundChannel(ChannelRegistration registration) {
++        registration.interceptors(xacThuc.kiemTraHanKhiGui());
++    }
++}
+diff --git a/BE/src/main/java/com/example/demo/security/JwtService.java b/BE/src/main/java/com/example/demo/security/JwtService.java
+index 575c4e6..c175679 100644
+--- a/BE/src/main/java/com/example/demo/security/JwtService.java
++++ b/BE/src/main/java/com/example/demo/security/JwtService.java
+@@ -1,6 +1,7 @@
+ package com.example.demo.security;
+ 
+ import java.nio.charset.StandardCharsets;
++import java.time.Instant;
+ import java.util.Date;
+ 
+ import javax.crypto.SecretKey;
+@@ -53,6 +54,16 @@ public class JwtService {
+         return extractClaims(token).getSubject();
+     }
+ 
++    public PhienJwt docPhien(String token) {
++        Claims claims = extractClaims(token);
++        if (claims.getSubject() == null || claims.getSubject().isBlank() || claims.getExpiration() == null) {
++            throw new JwtException("JWT thiếu thông tin phiên");
++        }
++        return new PhienJwt(claims.getSubject(), claims.getExpiration().toInstant());
++    }
++
++    public record PhienJwt(String tenDangNhap, Instant hetHanLuc) {}
++
+     // Kiểm tra token hợp lệ và chưa hết hạn
+     public boolean isTokenValid(String token, String username) {
+ 
+diff --git a/BE/src/main/java/com/example/demo/security/XacThucWebSocket.java b/BE/src/main/java/com/example/demo/security/XacThucWebSocket.java
+new file mode 100644
+index 0000000..f4a92da
+--- /dev/null
++++ b/BE/src/main/java/com/example/demo/security/XacThucWebSocket.java
+@@ -0,0 +1,105 @@
++package com.example.demo.security;
++
++import java.time.Instant;
++import java.util.Map;
++import java.util.concurrent.ConcurrentHashMap;
++
++import org.springframework.context.event.EventListener;
++import org.springframework.messaging.Message;
++import org.springframework.messaging.MessageChannel;
++import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
++import org.springframework.messaging.simp.SimpMessageType;
++import org.springframework.messaging.simp.stomp.StompCommand;
++import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
++import org.springframework.messaging.support.ChannelInterceptor;
++import org.springframework.messaging.support.MessageHeaderAccessor;
++import org.springframework.security.access.AccessDeniedException;
++import org.springframework.stereotype.Component;
++import org.springframework.web.socket.messaging.SessionDisconnectEvent;
++
++import com.example.demo.entity.NguoiDung;
++import com.example.demo.repository.NguoiDungRepository;
++
++import io.jsonwebtoken.JwtException;
++import lombok.RequiredArgsConstructor;
++
++@Component
++@RequiredArgsConstructor
++public class XacThucWebSocket implements ChannelInterceptor {
++
++    public static final String KENH_RIENG = "/user/queue/cap-nhat";
++
++    private final JwtService jwtService;
++    private final NguoiDungRepository nguoiDungRepository;
++    private final Map<String, Instant> hanTheoPhien = new ConcurrentHashMap<>();
++
++    @Override
++    public Message<?> preSend(Message<?> message, MessageChannel channel) {
++        StompHeaderAccessor header = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
++        if (header == null) {
++            throw new AccessDeniedException("Khung STOMP không hợp lệ");
++        }
++
++        StompCommand lenh = header.getCommand();
++        if (lenh == StompCommand.CONNECT || lenh == StompCommand.STOMP) {
++            xacThucKetNoi(header);
++        } else if (lenh == StompCommand.SUBSCRIBE) {
++            if (header.getUser() == null || !phienConHan(header.getSessionId())
++                    || !KENH_RIENG.equals(header.getDestination())) {
++                throw new AccessDeniedException("Bạn không có quyền đăng ký kênh này");
++            }
++        } else if (lenh != StompCommand.UNSUBSCRIBE && lenh != StompCommand.DISCONNECT
++                && header.getMessageType() != SimpMessageType.HEARTBEAT) {
++            throw new AccessDeniedException("Lệnh STOMP không được phép");
++        }
++        return message;
++    }
++
++    private void xacThucKetNoi(StompHeaderAccessor header) {
++        String authorization = header.getFirstNativeHeader("Authorization");
++        header.removeNativeHeader("Authorization");
++        if (authorization == null || !authorization.startsWith("Bearer ") || header.getSessionId() == null
++                || hanTheoPhien.containsKey(header.getSessionId())) {
++            throw new AccessDeniedException("Yêu cầu JWT hợp lệ để kết nối");
++        }
++
++        JwtService.PhienJwt phien;
++        try {
++            phien = jwtService.docPhien(authorization.substring(7));
++        } catch (JwtException | IllegalArgumentException ex) {
++            throw new AccessDeniedException("Phiên đăng nhập không hợp lệ", ex);
++        }
++
++        String nguoiDungId = nguoiDungRepository.findByTenDangNhap(phien.tenDangNhap())
++                .filter(nguoi -> "HOAT_DONG".equals(nguoi.getTrangThai()))
++                .map(NguoiDung::getNguoiDungId)
++                .map(String::valueOf)
++                .orElseThrow(() -> new AccessDeniedException("Tài khoản không hoạt động"));
++
++        header.setUser(() -> nguoiDungId);
++        hanTheoPhien.put(header.getSessionId(), phien.hetHanLuc());
++    }
++
++    private boolean phienConHan(String phienId) {
++        Instant hetHan = phienId == null ? null : hanTheoPhien.get(phienId);
++        return hetHan != null && hetHan.isAfter(Instant.now());
++    }
++
++    public ChannelInterceptor kiemTraHanKhiGui() {
++        return new ChannelInterceptor() {
++            @Override
++            public Message<?> preSend(Message<?> message, MessageChannel channel) {
++                if (SimpMessageHeaderAccessor.getMessageType(message.getHeaders()) == SimpMessageType.MESSAGE
++                        && !phienConHan(SimpMessageHeaderAccessor.getSessionId(message.getHeaders()))) {
++                    return null;
++                }
++                return message;
++            }
++        };
++    }
++
++    @EventListener
++    public void huyPhien(SessionDisconnectEvent suKien) {
++        hanTheoPhien.remove(suKien.getSessionId());
++    }
++}
+diff --git a/BE/src/main/java/com/example/demo/service/CapNhatHoSoRealtime.java b/BE/src/main/java/com/example/demo/service/CapNhatHoSoRealtime.java
+new file mode 100644
+index 0000000..2dcf8ed
+--- /dev/null
++++ b/BE/src/main/java/com/example/demo/service/CapNhatHoSoRealtime.java
+@@ -0,0 +1,33 @@
++package com.example.demo.service;
++
++import java.util.Set;
++
++import org.springframework.messaging.MessagingException;
++import org.springframework.messaging.simp.SimpMessagingTemplate;
++import org.springframework.stereotype.Component;
++import org.springframework.transaction.event.TransactionPhase;
++import org.springframework.transaction.event.TransactionalEventListener;
++
++import lombok.RequiredArgsConstructor;
++import lombok.extern.slf4j.Slf4j;
++
++@Slf4j
++@Component
++@RequiredArgsConstructor
++public class CapNhatHoSoRealtime {
++
++    private final SimpMessagingTemplate kenhGui;
++
++    public record KeHoachThayDoi(Set<Integer> nguoiNhanIds) {}
++
++    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
++    public void guiTinHieu(KeHoachThayDoi suKien) {
++        for (Integer nguoiNhanId : suKien.nguoiNhanIds()) {
++            try {
++                kenhGui.convertAndSendToUser(nguoiNhanId.toString(), "/queue/cap-nhat", "KE_HOACH_CAP_NHAT");
++            } catch (MessagingException ex) {
++                log.warn("Không gửi được tín hiệu cập nhật kế hoạch cho tài khoản {}", nguoiNhanId, ex);
++            }
++        }
++    }
++}
+diff --git a/BE/src/main/java/com/example/demo/service/ThongBaoService.java b/BE/src/main/java/com/example/demo/service/ThongBaoService.java
+index adbb27d..76c3692 100644
+--- a/BE/src/main/java/com/example/demo/service/ThongBaoService.java
++++ b/BE/src/main/java/com/example/demo/service/ThongBaoService.java
+@@ -3,6 +3,7 @@ package com.example.demo.service;
+ import java.util.HashSet;
+ import java.util.Set;
+ 
++import org.springframework.context.ApplicationEventPublisher;
+ import org.springframework.stereotype.Service;
+ import org.springframework.transaction.annotation.Propagation;
+ import org.springframework.transaction.annotation.Transactional;
+@@ -19,6 +20,7 @@ import lombok.RequiredArgsConstructor;
+ public class ThongBaoService {
+ 
+     private final ThongBaoRepository thongBaoRepository;
++    private final ApplicationEventPublisher suKien;
+ 
+     @Transactional(propagation = Propagation.MANDATORY)
+     public void gui(
+@@ -45,5 +47,10 @@ public class ThongBaoService {
+             thongBao.setNoiDung(noiDung);
+             thongBaoRepository.save(thongBao);
+         }
++
++        if (loai != null && loai.startsWith("KE_HOACH_")) {
++            daThem.remove(null);
++            suKien.publishEvent(new CapNhatHoSoRealtime.KeHoachThayDoi(Set.copyOf(daThem)));
++        }
+     }
+-}
+\ No newline at end of file
++}
+diff --git a/FE/package-lock.json b/FE/package-lock.json
+index 3410abe..5f6fe0d 100644
+--- a/FE/package-lock.json
++++ b/FE/package-lock.json
+@@ -8,6 +8,7 @@
+       "name": "fe",
+       "version": "0.0.0",
+       "dependencies": {
++        "@stomp/stompjs": "^7.5.0",
+         "@tailwindcss/vite": "^4.3.3",
+         "axios": "^1.21.0",
+         "docx-preview": "0.4.1",
+@@ -691,6 +692,12 @@
+       "integrity": "sha512-2j9bGt5Jh8hj+vPtgzPtl72j0yRxHAyumoo6TNfAjsLB04UtpSvPbPcDcBMxz7n+9CYB0c1GxQFxYRg2jimqGw==",
+       "license": "MIT"
+     },
++    "node_modules/@stomp/stompjs": {
++      "version": "7.5.0",
++      "resolved": "https://registry.npmjs.org/@stomp/stompjs/-/stompjs-7.5.0.tgz",
++      "integrity": "sha512-xh3sdzEYH8M+krQGBOgj+U0BLBHd7ccTj8YM3mVxaULMTW/wx2QBWf448pilRiWZKjglhDmNILxM3W+j/Ch9uw==",
++      "license": "Apache-2.0"
++    },
+     "node_modules/@tailwindcss/node": {
+       "version": "4.3.3",
+       "resolved": "https://registry.npmjs.org/@tailwindcss/node/-/node-4.3.3.tgz",
+diff --git a/FE/package.json b/FE/package.json
+index 32ecbc2..55f2572 100644
+--- a/FE/package.json
++++ b/FE/package.json
+@@ -10,6 +10,7 @@
+     "preview": "vite preview"
+   },
+   "dependencies": {
++    "@stomp/stompjs": "^7.5.0",
+     "@tailwindcss/vite": "^4.3.3",
+     "axios": "^1.21.0",
+     "docx-preview": "0.4.1",
+diff --git a/FE/src/layouts/KhongGianLamViec.jsx b/FE/src/layouts/KhongGianLamViec.jsx
+index 5319218..d8e20c9 100644
+--- a/FE/src/layouts/KhongGianLamViec.jsx
++++ b/FE/src/layouts/KhongGianLamViec.jsx
+@@ -1,4 +1,5 @@
+ import { useState } from 'react'
++import { useKetNoiHoSo } from '../services/useKetNoiHoSo.js'
+ import BoCucChung from './BoCucChung.jsx'
+ import TongQuanCuocHop from '../pages/TongQuanCuocHop.jsx'
+ import { LOP_NUT_CHINH } from '../components/lopBieuMau.js'
+@@ -7,6 +8,7 @@ import { layMenuKhongGianLamViec } from './menuKhongGianLamViec.js'
+ 
+ export default function KhongGianLamViec({ nguoiDung, loi, onDangXuat }) {
+   const { maVaiTro, token } = nguoiDung
++  useKetNoiHoSo(token)
+   const laQuanLy = maVaiTro === 'LANH_DAO' || (maVaiTro === 'CAN_BO' && nguoiDung.truongPhong)
+   const [mucDangChon, setMucDangChon] = useState('tong-quan')
+   const [cuocHopLapLich, setCuocHopLapLich] = useState(null)
+diff --git a/FE/src/services/dongBoDuLieu.js b/FE/src/services/dongBoDuLieu.js
+index 373dbe3..8b4bddb 100644
+--- a/FE/src/services/dongBoDuLieu.js
++++ b/FE/src/services/dongBoDuLieu.js
+@@ -22,6 +22,10 @@ function capNhatKhiDangXem() {
+   if (document.visibilityState !== 'hidden') henCapNhat()
+ }
+ 
++export function capNhatKhiMayChuBaoThayDoi() {
++  capNhatKhiDangXem()
++}
++
+ export function docPhienDongBo() {
+   return phienBan
+ }
+diff --git a/FE/src/services/useKetNoiHoSo.js b/FE/src/services/useKetNoiHoSo.js
+new file mode 100644
+index 0000000..f9b33da
+--- /dev/null
++++ b/FE/src/services/useKetNoiHoSo.js
+@@ -0,0 +1,33 @@
++import { useEffect } from 'react'
++import { Client } from '@stomp/stompjs'
++import { capNhatKhiMayChuBaoThayDoi } from './dongBoDuLieu.js'
++
++export function useKetNoiHoSo(token) {
++  useEffect(() => {
++    if (!token || typeof window.WebSocket !== 'function') return
++
++    const url = new URL('/ws', window.location.href)
++    url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
++    const client = new Client({
++      brokerURL: url.toString(),
++      connectHeaders: { Authorization: `Bearer ${token}` },
++      reconnectDelay: 5000,
++      connectionTimeout: 8000,
++      heartbeatIncoming: 10000,
++      heartbeatOutgoing: 10000,
++      onConnect: () => {
++        client.subscribe('/user/queue/cap-nhat', (tinNhan) => {
++          if (client.active && tinNhan.body === 'KE_HOACH_CAP_NHAT') capNhatKhiMayChuBaoThayDoi()
++        })
++        capNhatKhiMayChuBaoThayDoi()
++      },
++      onStompError: () => {
++        // Tránh tiếp tục gửi cùng JWT khi máy chủ đã từ chối phiên này.
++        void client.deactivate({ force: true })
++      },
++    })
++    client.activate()
++
++    return () => { void client.deactivate({ force: true }) }
++  }, [token])
++}
+diff --git a/FE/vite.config.js b/FE/vite.config.js
+index 1e2bf1a..1010012 100644
+--- a/FE/vite.config.js
++++ b/FE/vite.config.js
+@@ -6,6 +6,10 @@ export default defineConfig({
+   plugins: [react(), tailwindcss()],
+   server: {
+     proxy: {
++      '/ws': {
++        target: 'ws://localhost:8080',
++        ws: true,
++      },
+       '/api': {
+         target: 'http://localhost:8080',
+         changeOrigin: true,

@@ -30,7 +30,9 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 @Transactional
 public class DeXuatCuocHopService {
+    private final CapNhatHoSoRealtime capNhatRealtime;
     private final CuocHopRepository cuocHopRepository;
+    private final HuyCuocHopService huyCuocHopService;
     private final NguoiDungRepository nguoiDungRepository;
     private final PhongBanRepository phongBanRepository;
     private final ThanhVienCuocHopRepository thanhVienCuocHopRepository;
@@ -113,11 +115,16 @@ public class DeXuatCuocHopService {
         if (request.isGuiNgay()) {
             ThaoTacCuocHop.thucHien(() -> ThaoTacCuocHop.guiDeXuat(cuocHop));
         }
-     CuocHop daLuu = cuocHopRepository.save(cuocHop);
-     if (thuKy != null) {
-         ganThuKy(daLuu, thuKy);
-     }
-     return daLuu.getCuocHopId();
+        CuocHop daLuu = cuocHopRepository.save(cuocHop);
+        if (thuKy != null) {
+            ganThuKy(daLuu, thuKy);
+        }
+        if (request.isGuiNgay()) {
+            capNhatRealtime.baoNguoiPhuTrach(daLuu, nguoiDangNhapId);
+        } else {
+            capNhatRealtime.baoCho(nguoiDangNhapId);
+        }
+        return daLuu.getCuocHopId();
     }
 
     public void capNhatDeXuat(
@@ -197,6 +204,7 @@ public class DeXuatCuocHopService {
             cuocHop.setThuKyCuocHop(phanCongXuLyKeHoachService.chonThuKyCuocHop(cuocHop, request.getThuKyCuocHopId()));
         }
         cuocHopRepository.save(cuocHop);
+        capNhatRealtime.baoCho(nguoiDangNhapId);
     }
 
     public void guiDeXuat(
@@ -265,6 +273,7 @@ public class DeXuatCuocHopService {
         ganThuKy(cuocHop, thuKy);
         ThaoTacCuocHop.thucHien(() -> ThaoTacCuocHop.guiDeXuat(cuocHop));
         cuocHopRepository.save(cuocHop);
+        capNhatRealtime.baoNguoiPhuTrach(cuocHop, nguoiDangNhapId);
     }
     // TIẾP NHẬN ĐỀ XUẤT
     public void tiepNhanDeXuat(
@@ -293,6 +302,7 @@ public class DeXuatCuocHopService {
         }
         ThaoTacCuocHop.thucHien(() -> ThaoTacCuocHop.tiepNhanDeXuat(cuocHop));
         cuocHopRepository.save(cuocHop);
+        capNhatRealtime.baoNguoiPhuTrach(cuocHop, nguoiDangNhapId);
     }
 
     @Transactional(readOnly = true)
@@ -330,7 +340,7 @@ public class DeXuatCuocHopService {
                     HttpStatus.FORBIDDEN,
                     "Bạn không có quyền xem đề xuất này");
         }
-        return chuyenDeXuatResponse(cuocHop, nguoiDungId);
+        return chuyenDeXuatResponse(cuocHop, nguoiDungId, true);
     }
 
     @Transactional(readOnly = true)
@@ -434,6 +444,10 @@ public class DeXuatCuocHopService {
     }
 
     private DeXuatCuocHopResponse chuyenDeXuatResponse(CuocHop ch, Integer nguoiDungId) {
+        return chuyenDeXuatResponse(ch, nguoiDungId, false);
+    }
+
+    private DeXuatCuocHopResponse chuyenDeXuatResponse(CuocHop ch, Integer nguoiDungId, boolean laChiTiet) {
         var banGiao = phanCongXuLyKeHoachService.layLanTrinhMoiNhat(ch.getCuocHopId());
         NguoiDung nguoiDangXuLy = layNguoiDangXuLy(ch, banGiao);
         boolean nguoiNhan = phanCongXuLyKeHoachService.daDenGiaiDoanToChuc(ch)
@@ -477,7 +491,9 @@ public class DeXuatCuocHopService {
                 ch.getThuKyCuocHop() == null ? null : ch.getThuKyCuocHop().getHoTen(),
                 ch.getThoiGianBatDauThucTe(),
                 ch.getThoiGianKetThucThucTe(),
-                ThaoTacCuocHop.coTheLapLich(ch) && ThaoTacCuocHop.coLichDaXacNhan(ch)
+                ThaoTacCuocHop.coTheLapLich(ch) && ThaoTacCuocHop.coLichDaXacNhan(ch),
+                laChiTiet && huyCuocHopService.duocHuy(ch, nguoiDungId),
+                laChiTiet ? huyCuocHopService.lyDoDaHuy(ch) : null
         );
     }
 

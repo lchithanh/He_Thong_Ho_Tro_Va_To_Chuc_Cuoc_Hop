@@ -33,7 +33,9 @@ public record DeXuatCuocHopResponse(
         String tenThuKyCuocHop,
         LocalDateTime thoiGianBatDauThucTe,
         LocalDateTime thoiGianKetThucThucTe,
-        boolean coLichDaXacNhan
+        boolean coLichDaXacNhan,
+        boolean duocHuyCuocHop,
+        String lyDoHuyCuocHop
 ) {
     public record PhanHoiKeHoach(
             Integer yeuCauPheDuyetId,

@@ -75,7 +75,20 @@ public class QuyTrinhKeHoachService {
         List<TaiLieuCuocHop> taiLieuDaChon = taiLieuKeHoachService
                 .kiemTraTruocKhiTrinh(ch, nguoiTrinhId, taiLieuIds);
         LichHop lich = lichHopId == null ? null : lichHopRepository.findById(lichHopId).orElse(null);
-        xacNhanLichHopService.kiemTraLichTruocKhiTrinh(ch, lich, HttpStatus.BAD_REQUEST);
+        var lanDaDuyet = phanCongXuLyKeHoachService.layLanDuyetCoLichDaXacNhan(cuocHopId);
+        xacNhanLichHopService.kiemTraLichCuaLanTrinh(ch, lich, lichDaDuyet(lanDaDuyet), HttpStatus.BAD_REQUEST);
+        boolean giuLichDaDuyet = lanDaDuyet != null
+                && Objects.equals(lanDaDuyet.getLichHop().getLichHopId(), lichHopId);
+        if (giuLichDaDuyet && (ghiChuTrinh == null || ghiChuTrinh.isBlank())) {
+            throw loi(HttpStatus.BAD_REQUEST, "Nhập lý do cập nhật kế hoạch trong ghi chú trình");
+        }
+        if (lanDaDuyet != null && !giuLichDaDuyet
+                && (lich.getLyDoThayDoi() == null || lich.getLyDoThayDoi().isBlank())) {
+            if (ghiChuTrinh == null || ghiChuTrinh.isBlank()) {
+                throw loi(HttpStatus.BAD_REQUEST, "Nhập lý do đề xuất lịch thay thế trong ghi chú trình");
+            }
+            lich.setLyDoThayDoi(ghiChuTrinh.trim());
+        }
         if (ch.getNguoiChuTri() == null || !NguoiDungHienTaiService.dangHoatDong(ch.getNguoiChuTri())) {
             throw loi(HttpStatus.BAD_REQUEST, "Cần chọn người chủ trì đang hoạt động");
         }
@@ -144,6 +157,10 @@ public class QuyTrinhKeHoachService {
         }
         NguoiDung thuKy = nguoiDungHienTaiService.layTaiKhoanHoatDong(thuKyId);
         CuocHop ch = timVaKhoaCuocHop(cuocHopId);
+        if (!phanCongXuLyKeHoachService.laThuKyBanDau(cuocHopId, thuKyId)
+                || !phanQuyenCuocHopService.coVaiTro(thuKyId, "THU_KY")) {
+            throw loi(HttpStatus.FORBIDDEN, "Chỉ thư ký ban đầu được chuyển hồ sơ lên cấp trên");
+        }
         if (!"DANG_CHUAN_BI".equals(ch.getTrangThai())
                 || !"CHO_GUI_CAP_TREN".equals(ch.getBuocXuLyHienTai())) {
             throw loi(HttpStatus.CONFLICT, "Hồ sơ chưa ở bước chờ gửi cấp trên");
@@ -151,7 +168,14 @@ public class QuyTrinhKeHoachService {
 
         YeuCauPheDuyet yeuCauTruoc = yeuCauPheDuyetRepository.findByIdForUpdate(yeuCauTruocId)
                 .orElseThrow(() -> loi(HttpStatus.NOT_FOUND, "Không tìm thấy lần duyệt của trưởng phòng"));
-        kiemTraLanTrinhChoChuyenCap(ch, yeuCauTruocId, thuKyId);
+        var lanTrinhMoiNhat = phanCongXuLyKeHoachService.layLanTrinhMoiNhat(cuocHopId);
+        if (lanTrinhMoiNhat == null || !yeuCauTruocId.equals(lanTrinhMoiNhat.getYeuCauPheDuyetId())
+                || yeuCauTruoc.getLoaiYeuCau() != LoaiYeuCau.KE_HOACH_CUOC_HOP
+                || !cuocHopId.equals(yeuCauTruoc.getCuocHop().getCuocHopId())
+                || yeuCauTruoc.getTrangThai() != TrangThai.DA_DUYET
+                || !"TRUONG_PHONG".equals(yeuCauTruoc.getCapPheDuyet())) {
+            throw loi(HttpStatus.CONFLICT, "Lần duyệt trước không thuộc hồ sơ đang chờ chuyển cấp");
+        }
         if (!QuyTacDuyetKeHoach.canTrinhCapTren(
                 phanQuyenCuocHopService.coVaiTro(ch.getNguoiDeXuat().getNguoiDungId(), "LANH_DAO"),
                 ch.getPhamViCuocHop(), coKhachNgoai(ch))) {
@@ -163,7 +187,8 @@ public class QuyTrinhKeHoachService {
         if (yeuCauPheDuyetRepository.existsByYeuCauTruoc_YeuCauPheDuyetId(yeuCauTruocId)) {
             throw loi(HttpStatus.CONFLICT, "Lần duyệt này đã được chuyển lên cấp trên");
         }
-        xacNhanLichHopService.kiemTraLichTruocKhiTrinh(ch, yeuCauTruoc.getLichHop(), HttpStatus.CONFLICT);
+        xacNhanLichHopService.kiemTraLichCuaLanTrinh(ch, yeuCauTruoc.getLichHop(),
+                lichDaDuyet(phanCongXuLyKeHoachService.layLanDuyetCoLichDaXacNhan(cuocHopId)), HttpStatus.CONFLICT);
 
         NguoiDung lanhDao = nguoiDungHienTaiService.layTaiKhoanHoatDong(lanhDaoId);
         if (!phanQuyenCuocHopService.coVaiTro(lanhDaoId, "LANH_DAO")) {
@@ -204,8 +229,18 @@ public class QuyTrinhKeHoachService {
             Integer cuocHopId, Integer yeuCauId, Integer thuKyId) {
         nguoiDungHienTaiService.layTaiKhoanHoatDong(thuKyId);
         CuocHop ch = timVaKhoaCuocHop(cuocHopId);
+        if (!phanCongXuLyKeHoachService.laThuKyBanDau(cuocHopId, thuKyId)
+                || !phanQuyenCuocHopService.coVaiTro(thuKyId, "THU_KY")) {
+            throw loi(HttpStatus.FORBIDDEN, "Chỉ thư ký ban đầu được đề xuất lại lịch ở bước chuyển cấp");
+        }
 
-        var yeuCau = kiemTraLanTrinhChoChuyenCap(ch, yeuCauId, thuKyId);
+        var yeuCau = phanCongXuLyKeHoachService.layLanTrinhMoiNhat(cuocHopId);
+        if (!"CHO_GUI_CAP_TREN".equals(ch.getBuocXuLyHienTai()) || yeuCau == null
+                || !yeuCauId.equals(yeuCau.getYeuCauPheDuyetId())
+                || yeuCau.getTrangThai() != TrangThai.DA_DUYET
+                || !"TRUONG_PHONG".equals(yeuCau.getCapPheDuyet())) {
+            throw loi(HttpStatus.CONFLICT, "Hồ sơ không còn ở lần trình chờ chuyển cấp");
+        }
 
         // Bảo toàn quyết định đã có. Lần trình mới sẽ quay lại trưởng phòng.
         ThaoTacCuocHop.thucHien(() -> ThaoTacCuocHop.moLaiKeHoachChoChuyenCap(ch));
@@ -213,17 +248,6 @@ public class QuyTrinhKeHoachService {
                 "YEU_CAU_CHINH_SUA", "Thư ký mở lại hồ sơ để đề xuất lịch mới", yeuCau);
         return new TrinhKeHoachResponse("Đã mở lại kế hoạch. Hãy chọn lịch mới và trình lại trưởng phòng.",
                 yeuCauId, ch.getTrangThai(), ch.getBuocXuLyHienTai());
-    }
-
-    private YeuCauPheDuyet kiemTraLanTrinhChoChuyenCap(CuocHop ch, Integer yeuCauId, Integer thuKyId) {
-        var lanTrinh = phanCongXuLyKeHoachService.layLanTrinhMoiNhat(ch.getCuocHopId());
-        if (yeuCauId == null || lanTrinh == null || !yeuCauId.equals(lanTrinh.getYeuCauPheDuyetId())) {
-            throw loi(HttpStatus.CONFLICT, "Hồ sơ không còn ở lần trình chờ chuyển cấp");
-        }
-        if (phanCongXuLyKeHoachService.layYeuCauChoChuyenCap(ch, lanTrinh, thuKyId) == null) {
-            throw loi(HttpStatus.FORBIDDEN, "Chỉ người đã trình kế hoạch cấp 1 được xử lý lần chuyển cấp này");
-        }
-        return lanTrinh;
     }
 
     public void tiepNhanHoSoLanhDao(Integer cuocHopId, Integer yeuCauId, Integer thuKyId) {
@@ -269,12 +293,10 @@ public class QuyTrinhKeHoachService {
                         phanQuyenCuocHopService.coVaiTro(ch.getNguoiDeXuat().getNguoiDungId(), "LANH_DAO"),
                         ch.getPhamViCuocHop(), coKhachNgoai(ch));
         LichHop lich = yc.getLichHop();
-        if (dongYChuyenCap) {
-            xacNhanLichHopService.kiemTraLichTruocKhiTrinh(ch, lich, HttpStatus.CONFLICT);
+        LichHop lichDaDuyet = lichDaDuyet(phanCongXuLyKeHoachService.layLanDuyetCoLichDaXacNhan(cuocHopId));
+        if (dongYChuyenCap || (lich != null && ThaoTacLichHop.daXacNhan(lich))) {
+            xacNhanLichHopService.kiemTraLichCuaLanTrinh(ch, lich, lichDaDuyet, HttpStatus.CONFLICT);
         } else {
-            if (lich == null) {
-                throw loi(HttpStatus.CONFLICT, "Hồ sơ chưa có lịch đề xuất. Hãy trả lại để bổ sung lịch.");
-            }
             xacNhanLichHopService.xacNhan(ch, lich, nguoiDuyet, yc);
         }
         ThaoTacCuocHop.thucHien(() -> {
@@ -290,7 +312,8 @@ public class QuyTrinhKeHoachService {
                     "KE_HOACH", "DONG_Y_TRINH_CAP_TREN", yKien, yc);
             thongBaoService.gui(ch, nguoiDuyetId, "KE_HOACH_DONG_Y_CAP_TREN",
                     "Trưởng phòng đã đồng ý trình kế hoạch lên cấp trên",
-                    ch.getTieuDe(), yc.getNguoiTrinh());
+                    ch.getTieuDe(), phanCongXuLyKeHoachService.layThuKyBanDau(cuocHopId),
+                    yc.getNguoiTrinh());
             return false;
         }
         lichSuPheDuyetService.ghiNhan(cuocHopId, null, null, nguoiDuyetId,
@@ -470,6 +493,10 @@ public class QuyTrinhKeHoachService {
         if (ThaoTacCuocHop.laCuocHopNoiBo(ch) && ch.getPhongBanChuTri() == null) {
             throw loi(HttpStatus.BAD_REQUEST, "Họp nội bộ phải có phòng ban chủ trì");
         }
+    }
+
+    private LichHop lichDaDuyet(YeuCauPheDuyet yeuCau) {
+        return yeuCau == null ? null : yeuCau.getLichHop();
     }
 
     private boolean coKhachNgoai(CuocHop ch) {
