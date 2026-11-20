@@ -1,3 +1,4 @@
+import { dinhDangNgayGio } from '../../utils/thoiGianCuocHop.js'
 import { useEffect, useState } from 'react'
 import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
 import { layBienBanChoToiPhatHanh } from '../../api/bienBanApi.js'
@@ -31,7 +32,8 @@ export default function BienBanChoPhatHanh({ token }) {
             const mo = event.currentTarget.open
             setDangMo((hienTai) => ({ ...hienTai, [muc.bienBanId]: mo }))
           }}>
-          <summary className="cursor-pointer font-semibold">{muc.tieuDeCuocHop || muc.tieuDe}</summary>
+          <summary className="cursor-pointer font-semibold">{muc.tieuDeCuocHop || muc.tieuDe}
+            <span className="ml-3 text-sm font-normal text-slate-600">Đã duyệt · {dinhDangNgayGio(muc.ngayDuyet)}</span></summary>
           {dangMo[muc.bienBanId] && (
             <div className="mt-4">
               <VanBanCuaHoSo loai="bien-ban" cuocHopId={muc.cuocHopId} token={token}

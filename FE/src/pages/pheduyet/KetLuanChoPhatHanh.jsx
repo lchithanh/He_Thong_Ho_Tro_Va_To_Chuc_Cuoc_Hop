@@ -1,3 +1,4 @@
+import { dinhDangNgayGio } from '../../utils/thoiGianCuocHop.js'
 import { useEffect, useState } from 'react'
 import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
 import { LichCuaHoSo } from '../thuky/DanhSachDeXuatThuKy.jsx'
@@ -112,6 +113,8 @@ export default function KetLuanChoPhatHanh({ token, cheDo }) {
           className="rounded-lg border border-slate-200 p-4">
           <summary className="cursor-pointer font-semibold">
             {ketLuan.tieuDeCuocHop || ketLuan.tieuDe}
+            <span className="ml-3 text-sm font-normal text-slate-600">Trình duyệt · {dinhDangNgayGio(ketLuan.ngayTrinhDuyet)}</span>
+            {ketLuan.ngayDuyet && <span className="ml-3 text-sm font-normal text-slate-600">Đã duyệt · {dinhDangNgayGio(ketLuan.ngayDuyet)}</span>}
           </summary>
 
           <KhongGianVanBan banXem={dangMo[ketLuan.ketLuanId] && (

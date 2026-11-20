@@ -12,6 +12,7 @@ public record KeHoachPheDuyetResponse(
         String trangThai,
         Integer yeuCauTruocId,
         String capPheDuyet,
-        boolean choPhepTrinhCapTren
+        boolean choPhepTrinhCapTren,
+        LocalDateTime thoiGianTrinh
 ) {
 }

@@ -43,6 +43,7 @@ public interface BieuQuyetRepository extends JpaRepository<BieuQuyet, Integer> {
             FROM BieuQuyet bq
             JOIN FETCH bq.cuocHop ch
             WHERE bq.trangThai = 'DANG_MO'
+              AND (:cuocHopId IS NULL OR ch.cuocHopId = :cuocHopId)
               AND bq.thoiGianBatDau <= :hienTai
               AND bq.thoiGianKetThuc > :hienTai
               AND EXISTS (
@@ -56,6 +57,7 @@ public interface BieuQuyetRepository extends JpaRepository<BieuQuyet, Integer> {
             ORDER BY bq.thoiGianKetThuc ASC, bq.bieuQuyetId ASC
             """)
     List<BieuQuyet> timBieuQuyetDangMoCuaThanhVien(
+            @Param("cuocHopId") Integer cuocHopId,
             @Param("nguoiDungId") Integer nguoiDungId,
             @Param("hienTai") LocalDateTime hienTai
     );
@@ -65,6 +67,7 @@ public interface BieuQuyetRepository extends JpaRepository<BieuQuyet, Integer> {
             FROM BieuQuyet bq
             JOIN FETCH bq.cuocHop
             WHERE bq.trangThai = 'DA_DONG'
+              AND (:cuocHopId IS NULL OR bq.cuocHop.cuocHopId = :cuocHopId)
               AND EXISTS (
                   SELECT tv.id.nguoiDungId
                   FROM ThanhVienCuocHop tv
@@ -74,6 +77,7 @@ public interface BieuQuyetRepository extends JpaRepository<BieuQuyet, Integer> {
             ORDER BY bq.thoiGianKetThuc DESC, bq.bieuQuyetId DESC
             """)
     List<BieuQuyet> timBieuQuyetDaDongCuaThanhVien(
+            @Param("cuocHopId") Integer cuocHopId,
             @Param("nguoiDungId") Integer nguoiDungId
     );
     

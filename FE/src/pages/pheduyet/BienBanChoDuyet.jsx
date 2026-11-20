@@ -1,3 +1,4 @@
+import { dinhDangNgayGio } from '../../utils/thoiGianCuocHop.js'
 import TaiLieuKetLuan from '../thuky/TaiLieuKetLuan.jsx'
 import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
 import BanXemTruocVanBan from '../thuky/BanXemTruocVanBan.jsx'
@@ -87,6 +88,7 @@ export default function BienBanChoDuyet({ token }) {
         >
           <summary className="cursor-pointer font-semibold">
             {bienBan.tieuDeCuocHop || bienBan.tieuDe}
+            <span className="ml-3 text-sm font-normal text-slate-600">Trình duyệt · {dinhDangNgayGio(bienBan.thoiGianTrinh)}</span>
           </summary>
 
           <KhongGianVanBan banXem={dangMo[bienBan.yeuCauPheDuyetId] && (

@@ -89,8 +89,9 @@ export async function layKetQuaBieuQuyet(cuocHopId, bieuQuyetId, token) {
   return response.json()
 }
 
-export async function layDanhSachBieuQuyetThamDu(token, signal) {
-  const response = await goiApi('/api/cuoc-hop/bieu-quyet/cua-toi', {
+export async function layDanhSachBieuQuyetThamDu(token, signal, cuocHopId) {
+  const boLoc = cuocHopId == null ? '' : '?' + new URLSearchParams({ cuocHopId })
+  const response = await goiApi('/api/cuoc-hop/bieu-quyet/cua-toi' + boLoc, {
     token,
     signal,
   })
@@ -99,8 +100,9 @@ export async function layDanhSachBieuQuyetThamDu(token, signal) {
   return response.json()
 }
 
-export async function layDanhSachBieuQuyetDaDongCuaToi(token, signal) {
-  const response = await goiApi('/api/cuoc-hop/bieu-quyet/ket-qua-cua-toi', {
+export async function layDanhSachBieuQuyetDaDongCuaToi(token, signal, cuocHopId) {
+  const boLoc = cuocHopId == null ? '' : '?' + new URLSearchParams({ cuocHopId })
+  const response = await goiApi('/api/cuoc-hop/bieu-quyet/ket-qua-cua-toi' + boLoc, {
     token,
     signal,
   })

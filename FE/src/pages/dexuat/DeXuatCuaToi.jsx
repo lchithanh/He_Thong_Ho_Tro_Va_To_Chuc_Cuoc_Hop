@@ -1,9 +1,11 @@
+import { dinhDangNgayGio } from '../../utils/thoiGianCuocHop.js'
 import { useEffect, useState } from 'react'
 import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
 import { LOP_KHOI, LOP_TRUONG, LOP_NUT_CHINH } from '../../components/lopBieuMau.js'
 import {
   guiDeXuatCuocHop,
   layDanhSachDeXuat,
+  layThuKyCoTheDeXuat,
   layTrangThaiHienThiCuocHop,
   taoDeXuatCuocHop,
 } from '../../api/cuocHopApi.js'
@@ -36,6 +38,8 @@ export default function DeXuatCuaToi({ token, nguoiDung, onXemCuocHop }) {
   const [thongBao, setThongBao] = useState('')
   const [dangGui, setDangGui] = useState(false)
   const [phamVi, setPhamVi] = useState('NOI_BO')
+  const [luaChonThuKy, setLuaChonThuKy] = useState(null)
+  const [loiTaiThuKy, setLoiTaiThuKy] = useState('')
   const lanhDao = nguoiDung.maVaiTro === 'LANH_DAO'
   const coThuKy = Boolean(nguoiDung.tenThuKyMacDinh)
 
@@ -50,6 +54,19 @@ export default function DeXuatCuaToi({ token, nguoiDung, onXemCuocHop }) {
       .catch((error) => { if (!controller.signal.aborted) setLoiTai(error.message) })
     return () => controller.abort()
   }, [token, nguoiDung.nguoiDungId, lanTai, phienDongBo])
+
+  useEffect(() => {
+    const controller = new AbortController()
+    layThuKyCoTheDeXuat(token, controller.signal)
+      .then((duLieu) => {
+        if (!controller.signal.aborted) {
+          setLuaChonThuKy(duLieu)
+          setLoiTaiThuKy('')
+        }
+      })
+      .catch((error) => { if (!controller.signal.aborted) setLoiTaiThuKy(error.message) })
+    return () => controller.abort()
+  }, [token, phienDongBo])
 
   async function xuLyDeXuat(thaoTac) {
     if (dangGui) return
@@ -135,10 +152,18 @@ export default function DeXuatCuaToi({ token, nguoiDung, onXemCuocHop }) {
             : <input name="coKhachMoiBenNgoai" type="checkbox" />}
           Có khách mời bên ngoài
         </label>
-        <label className="block text-sm font-semibold">Mã cán bộ được đề nghị làm thư ký cuộc họp
-          <input className={LOP_TRUONG} name="thuKyCuocHopId" type="number" min="1" step="1"
-            placeholder="Để trống nếu dùng thư ký mặc định" />
+        <label className="block text-sm font-semibold">Thư ký cuộc họp đề nghị
+          <select className={LOP_TRUONG} name="thuKyCuocHopId">
+            <option value="">Dùng thư ký mặc định</option>
+            {luaChonThuKy?.map((nguoi) => (
+              <option key={nguoi.nguoiDungId} value={nguoi.nguoiDungId}>
+                {[nguoi.hoTen, nguoi.chucVu, nguoi.tenPhongBan].filter(Boolean).join(' · ')}
+              </option>
+            ))}
+          </select>
         </label>
+        {loiTaiThuKy ? <p role="alert" className="text-sm text-red-800">{loiTaiThuKy}</p>
+          : luaChonThuKy === null && <p role="status" className="text-sm text-slate-600">Đang tải danh sách thư ký…</p>}
         <div className="flex flex-wrap gap-2">
           <button type="submit" value="nhap" disabled={dangGui} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold disabled:opacity-50">Lưu nháp</button>
           <button type="submit" value="gui" disabled={dangGui || !coThuKy} className={LOP_NUT_CHINH}>Gửi thư ký</button>
@@ -156,6 +181,8 @@ export default function DeXuatCuaToi({ token, nguoiDung, onXemCuocHop }) {
             <li key={muc.cuocHopId} className="flex flex-wrap items-center justify-between gap-3 py-3">
               <div className="min-w-0">
                 <p className="break-words text-sm font-semibold">{muc.tieuDe}</p>
+                <p className="text-xs text-slate-600">Tạo đề xuất · {dinhDangNgayGio(muc.ngayTao)}</p>
+                {muc.thoiGianChuyenCap && <p className="text-xs text-slate-600">Đã chuyển cấp · {dinhDangNgayGio(muc.thoiGianChuyenCap)}</p>}
                 <p className="text-xs text-slate-600">{muc.maCuocHop} · {TEN_TRANG_THAI[layTrangThaiHienThiCuocHop(muc)] ?? muc.trangThai}</p>
               </div>
               <div className="flex flex-wrap gap-2">

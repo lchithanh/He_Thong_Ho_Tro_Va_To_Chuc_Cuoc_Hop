@@ -47,12 +47,13 @@ class GuiEmailCuocHopSauCommit {
 
     private void gui(EmailCanGui email, String diaChi) {
         try {
-            var message = new MimeMessageHelper(mailSender.createMimeMessage(), "UTF-8");
+            var message = new MimeMessageHelper(mailSender.createMimeMessage(), email.tep() != null, "UTF-8");
             message.setValidateAddresses(true);
             message.setFrom(from);
             message.setTo(diaChi);
             message.setSubject(email.chuDe());
             message.setText(email.noiDung());
+            if (email.tep() != null) email.tep().dinhKem(message);
             mailSender.send(message.getMimeMessage());
         } catch (MailException | MessagingException ex) {
             log.warn("Không gửi được email cho lịch họp {} ({})", email.lichHopId(), ex.getClass().getSimpleName());

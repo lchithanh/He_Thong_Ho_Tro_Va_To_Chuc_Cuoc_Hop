@@ -46,7 +46,7 @@ public class QuyTrinhKeHoachController {
     public TrinhKeHoachResponse trinhLaiLich(@PathVariable("cuocHopId") Integer cuocHopId,
             @RequestBody TrinhKeHoachRequest request, Authentication auth) {
         return quyTrinhKeHoachService.trinhLaiLichSauHuy(
-                cuocHopId, request.getLichHopId(), layNguoiDungId(auth));
+                cuocHopId, request.getLichHopId(), layNguoiDungId(auth), request.getGhiChuTrinh());
     }
 
     @PostMapping("/{cuocHopId}/trinh")

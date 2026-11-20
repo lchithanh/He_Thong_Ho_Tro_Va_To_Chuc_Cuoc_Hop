@@ -1,4 +1,7 @@
+import { dinhDangNgayGio } from '../../utils/thoiGianCuocHop.js'
 import { useEffect, useState } from 'react'
+import TepThuMoiFields from './TepThuMoiFields.jsx'
+import { tenNguoiNhanGiayMoi, themTepVaoThuMoi, thongTinGiayMoi } from './taoGiayMoi.js'
 import { layKhachNgoaiCuocHop, moiKhachNgoaiQuaEmail } from '../../api/khachNgoaiCuocHopApi.js'
 
 const TRANG_THAI = {
@@ -10,7 +13,7 @@ const TRANG_THAI = {
 
 const O_NHAP = 'mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm'
 
-export default function KhachNgoaiCuocHop({ cuocHopId, token, laThuKy, choPhepMoi, trucTuyen }) {
+export default function KhachNgoaiCuocHop({ cuocHopId, token, laThuKy, choPhepMoi, trucTuyen, thongTinCuocHop }) {
   const [danhSach, setDanhSach] = useState(null)
   const [loiDanhSach, setLoiDanhSach] = useState('')
   const [loiGui, setLoiGui] = useState('')
@@ -27,19 +30,30 @@ export default function KhachNgoaiCuocHop({ cuocHopId, token, laThuKy, choPhepMo
     return () => controller.abort()
   }, [cuocHopId, token])
 
+  function docThongTinKhach(duLieu) {
+    return Object.fromEntries(['hoTen', 'email', 'donViCongTac', 'chucVu', 'truSo', 'duongDanHop']
+      .map((ten) => [ten, duLieu.get(ten)?.trim() || '']))
+  }
+
+  function layThongTin(duLieu) {
+    const khach = docThongTinKhach(duLieu)
+    return thongTinGiayMoi(thongTinCuocHop, tenNguoiNhanGiayMoi(khach), khach.duongDanHop)
+  }
+
   async function guiThuMoi(event) {
     event.preventDefault()
-    if (dangGui || !choPhepMoi) return
+    if (dangGui || !choPhepMoi || !thongTinCuocHop) return
 
     const form = event.currentTarget
-    const duLieu = Object.fromEntries(
-      Array.from(new FormData(form), ([ten, giaTri]) => [ten, giaTri.trim()]),
-    )
+    const duLieu = new FormData(form)
+    const khach = docThongTinKhach(duLieu)
     setDangGui(true)
     setLoiGui('')
     setThongBao('')
     try {
-      const loiMoi = await moiKhachNgoaiQuaEmail(cuocHopId, token, duLieu)
+      const loiMoi = await moiKhachNgoaiQuaEmail(cuocHopId, token, {
+        ...khach, thuMoi: await themTepVaoThuMoi({}, duLieu, layThongTin(duLieu)),
+      })
       setDanhSach((hienTai) => [loiMoi, ...(hienTai ?? [])])
       setThongBao('Đã gửi thư mời đến ' + loiMoi.email + '.')
       form.reset()
@@ -61,6 +75,7 @@ export default function KhachNgoaiCuocHop({ cuocHopId, token, laThuKy, choPhepMo
           {danhSach.map((khach) => (
             <li key={khach.khachMoiCuocHopId} className="space-y-1 py-2 text-sm">
               <p className="font-semibold text-slate-900">{khach.hoTen}</p>
+              <p className="text-xs text-slate-600">Đã mời · {dinhDangNgayGio(khach.ngayMoi)}</p>
               <p className="break-all text-slate-600">{khach.email}</p>
               <p className="text-xs font-medium text-slate-600">{TRANG_THAI[khach.trangThaiMoi] ?? khach.trangThaiMoi}</p>
             </li>
@@ -82,12 +97,16 @@ export default function KhachNgoaiCuocHop({ cuocHopId, token, laThuKy, choPhepMo
               <input className={O_NHAP} name="email" type="email" maxLength={190} required />
             </label>
             <label className="block text-sm font-medium">
-              Đơn vị công tác
+              Đơn vị công tác hiện tại
               <input className={O_NHAP} name="donViCongTac" maxLength={200} />
             </label>
             <label className="block text-sm font-medium">
               Chức vụ
               <input className={O_NHAP} name="chucVu" maxLength={120} />
+            </label>
+            <label className="block text-sm font-medium">
+              Trụ sở đơn vị công tác (nếu có)
+              <input className={O_NHAP} name="truSo" maxLength={250} />
             </label>
             {trucTuyen && (
               <label className="block text-sm font-medium">
@@ -95,6 +114,7 @@ export default function KhachNgoaiCuocHop({ cuocHopId, token, laThuKy, choPhepMo
                 <input className={O_NHAP} name="duongDanHop" type="url" maxLength={500} placeholder="https://" required />
               </label>
             )}
+            <TepThuMoiFields layThongTin={layThongTin} thongTinCuocHop={thongTinCuocHop} />
             <button type="submit" className="rounded-lg bg-emerald-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-60">
               {dangGui ? 'Đang gửi…' : 'Gửi thư mời'}
             </button>

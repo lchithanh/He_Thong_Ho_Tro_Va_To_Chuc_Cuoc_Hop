@@ -59,8 +59,17 @@ public class ThanhVienCuocHop {
     )
     private String trangThaiThamDu = "CHUA_DIEM_DANH";
 
+    @Column(name = "ngay_moi")
+    private LocalDateTime ngayMoi;
+
     @Column(name = "thoi_gian_diem_danh")
     private LocalDateTime thoiGianDiemDanh;
+
+    @Column(name = "thoi_gian_tu_diem_danh")
+    private LocalDateTime thoiGianTuDiemDanh;
+
+    @Column(name = "thoi_gian_doi_chieu_diem_danh")
+    private LocalDateTime thoiGianDoiChieuDiemDanh;
 
     @Column(name = "thoi_gian_roi_cuoc_hop")
     private LocalDateTime thoiGianRoiCuocHop;

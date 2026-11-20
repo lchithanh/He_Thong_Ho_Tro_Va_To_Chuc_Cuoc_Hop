@@ -97,12 +97,12 @@ public class PhanCongXuLyKeHoachService {
     }
 
     public YeuCauPheDuyet layBanGiaoHoSo(CuocHop cuocHop, YeuCauPheDuyet lanMoiNhat) {
-        return oGiaiDoanToChucHoacSauHop(cuocHop)
+        return daDenGiaiDoanToChuc(cuocHop)
                 ? lanMoiNhat
                 : layLanDuyetCoLichDaXacNhan(cuocHop.getCuocHopId());
     }
 
-    private boolean oGiaiDoanToChucHoacSauHop(CuocHop cuocHop) {
+    public boolean daDenGiaiDoanToChuc(CuocHop cuocHop) {
         String trangThai = cuocHop.getTrangThai();
         return "DA_DUYET".equals(trangThai) || "DANG_DIEN_RA".equals(trangThai)
                 || "DA_KET_THUC".equals(trangThai);
@@ -130,7 +130,7 @@ public class PhanCongXuLyKeHoachService {
     }
 
     public boolean laThuKyToChuc(CuocHop cuocHop, Integer nguoiDungId) {
-        if (!oGiaiDoanToChucHoacSauHop(cuocHop)) return false;
+        if (!daDenGiaiDoanToChuc(cuocHop)) return false;
 
         YeuCauPheDuyet yeuCau = layLanTrinhMoiNhat(cuocHop.getCuocHopId());
         if (yeuCau == null || yeuCau.getTrangThai() != TrangThai.DA_DUYET) {
@@ -144,6 +144,18 @@ public class PhanCongXuLyKeHoachService {
 
     public boolean laThuKyBanDau(Integer cuocHopId, Integer nguoiDungId) {
         return coVaiTro(cuocHopId, nguoiDungId, "THU_KY");
+    }
+
+    public Integer layYeuCauChoChuyenCap(CuocHop cuocHop, YeuCauPheDuyet lanMoiNhat, Integer nguoiDungId) {
+        if (!"DANG_CHUAN_BI".equals(cuocHop.getTrangThai())
+                || !"CHO_GUI_CAP_TREN".equals(cuocHop.getBuocXuLyHienTai())
+                || lanMoiNhat == null || lanMoiNhat.getTrangThai() != TrangThai.DA_DUYET
+                || !"TRUONG_PHONG".equals(lanMoiNhat.getCapPheDuyet())
+                || !laThuKyBanDau(cuocHop.getCuocHopId(), nguoiDungId)
+                || nguoiDungVaiTroRepository.findByNguoiDungIdAndVaiTro_MaVaiTro(nguoiDungId, "THU_KY").isEmpty()) {
+            return null;
+        }
+        return lanMoiNhat.getYeuCauPheDuyetId();
     }
 
     public boolean laThuKyThamGia(Integer cuocHopId, Integer nguoiDungId) {

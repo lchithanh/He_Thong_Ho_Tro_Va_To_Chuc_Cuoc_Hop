@@ -11,6 +11,7 @@ public record BienBanDaPhatHanhResponse(
         String noiDungChinhThuc,
         String trangThai,
         LocalDateTime ngayDuyet,
+        LocalDateTime ngayPhatHanh,
         Integer soPhienBan,
         ThongTinCuocHop cuocHop,
         List<TaiLieuBienBanResponse> taiLieu) {

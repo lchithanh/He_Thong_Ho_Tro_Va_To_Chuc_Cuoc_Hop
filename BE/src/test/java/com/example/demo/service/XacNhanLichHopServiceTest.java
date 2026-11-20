@@ -55,6 +55,7 @@ class XacNhanLichHopServiceTest {
         assertSame(lichCu, lichMoi.getLichThayThe());
         verify(lichSuPheDuyetService).ghiNhan(1, 11, null, 7, "LICH_HOP", "PHE_DUYET",
                 "Lịch họp được xác nhận cùng kế hoạch", yeuCau);
+        verify(thongBaoEmail).xacNhanLich(lichMoi, true);
     }
 
     @Test
@@ -69,7 +70,7 @@ class XacNhanLichHopServiceTest {
 
         assertEquals(HttpStatus.CONFLICT, loi.getStatusCode());
         assertEquals("DE_XUAT", lich.getTrangThai());
-        verifyNoInteractions(lichSuPheDuyetService);
+        verifyNoInteractions(lichSuPheDuyetService, thongBaoEmail);
     }
 
     @Test
@@ -91,7 +92,7 @@ class XacNhanLichHopServiceTest {
         assertEquals(HttpStatus.CONFLICT, loi.getStatusCode());
         assertEquals("DE_XUAT", lich.getTrangThai());
         verify(lichHopRepository).khoaPhongHop(phong);
-        verifyNoInteractions(lichSuPheDuyetService);
+        verifyNoInteractions(lichSuPheDuyetService, thongBaoEmail);
     }
 
     private LichHop taoLichDeXuat(CuocHop cuocHop, LocalDateTime batDau) {

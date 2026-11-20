@@ -1,3 +1,4 @@
+import KhungGioBieuQuyet from '../../components/KhungGioBieuQuyet.jsx'
 import { useEffect, useState } from 'react'
 import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
 import {
@@ -5,7 +6,7 @@ import {
   layKetQuaBieuQuyet,
 } from '../../api/bieuQuyetApi.js'
 
-export default function KetQuaBieuQuyetThamDu({ token }) {
+export default function KetQuaBieuQuyetThamDu({ token, cuocHopId: cuocHopIdLoc }) {
   const phienDongBo = useDongBoDuLieu()
   const [danhSach, setDanhSach] = useState(null)
   const [loiDanhSach, setLoiDanhSach] = useState('')
@@ -17,10 +18,10 @@ export default function KetQuaBieuQuyetThamDu({ token }) {
   useEffect(() => {
     const controller = new AbortController()
 
-    layDanhSachBieuQuyetDaDongCuaToi(token, controller.signal)
+    layDanhSachBieuQuyetDaDongCuaToi(token, controller.signal, cuocHopIdLoc)
       .then((duLieu) => {
         if (!controller.signal.aborted) {
-          setDanhSach(duLieu)
+          setDanhSach(cuocHopIdLoc == null ? duLieu : duLieu.filter((muc) => muc.cuocHopId === cuocHopIdLoc))
           setLoiDanhSach('')
         }
       })
@@ -29,7 +30,7 @@ export default function KetQuaBieuQuyetThamDu({ token }) {
       })
 
     return () => controller.abort()
-  }, [token, lanTai, phienDongBo])
+  }, [token, lanTai, phienDongBo, cuocHopIdLoc])
 
   useEffect(() => {
     if (!phienDangXem) return
@@ -106,6 +107,7 @@ export default function KetQuaBieuQuyetThamDu({ token }) {
                 className="space-y-2 rounded-lg border border-slate-200 p-3"
               >
                   <h4 className="text-sm font-semibold">{muc.tieuDeBieuQuyet}</h4>
+              <KhungGioBieuQuyet muc={muc} />
 
                 <button
                   type="button"

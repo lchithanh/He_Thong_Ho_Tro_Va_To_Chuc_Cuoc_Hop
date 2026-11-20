@@ -1,5 +1,7 @@
 package com.example.demo.dto.response;
 
+import java.time.LocalDateTime;
+
 public record BienBanChoDuyetResponse(
         Integer yeuCauPheDuyetId,
         Integer bienBanId,
@@ -9,7 +11,8 @@ public record BienBanChoDuyetResponse(
         Integer soPhienBan,
         String noiDung,
         String ghiChuTrinh,
-        String capPheDuyet
+        String capPheDuyet,
+        LocalDateTime thoiGianTrinh
 ) {}
 
 

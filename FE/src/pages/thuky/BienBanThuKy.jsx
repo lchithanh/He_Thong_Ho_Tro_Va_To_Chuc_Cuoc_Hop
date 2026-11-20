@@ -246,6 +246,7 @@ const [yeuCauPheDuyetId, setYeuCauPheDuyetId] = useState(null)
               ['Ngày soạn', gio(bienBan.ngaySoan, 'Chưa có thông tin')],
               ['Ngày trình duyệt', gio(bienBan.ngayTrinhDuyet, 'Chưa trình duyệt')],
               ['Ngày duyệt', gio(bienBan.ngayDuyet, 'Chưa duyệt')],
+              ['Ngày phát hành', gio(bienBan.ngayPhatHanh, 'Chưa ghi nhận')],
             ].map(([nhan, giaTri]) => (
               <div key={nhan}><dt className="font-medium">{nhan}</dt><dd>{giaTri}</dd></div>
             ))}

@@ -8,7 +8,11 @@ const KHUNG_WORD = `<!doctype html>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="Content-Security-Policy"
     content="default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:; base-uri 'none'; form-action 'none'">
-  <style>body { margin: 0; background: #f1f5f9; }</style>
+  <style>
+    html { overflow-y: scroll; overflow-x: auto; scrollbar-gutter: stable; }
+    body { min-height: 100vh; margin: 0; background: #f1f5f9; }
+    #noi-dung-word .docx-wrapper { padding: 16px; }
+  </style>
 </head>
 <body><div id="noi-dung-word"></div></body>
 </html>`
@@ -16,7 +20,8 @@ const KHUNG_WORD = `<!doctype html>
 export default function TrangWord({ taiLieuId, cuocHopId, yeuCauId, token, tenTep, layTep = layTepKeHoach }) {
   const [khung, setKhung] = useState(null)
   const [loi, setLoi] = useState('')
-  const [daTai, setDaTai] = useState(false)
+  const [soTrang, setSoTrang] = useState(null)
+  const daTai = soTrang !== null
   const [lanThu, setLanThu] = useState(0)
 
   useEffect(() => {
@@ -36,6 +41,7 @@ export default function TrangWord({ taiLieuId, cuocHopId, yeuCauId, token, tenTe
         renderAltChunks: false,
         useBase64URL: true,
         ignoreLastRenderedPageBreak: false,
+        breakPages: true,
       })
       if (controller.signal.aborted) return
 
@@ -53,7 +59,7 @@ export default function TrangWord({ taiLieuId, cuocHopId, yeuCauId, token, tenTe
       theoDoiKichThuoc = new ResizeObserver(vuaKhung)
       theoDoiKichThuoc.observe(khung.documentElement)
       vuaKhung()
-      setDaTai(true)
+      setSoTrang(trang.length)
     }
 
     hienThiWord().catch((error) => {
@@ -78,12 +84,15 @@ export default function TrangWord({ taiLieuId, cuocHopId, yeuCauId, token, tenTe
           }}>Thử lại</button>
         </div>
       ) : !daTai && <p role="status" className="p-4 text-sm">Đang chuẩn bị bản xem trước…</p>}
+      {daTai && !loi && <p className="border-b border-slate-200 bg-white px-4 py-2 text-sm text-slate-700">
+        {soTrang > 0 ? soTrang + ' trang · ' : ''}Cuộn trong khung để đọc toàn bộ tài liệu.
+      </p>}
       <iframe title={`Xem trước ${tenTep}`} sandbox="allow-same-origin" srcDoc={KHUNG_WORD}
         onLoad={(event) => {
           const taiLieuKhung = event.currentTarget.contentDocument
           if (taiLieuKhung?.getElementById('noi-dung-word')) setKhung(taiLieuKhung)
         }}
-        hidden={!daTai} className="h-[min(78vh,56rem)] min-h-96 w-full border-0" />
+        hidden={!daTai || Boolean(loi)} tabIndex={0} className="h-[min(82vh,64rem)] min-h-96 w-full border-0" />
     </>
   )
 }

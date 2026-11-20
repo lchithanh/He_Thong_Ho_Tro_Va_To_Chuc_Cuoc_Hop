@@ -21,6 +21,7 @@ import lombok.RequiredArgsConstructor;
 @Transactional
 public class CuocHopService {
     private final CapNhatHoSoRealtime capNhatRealtime;
+    private final ThanhVienCuocHopService thanhVienCuocHopService;
     private final NguoiDungRepository nguoiDungRepository;
     private final PhanQuyenCuocHopService phanQuyenCuocHopService;
     private final CuocHopRepository cuocHopRepository;
@@ -61,6 +62,17 @@ public class CuocHopService {
                 .filter(phanCongXuLyKeHoachService::laNguoiCoTheLamThuKy)
                 .filter(nd -> !ThaoTacCuocHop.laNguoiDeXuat(ch, nd.getNguoiDungId()))
                 .map(this::chuyenLuaChonNguoiDung).toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<NguoiCoTheMoiResponse> layThuKyCoTheDeXuat(Integer nguoiDungId) {
+        phanQuyenCuocHopService.kiemTraQuyenTaoDeXuat(nguoiDungId);
+        return nguoiDungRepository.findAll().stream()
+                .filter(nd -> !nd.getNguoiDungId().equals(nguoiDungId))
+                .filter(phanCongXuLyKeHoachService::laNguoiCoTheLamThuKy)
+                .sorted(Comparator.comparing(NguoiDung::getHoTen).thenComparing(NguoiDung::getNguoiDungId))
+                .map(this::chuyenLuaChonNguoiDung)
+                .toList();
     }
 
     private NguoiCoTheMoiResponse chuyenLuaChonNguoiDung(NguoiDung nguoiDung) {
@@ -150,6 +162,7 @@ public class CuocHopService {
                     ex.getMessage(),
                     ex);
         }
+        thanhVienCuocHopService.baoCuocHopBatDau(cuocHop, nguoiDangNhapId);
         capNhatRealtime.baoCuocHop(cuocHop, nguoiDangNhapId);
     }
 

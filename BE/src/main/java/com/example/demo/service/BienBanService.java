@@ -184,7 +184,7 @@ public class BienBanService {
             return new BienBanDaPhatHanhResponse(
                     bienBan.getBienBanId(), cuocHop.getCuocHopId(), cuocHop.getTieuDe(),
                     bienBan.getTieuDe(), bienBan.getNoiDungChinhThuc(), bienBan.getTrangThai(),
-                    bienBan.getNgayDuyet(), phienBanTheoBienBan.get(bienBan.getBienBanId()), thongTin,
+                    bienBan.getNgayDuyet(), bienBan.getNgayPhatHanh(), phienBanTheoBienBan.get(bienBan.getBienBanId()), thongTin,
                     taiLieuTheoCuocHop.getOrDefault(cuocHop.getCuocHopId(), List.of()));
         }).toList();
     }
@@ -227,6 +227,7 @@ public class BienBanService {
                     "Biên bản chỉ được phát hành sau khi đã duyệt cuối");
         }
         bienBan.setTrangThai("DA_PHAT_HANH");
+        bienBan.setNgayPhatHanh(LocalDateTime.now());
         thongBaoService.gui(cuocHop, nguoiDungId, "BIEN_BAN_DA_PHAT_HANH",
                 "Biên bản cuộc họp đã được phát hành",
                 bienBan.getTieuDe(), capNhatRealtime.nguoiDocVanBan(cuocHop));
@@ -364,7 +365,7 @@ public class BienBanService {
                 bienBan.getYKienPhanHoi(),
                 bienBan.getNgaySoan(),
                 bienBan.getNgayTrinhDuyet(),
-                bienBan.getNgayDuyet(),
+                bienBan.getNgayDuyet(), bienBan.getNgayPhatHanh(),
                 bienBan.getCuocHop().getTieuDe(),
                 bienBan.getNguoiSoan().getHoTen());
     }

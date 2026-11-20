@@ -1,5 +1,6 @@
 package com.example.demo.service;
 
+import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
@@ -41,6 +42,7 @@ public class DeXuatCuocHopService {
     private  final PhanCongThuKyRepository phanCongThuKyRepository;
     private final PhanCongXuLyKeHoachService phanCongXuLyKeHoachService;
     private final LichSuPheDuyetRepository lichSuPheDuyetRepository;
+    private final ThongTinThuMoiDaDuyet thongTinThuMoiDaDuyet;
 
     public Integer taoDeXuatCuocHop(
             TaoDeXuatCuocHopRequest request,
@@ -448,13 +450,14 @@ public class DeXuatCuocHopService {
     }
 
     private DeXuatCuocHopResponse chuyenDeXuatResponse(CuocHop ch, Integer nguoiDungId, boolean laChiTiet) {
-        var banGiao = phanCongXuLyKeHoachService.layLanTrinhMoiNhat(ch.getCuocHopId());
-        NguoiDung nguoiDangXuLy = layNguoiDangXuLy(ch, banGiao);
-        boolean nguoiNhan = phanCongXuLyKeHoachService.daDenGiaiDoanToChuc(ch)
-                && phanCongXuLyKeHoachService.laThuKyDaNhanBanGiao(banGiao, nguoiDungId);
+        var lanMoiNhat = phanCongXuLyKeHoachService.layLanTrinhMoiNhat(ch.getCuocHopId());
+        var banGiao = phanCongXuLyKeHoachService.layBanGiaoHoSo(ch, lanMoiNhat);
+        NguoiDung nguoiDangXuLy = layNguoiDangXuLy(ch, lanMoiNhat);
+        boolean nguoiNhan = phanCongXuLyKeHoachService.laThuKyDaNhanBanGiao(banGiao, nguoiDungId);
         boolean duocLap = phanQuyenCuocHopService.laThuKyDuocPhanCong(ch.getCuocHopId(), nguoiDungId)
                 && (ThaoTacCuocHop.dangChoTiepNhan(ch) || ThaoTacCuocHop.dangLapKeHoach(ch));
         boolean hoanTat = phanCongXuLyKeHoachService.daHoanTatHoSo(ch);
+        Integer choChuyenCap = phanCongXuLyKeHoachService.layYeuCauChoChuyenCap(ch, lanMoiNhat, nguoiDungId);
         return new DeXuatCuocHopResponse(
                 ch.getCuocHopId(),
                 ch.getMaCuocHop(),
@@ -483,18 +486,31 @@ public class DeXuatCuocHopService {
                 !hoanTat && phanCongXuLyKeHoachService.laThuKyToChuc(ch, nguoiDungId),
                 hoanTat,
                 xacDinhVaiTroNguoiDeXuat(ch),
-                phanCongXuLyKeHoachService.layYeuCauChoChuyenCap(ch, banGiao, nguoiDungId),
+                choChuyenCap,
                 nguoiDangXuLy == null ? null : nguoiDangXuLy.getNguoiDungId(),
                 nguoiDangXuLy == null ? null : nguoiDangXuLy.getHoTen(),
-                layLichHopIdKeHoachDaDuyet(ch, banGiao),
+                layLichHopIdKeHoachDaDuyet(banGiao),
                 ch.getNguoiChuTri() == null ? null : ch.getNguoiChuTri().getHoTen(),
                 ch.getThuKyCuocHop() == null ? null : ch.getThuKyCuocHop().getHoTen(),
                 ch.getThoiGianBatDauThucTe(),
                 ch.getThoiGianKetThucThucTe(),
                 ThaoTacCuocHop.coTheLapLich(ch) && ThaoTacCuocHop.coLichDaXacNhan(ch),
                 laChiTiet && huyCuocHopService.duocHuy(ch, nguoiDungId),
-                laChiTiet ? huyCuocHopService.lyDoDaHuy(ch) : null
+                laChiTiet ? huyCuocHopService.lyDoDaHuy(ch) : null,
+                choChuyenCap == null ? null : mocKeHoach(ch.getCuocHopId(), "DONG_Y_TRINH_CAP_TREN"),
+                lanMoiNhat == null || lanMoiNhat.getYeuCauTruoc() == null
+                        ? null : mocKeHoach(ch.getCuocHopId(), "TRINH_CAP_TREN"),
+                laChiTiet && ThaoTacCuocHop.coLichMoiThamDu(ch, lanMoiNhat)
+                        ? thongTinThuMoiDaDuyet.doc(lanMoiNhat) : null
         );
+    }
+
+    private LocalDateTime mocKeHoach(Integer cuocHopId, String hanhDong) {
+        return lichSuPheDuyetRepository
+                .findFirstByCuocHop_CuocHopIdAndLoaiPheDuyetAndHanhDongOrderByLichSuPheDuyetIdDesc(
+                        cuocHopId, "KE_HOACH", hanhDong)
+                .map(lichSu -> lichSu.getThoiGianPheDuyet())
+                .orElse(null);
     }
 
     private NguoiDung layNguoiDangXuLy(CuocHop cuocHop, YeuCauPheDuyet yeuCau) {
@@ -504,7 +520,7 @@ public class DeXuatCuocHopService {
             case "CHO_TRUONG_PHONG", "CHO_LANH_DAO" ->
                     yeuCau == null ? null : yeuCau.getNguoiDuyet();
             case "CHO_GUI_CAP_TREN" ->
-                    yeuCau == null ? null : yeuCau.getNguoiTrinh();
+                    phanCongXuLyKeHoachService.layThuKyBanDau(cuocHop.getCuocHopId());
             case "CHO_THU_KY_LANH_DAO", "THU_KY_LANH_DAO_XU_LY" ->
                     yeuCau == null ? null : yeuCau.getThuKyTiepNhan();
             case "THU_KY_TO_CHUC", "SAU_CUOC_HOP" ->
@@ -515,9 +531,8 @@ public class DeXuatCuocHopService {
         };
     }
 
-    private Integer layLichHopIdKeHoachDaDuyet(CuocHop cuocHop, YeuCauPheDuyet yeuCau) {
-        if (!ThaoTacCuocHop.coTheLapLich(cuocHop)
-                || yeuCau == null
+    private Integer layLichHopIdKeHoachDaDuyet(YeuCauPheDuyet yeuCau) {
+        if (yeuCau == null
                 || yeuCau.getTrangThai() != TrangThai.DA_DUYET
                 || yeuCau.getLichHop() == null) {
             return null;

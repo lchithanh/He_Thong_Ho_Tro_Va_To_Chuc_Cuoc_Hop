@@ -18,6 +18,65 @@ import com.example.demo.entity.YeuCauPheDuyet.TrangThai;
 @Repository
 public interface CuocHopRepository extends JpaRepository<CuocHop, Integer> {
 
+    @Query("""
+            select hop from CuocHop hop
+            left join hop.nguoiChuTri chuTri
+            left join hop.thuKyCuocHop thuKy
+            where hop.trangThai = 'DANG_DIEN_RA'
+              and (chuTri.nguoiDungId = :nguoiDungId
+                   or thuKy.nguoiDungId = :nguoiDungId
+                   or exists (
+                       select 1 from ThanhVienCuocHop tv
+                       where tv.cuocHop = hop and tv.id.nguoiDungId = :nguoiDungId
+                   )
+                   or exists (
+                       select 1 from YeuCauPheDuyet yc
+                       where yc.cuocHop = hop and yc.thuKyBanGiao.nguoiDungId = :nguoiDungId
+                   ))
+            order by hop.thoiGianBatDauThucTe desc, hop.cuocHopId desc
+            """)
+    List<CuocHop> findCuocHopDangDienRaGanVoiNguoiDung(@Param("nguoiDungId") Integer nguoiDungId);
+
+    String NOI_CUOC_HOP_VOI_NGUOI_PHU_TRACH = """
+            left join hop.nguoiChuTri chuTri
+            left join hop.thuKyCuocHop thuKy
+            """;
+
+    String PHAM_VI_DOC_VAN_BAN_DA_PHAT_HANH = """
+            and (
+                chuTri.nguoiDungId = :nguoiDungId
+                or thuKy.nguoiDungId = :nguoiDungId
+                or exists (
+                    select 1 from ThanhVienCuocHop tv
+                    where tv.cuocHop = hop and tv.id.nguoiDungId = :nguoiDungId
+                )
+                or exists (
+                    select 1 from YeuCauPheDuyet yc
+                    join yc.thuKyBanGiao nguoiNhan
+                    where yc.cuocHop = hop
+                      and yc.loaiYeuCau = :loaiKeHoach and yc.trangThai = :daDuyet
+                      and nguoiNhan.nguoiDungId = :nguoiDungId
+                      and yc.yeuCauPheDuyetId = (
+                          select max(lanTrinh.yeuCauPheDuyetId) from YeuCauPheDuyet lanTrinh
+                          where lanTrinh.cuocHop = hop
+                            and lanTrinh.loaiYeuCau = :loaiKeHoach and lanTrinh.trangThai = :daDuyet
+                      )
+                )
+            )
+            """;
+
+    @Query("""
+            select case when count(hop) > 0 then true else false end
+            from CuocHop hop
+            """ + NOI_CUOC_HOP_VOI_NGUOI_PHU_TRACH + """
+            where hop.cuocHopId = :cuocHopId
+            """ + PHAM_VI_DOC_VAN_BAN_DA_PHAT_HANH)
+    boolean coQuyenDocVanBanDaPhatHanh(
+            @Param("cuocHopId") Integer cuocHopId,
+            @Param("nguoiDungId") Integer nguoiDungId,
+            @Param("loaiKeHoach") LoaiYeuCau loaiKeHoach,
+            @Param("daDuyet") TrangThai daDuyet);
+
 	@Query("""
 		    SELECT ch
 		    FROM CuocHop ch

@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.demo.dto.request.GuiPhieuBieuQuyetRequest;
@@ -139,17 +140,19 @@ public class BieuQuyetController {
     
     @GetMapping("/bieu-quyet/cua-toi")
     public List<BieuQuyetThamDuResponse> layDanhSachBieuQuyetThamDu(
+            @RequestParam(name = "cuocHopId", required = false) Integer cuocHopId,
             Authentication authentication
     ) {
         Integer nguoiDungId = nguoiDungHienTaiService.layNguoiDungId(authentication);
-        return bieuQuyetService.layDanhSachBieuQuyetThamDu(nguoiDungId);
+        return bieuQuyetService.layDanhSachBieuQuyetThamDu(nguoiDungId, cuocHopId);
     }
     
     @GetMapping("/bieu-quyet/ket-qua-cua-toi")
     public List<BieuQuyetThamDuResponse> layDanhSachBieuQuyetDaDongCuaToi(
+            @RequestParam(name = "cuocHopId", required = false) Integer cuocHopId,
             Authentication authentication
     ) {
         Integer nguoiDungId = nguoiDungHienTaiService.layNguoiDungId(authentication);
-        return bieuQuyetService.layDanhSachBieuQuyetDaDongCuaToi(nguoiDungId);
+        return bieuQuyetService.layDanhSachBieuQuyetDaDongCuaToi(nguoiDungId, cuocHopId);
     }
 }

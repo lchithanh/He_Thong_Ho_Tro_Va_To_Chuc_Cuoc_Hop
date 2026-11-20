@@ -61,13 +61,20 @@ export default function LichCuaHoSo({
   const [loi, setLoi] = useState('')
   const [dangTrinh, setDangTrinh] = useState(null)
   const [loiTrinh, setLoiTrinh] = useState('')
+  const [lyDoTrinhLai, setLyDoTrinhLai] = useState('')
 
   async function trinhLai(lichHopId) {
     if (dangTrinh != null) return
+    const lyDo = lyDoTrinhLai.trim()
+    if (!lyDo) {
+      setLoiTrinh('Nhập lý do chọn lịch thay thế trước khi trình.')
+      return
+    }
     setDangTrinh(lichHopId)
     setLoiTrinh('')
     try {
-      const ketQua = await trinhLaiLichSauHuy(cuocHopId, lichHopId, token)
+      const ketQua = await trinhLaiLichSauHuy(cuocHopId, lichHopId, token, lyDo)
+      setLyDoTrinhLai('')
       onDaTrinhLai?.(ketQua)
     } catch (error) {
       setLoiTrinh(error.message)
@@ -112,9 +119,17 @@ export default function LichCuaHoSo({
         : !duLieuLich ? <p role="status">Đang tải lịch…</p>
           : hienTai.length === 0 && <p className="text-slate-600">Chưa có lịch hiện hành.</p>}
       {loiTrinh && <p role="alert" className="text-red-800">{loiTrinh}</p>}
-      {hienNutTrinhLai && <p className="text-slate-600">
-        Lịch đã duyệt bị hủy. Bạn có thể trình lịch đề xuất mới cùng kế hoạch và tài liệu đã lưu.
-      </p>}
+      {hienNutTrinhLai && (
+        <div className="space-y-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
+          <p className="text-amber-950">Lịch đã duyệt bị hủy. Lần trình mới sẽ dùng tài liệu của kế hoạch đã duyệt.</p>
+          <label className="block font-medium text-slate-800">
+            Lý do đề xuất lịch thay thế
+            <textarea value={lyDoTrinhLai} onChange={(event) => setLyDoTrinhLai(event.target.value)}
+              disabled={dangTrinh != null} rows={2}
+              className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2" />
+          </label>
+        </div>
+      )}
       {hienTai?.length > 0 && <DanhSachLich lich={hienTai} loaiHinh={loaiHinh}
         onTrinhLai={hienNutTrinhLai ? trinhLai : undefined} dangTrinh={dangTrinh}
         thoiDiemTai={duLieuLich.thoiDiemTai} />}

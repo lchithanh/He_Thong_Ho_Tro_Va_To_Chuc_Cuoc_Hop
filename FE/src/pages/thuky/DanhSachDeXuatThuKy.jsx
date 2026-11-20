@@ -1,3 +1,4 @@
+import { dinhDangNgayGio } from '../../utils/thoiGianCuocHop.js'
 import { useEffect, useState } from 'react'
 import CalendarDays from 'lucide-react/dist/esm/icons/calendar-days.mjs'
 import CheckCircle2 from 'lucide-react/dist/esm/icons/check-circle-2.mjs'
@@ -16,7 +17,7 @@ export { default as LichCuaHoSo } from './LichCuaHoSo.jsx'
 export { default as HoSoDaTrinh } from './HoSoDaTrinh.jsx'
 import NguonDeXuat from './NguonDeXuat.jsx'
 
-export default function DanhSachDeXuatThuKy({ token, nguoiDung, onLapLich, chiXemPhanHoi = false, chiXemBanGiao = false, chiXemRaSoat = false, chiXemChuyenCap = false }) {
+export default function DanhSachDeXuatThuKy({ token, nguoiDung, onLapLich, onMoPhongHop, viecDaChon, chiXemPhanHoi = false, chiXemBanGiao = false, chiXemRaSoat = false, chiXemChuyenCap = false }) {
   const [danhSach, setDanhSach] = useState(null)
   const [loi, setLoi] = useState('')
   const [lanTai, setLanTai] = useState(0)
@@ -51,6 +52,10 @@ export default function DanhSachDeXuatThuKy({ token, nguoiDung, onLapLich, chiXe
     return () => controller.abort()
   }, [token, lanTai, chiXemRaSoat])
 
+  const khoa = chiXemRaSoat ? 'yeuCauPheDuyetId' : chiXemChuyenCap ? 'yeuCauChoGuiCapTrenId' : 'cuocHopId'
+  const idsChoXuLy = viecDaChon && new Set(viecDaChon.map((muc) => muc[khoa]))
+  const danhSachTheoViec = idsChoXuLy ? danhSach?.filter((muc) => idsChoXuLy.has(muc[khoa])) : danhSach
+
   if (cuocHopDangXem !== null) {
     return (
       <ChiTietDeXuat
@@ -58,6 +63,7 @@ export default function DanhSachDeXuatThuKy({ token, nguoiDung, onLapLich, chiXe
         token={token}
         nguoiDung={nguoiDung}
         onLapLich={onLapLich}
+        onMoPhongHop={onMoPhongHop}
         tabBanDau={chiXemRaSoat || chiXemChuyenCap || chiXemPhanHoi ? 'ke-hoach' : 'thong-tin'}
         onQuayLai={() => {
           setCuocHopDangXem(null)
@@ -81,10 +87,11 @@ export default function DanhSachDeXuatThuKy({ token, nguoiDung, onLapLich, chiXe
       <section className="space-y-4">
         <h1 className="text-2xl font-bold">Hồ sơ chờ rà soát</h1>
         {loi ? <p role="alert">{loi}</p> : !danhSach ? <p role="status">Đang tải hồ sơ…</p>
-          : !danhSach.length && <p>Chưa có hồ sơ chờ rà soát.</p>}
-        {danhSach?.map((muc) => (
+          : !danhSachTheoViec?.length && <p>Chưa có hồ sơ chờ rà soát.</p>}
+        {danhSachTheoViec?.map((muc) => (
           <article key={muc.yeuCauPheDuyetId} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4">
-            <h2 className="font-semibold">{muc.tieuDe}</h2>
+            <div><h2 className="font-semibold">{muc.tieuDe}</h2>
+              <p className="text-sm text-slate-600">Chuyển cấp · {dinhDangNgayGio(muc.thoiGianTrinh)}</p></div>
             <button type="button" className="rounded-lg border px-3 py-2 text-sm font-semibold text-emerald-800"
               onClick={() => setCuocHopDangXem(muc.cuocHopId)}>Xem hồ sơ</button>
           </article>
@@ -94,7 +101,7 @@ export default function DanhSachDeXuatThuKy({ token, nguoiDung, onLapLich, chiXe
   }
 
   if (chiXemPhanHoi) {
-    const phanHoi = danhSach?.filter((muc) => muc.phanHoiKeHoach)
+    const phanHoi = danhSachTheoViec?.filter((muc) => muc.phanHoiKeHoach && (!viecDaChon || (muc.duocLapKeHoach && muc.phanHoiKeHoach.trangThai === 'TRA_LAI')))
       .sort((a, b) => (b.phanHoiKeHoach.thoiGian ?? '').localeCompare(a.phanHoiKeHoach.thoiGian ?? ''))
     return (
       <section className="space-y-4">
@@ -124,7 +131,7 @@ export default function DanhSachDeXuatThuKy({ token, nguoiDung, onLapLich, chiXe
   }
 
   if (chiXemChuyenCap) {
-    const choChuyenCap = danhSach?.filter((muc) => muc.yeuCauChoGuiCapTrenId != null)
+    const choChuyenCap = danhSachTheoViec?.filter((muc) => muc.yeuCauChoGuiCapTrenId != null)
     return (
       <section className="space-y-4">
         <h1 className="text-2xl font-bold">Hồ sơ chờ chuyển cấp</h1>
@@ -136,6 +143,7 @@ export default function DanhSachDeXuatThuKy({ token, nguoiDung, onLapLich, chiXe
             <div>
               <h2 className="font-semibold">{muc.tieuDe}</h2>
               <p className="mt-1 text-sm text-slate-600">Lần trình #{muc.yeuCauChoGuiCapTrenId} · Trưởng phòng đã đồng ý</p>
+              <p className="text-sm text-slate-600">Đồng ý chuyển cấp · {dinhDangNgayGio(muc.thoiGianDongYChuyenCap)}</p>
             </div>
             <button type="button" className="rounded-lg border px-3 py-2 text-sm font-semibold text-emerald-800"
               onClick={() => setCuocHopDangXem(muc.cuocHopId)}>Mở hồ sơ</button>
@@ -146,7 +154,7 @@ export default function DanhSachDeXuatThuKy({ token, nguoiDung, onLapLich, chiXe
   }
 
   if (chiXemBanGiao) {
-    const daGiao = danhSach?.filter((muc) => muc.yeuCauBanGiaoId != null)
+    const daGiao = danhSachTheoViec?.filter((muc) => muc.yeuCauBanGiaoId != null)
     return (
       <section className="space-y-4">
         <h1 className="text-2xl font-bold">Cuộc họp được giao</h1>
@@ -292,8 +300,9 @@ export default function DanhSachDeXuatThuKy({ token, nguoiDung, onLapLich, chiXe
                   <td className="px-3 py-3">
                     <p className="font-medium">{deXuat.tieuDe}</p>
                     <p className="text-xs text-slate-600">
-                      {deXuat.maCuocHop || `#${deXuat.cuocHopId}`}
+                      {deXuat.maCuocHop || `#${deXuat.cuocHopId}`} · {dinhDangNgayGio(deXuat.ngayTao)}
                     </p>
+                    {deXuat.thoiGianChuyenCap && <p className="text-xs text-slate-600">Đã chuyển cấp · {dinhDangNgayGio(deXuat.thoiGianChuyenCap)}</p>}
                   </td>
                   <td className="px-3 py-3">{deXuat.tenNguoiDeXuat || '—'}</td>
                   <td className="px-3 py-3">

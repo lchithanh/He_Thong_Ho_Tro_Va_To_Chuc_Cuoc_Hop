@@ -31,6 +31,7 @@ public class HuyCuocHopService {
     private final LichSuPheDuyetService lichSuService;
     private final NguoiDungHienTaiService nguoiDungHienTaiService;
     private final QuyTrinhKeHoachService quyTrinhKeHoachService;
+    private final PhanCongXuLyKeHoachService phanCongXuLyKeHoachService;
     private final CapNhatHoSoRealtime capNhatRealtime;
     private final ThongBaoEmailCuocHop thongBaoEmail;
 
@@ -105,13 +106,15 @@ public class HuyCuocHopService {
     }
 
     private boolean coQuyenHuy(CuocHop cuocHop, Integer nguoiDungId) {
-        return layLanTrinh(cuocHop.getCuocHopId()).stream()
-                .filter(yc -> yc.getTrangThai() == TrangThai.DA_DUYET && yc.getLichHop() != null
-                        && (yc.getLichHop().getThoiGianXacNhan() != null
-                            || ThaoTacCuocHop.coTheLapLich(cuocHop)))
-                .findFirst()
-                .map(yc -> quyTrinhKeHoachService.coQuyenXuLyQuyetDinh(yc, nguoiDungId))
-                .orElseGet(() -> ThaoTacCuocHop.laNguoiDeXuat(cuocHop, nguoiDungId));
+        Integer cuocHopId = cuocHop.getCuocHopId();
+        YeuCauPheDuyet lanDuyet = phanCongXuLyKeHoachService.layLanDuyetCoLichDaXacNhan(cuocHopId);
+        if (lanDuyet == null && ThaoTacCuocHop.coTheLapLich(cuocHop)) {
+            lanDuyet = phanCongXuLyKeHoachService.layLanTrinhMoiNhat(cuocHopId);
+        }
+        if (lanDuyet != null && lanDuyet.getTrangThai() == TrangThai.DA_DUYET) {
+            return quyTrinhKeHoachService.coQuyenXuLyQuyetDinh(lanDuyet, nguoiDungId);
+        }
+        return ThaoTacCuocHop.laNguoiDeXuat(cuocHop, nguoiDungId);
     }
 
     private List<YeuCauPheDuyet> layLanTrinh(Integer cuocHopId) {

@@ -23,6 +23,7 @@ import com.example.demo.dto.response.DeXuatCuocHopResponse;
 import com.example.demo.dto.response.DeXuatThaoTacResponse;
 import com.example.demo.dto.response.KeHoachPheDuyetResponse;
 import com.example.demo.dto.response.LichSuKeHoachResponse;
+import com.example.demo.dto.response.NguoiCoTheMoiResponse;
 import com.example.demo.dto.response.TrinhKeHoachResponse;
 import com.example.demo.service.CuocHopService;
 import com.example.demo.service.HuyCuocHopService;
@@ -43,6 +44,11 @@ public class CuocHopController {
     private final NguoiDungHienTaiService nguoiDungHienTaiService;
     private final PheDuyetKeHoachService pheDuyetKeHoachService;
     private final com.example.demo.service.QuyTrinhKeHoachService quyTrinhKeHoachService;
+
+    @GetMapping("/de-xuat/thu-ky-co-the-chon")
+    public List<NguoiCoTheMoiResponse> layThuKyCoTheDeXuat(Authentication authentication) {
+        return cuocHopService.layThuKyCoTheDeXuat(layNguoiDungId(authentication));
+    }
 
     @PostMapping("/de-xuat")
     public ResponseEntity<DeXuatThaoTacResponse> taoDeXuat(

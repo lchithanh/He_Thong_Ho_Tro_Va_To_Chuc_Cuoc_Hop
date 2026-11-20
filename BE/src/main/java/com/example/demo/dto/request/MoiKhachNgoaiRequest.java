@@ -1,5 +1,7 @@
 package com.example.demo.dto.request;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -9,5 +11,7 @@ public record MoiKhachNgoaiRequest(
         @NotBlank @Email @Size(max = 190) String email,
         @Size(max = 200) String donViCongTac,
         @Size(max = 120) String chucVu,
-        @Size(max = 500) String duongDanHop) {
+        @Size(max = 250) String truSo,
+        @Size(max = 500) String duongDanHop,
+        @NotNull @Valid NoiDungThuMoi thuMoi) {
 }

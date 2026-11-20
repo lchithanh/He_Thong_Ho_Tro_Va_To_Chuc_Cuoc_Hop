@@ -2,7 +2,6 @@ package com.example.demo.service;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
 
@@ -18,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.example.demo.dto.request.MoiKhachNgoaiRequest;
+import com.example.demo.dto.request.NoiDungThuMoi;
 import com.example.demo.dto.response.KhachNgoaiCuocHopResponse;
 import com.example.demo.entity.CuocHop;
 import com.example.demo.entity.KhachMoi;
@@ -37,8 +37,6 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class KhachNgoaiCuocHopService {
 
-    private static final DateTimeFormatter DINH_DANG_LICH = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
-
     private final CuocHopRepository cuocHopRepository;
     private final YeuCauPheDuyetRepository yeuCauPheDuyetRepository;
     private final KhachMoiRepository khachMoiRepository;
@@ -48,6 +46,7 @@ public class KhachNgoaiCuocHopService {
     private final PhanCongXuLyKeHoachService phanCongXuLyKeHoachService;
     private final ObjectProvider<JavaMailSender> mailSenderProvider;
     private final Environment environment;
+    private final ThongTinThuMoiDaDuyet thongTinThuMoi;
 
     @Transactional(readOnly = true)
     public List<KhachNgoaiCuocHopResponse> layDanhSach(Integer cuocHopId, Integer nguoiDungId) {
@@ -112,7 +111,7 @@ public class KhachNgoaiCuocHopService {
         loiMoi.setCuocHop(cuocHop);
         // Ghi và kiểm tra ràng buộc trước khi gửi. Lỗi SMTP làm giao dịch quay lui.
         khachMoiCuocHopRepository.saveAndFlush(loiMoi);
-        guiThuMoi(khachMoi, cuocHop, keHoach.getLichHop(), diaDiemHop);
+        guiThuMoi(khachMoi, thongTinThuMoi.doc(keHoach), diaDiemHop, request);
         return chuyenResponse(loiMoi);
     }
 
@@ -133,11 +132,14 @@ public class KhachNgoaiCuocHopService {
         if (phongHop == null) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Lịch họp trực tiếp cần có phòng họp");
         }
-        return "Phòng họp: " + phongHop.getTenPhongHop()
-                + (chuanHoa(phongHop.getViTri()) == null ? "" : "\nĐịa điểm: " + phongHop.getViTri().strip());
+        return phongHop.getTenPhongHop()
+                + (chuanHoa(phongHop.getViTri()) == null ? "" : " – " + phongHop.getViTri().strip());
     }
 
-    private void guiThuMoi(KhachMoi khachMoi, CuocHop cuocHop, LichHop lichHop, String diaDiemHop) {
+    private void guiThuMoi(KhachMoi khachMoi, ThongTinThuMoiDaDuyet.DuLieu thongTin,
+            String diaDiemHop, MoiKhachNgoaiRequest request) {
+        NoiDungThuMoi thuMoi = request.thuMoi();
+        TepThuMoi tep = TepThuMoi.doc(thuMoi.tepDinhKem(), thongTin.lichHopId());
         JavaMailSender mailSender = mailSenderProvider.getIfAvailable();
         String diaChiGui = chuanHoa(environment.getProperty("app.mail.from", environment.getProperty("spring.mail.username", "")));
         if (mailSender == null || diaChiGui == null) {
@@ -145,25 +147,16 @@ public class KhachNgoaiCuocHopService {
         }
         try {
             var message = mailSender.createMimeMessage();
-            var helper = new MimeMessageHelper(message, StandardCharsets.UTF_8.name());
+            var helper = new MimeMessageHelper(message, tep != null, StandardCharsets.UTF_8.name());
             helper.setValidateAddresses(true);
             helper.setFrom(diaChiGui);
             helper.setTo(khachMoi.getEmail());
-            helper.setSubject("Thư mời họp: " + cuocHop.getTieuDe().replaceAll("[\\r\\n]+", " "));
-            helper.setText("""
-                    Kính gửi %s,
-
-                    Trân trọng kính mời Quý khách tham dự cuộc họp "%s".
-
-                    Thời gian: %s đến %s (giờ Việt Nam)
-                    %s
-
-                    Quý khách vui lòng trả lời email này để xác nhận tham dự hoặc thông báo nếu không thể tham dự.
-
-                    Trân trọng.
-                    """.formatted(khachMoi.getHoTen(), cuocHop.getTieuDe(),
-                    lichHop.getThoiGianBatDau().format(DINH_DANG_LICH),
-                    lichHop.getThoiGianKetThuc().format(DINH_DANG_LICH), diaDiemHop));
+            helper.setSubject(thongTin.chuDe(thuMoi));
+            String nguoiNhan = java.util.stream.Stream.of(request.hoTen(), request.chucVu(),
+                    request.donViCongTac(), request.truSo()).map(KhachNgoaiCuocHopService::chuanHoa)
+                    .filter(java.util.Objects::nonNull).collect(java.util.stream.Collectors.joining(", "));
+            helper.setText(thongTin.noiDungEmail(thuMoi, nguoiNhan, diaDiemHop));
+            if (tep != null) tep.dinhKem(helper);
             mailSender.send(message);
         } catch (MailException | MessagingException ex) {
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Không gửi được thư mời. Vui lòng kiểm tra cấu hình SMTP và thử lại", ex);

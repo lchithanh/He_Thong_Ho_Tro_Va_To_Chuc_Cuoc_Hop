@@ -1,14 +1,18 @@
+import { dinhDangNgayGio } from '../../utils/thoiGianCuocHop.js'
 import { useEffect, useState } from 'react'
 import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
 import Building2 from 'lucide-react/dist/esm/icons/building-2.mjs'
 import UserPlus from 'lucide-react/dist/esm/icons/user-plus.mjs'
 import Users from 'lucide-react/dist/esm/icons/users.mjs'
 import {
+  guiLaiEmailLoiMoi,
   layNguoiCoTheMoi,
   layThanhVienCuocHop,
   moiDanhSachThanhVienCuocHop,
 } from '../../api/thanhVienCuocHopApi.js'
 
+import TepThuMoiFields from './TepThuMoiFields.jsx'
+import { tenNguoiNhanGiayMoi, themTepVaoThuMoi, thongTinGiayMoi } from './taoGiayMoi.js'
 import { layLichTheoCuocHop } from '../../api/cuocHopApi.js'
 
 const TEN_TRANG_THAI_MOI = {
@@ -21,6 +25,7 @@ const TEN_TRANG_THAI_MOI = {
 const TEN_VAI_TRO = {
   THAM_DU: 'Người tham dự',
   THU_KY: 'Thư ký',
+  THU_KY_CUOC_HOP: 'Thư ký tổ chức',
   THU_KY_LANH_DAO: 'Thư ký lãnh đạo',
   CHU_TRI: 'Chủ trì',
 }
@@ -35,9 +40,9 @@ export default function ThanhVienCuocHopThuKy({
   cuocHopId,
   token,
   choPhepMoi = true,
-  onTrangThaiLich,
   onLapLich,
   lichHopIdKeHoachDaDuyet,
+  thongTinCuocHop,
 }) {
   const phienDongBo = useDongBoDuLieu()
   const [danhSach, setDanhSach] = useState(null)
@@ -46,6 +51,8 @@ export default function ThanhVienCuocHopThuKy({
   const [tuKhoa, setTuKhoa] = useState('')
   const [xacNhanMoi, setXacNhanMoi] = useState(false)
   const [dangMoi, setDangMoi] = useState(false)
+  const [nguoiGuiLai, setNguoiGuiLai] = useState(null)
+  const [dangGuiLai, setDangGuiLai] = useState(null)
   const [loiTai, setLoiTai] = useState('')
   const [loiMoi, setLoiMoi] = useState('')
   const [thongBao, setThongBao] = useState('')
@@ -69,8 +76,10 @@ export default function ThanhVienCuocHopThuKy({
       })
 
     if (choPhepMoi) {
-      layLichTheoCuocHop(cuocHopId, token, controller.signal)
-        .then((lich) => {
+      const duLieuLich = thongTinCuocHop
+        ? Promise.resolve([{ ...thongTinCuocHop, trangThai: 'DA_XAC_NHAN' }])
+        : layLichTheoCuocHop(cuocHopId, token, controller.signal)
+      duLieuLich.then((lich) => {
           if (controller.signal.aborted) return
           const lichDuocDuyet = lich.find(
             (muc) => muc.lichHopId === lichHopIdKeHoachDaDuyet,
@@ -84,9 +93,8 @@ export default function ThanhVienCuocHopThuKy({
           setLichKeHoachQuaHan(Boolean(
             thoiGianBatDau && !lichChuaBatDau,
           ))
-          const coLichHopLe = daXacNhan && lichChuaBatDau
+          const coLichHopLe = daXacNhan && lichChuaBatDau && thongTinCuocHop?.lichHopId === lichDuocDuyet?.lichHopId
           setCoLichDaXacNhan(coLichHopLe)
-          onTrangThaiLich?.(coLichHopLe)
           if (coLichHopLe) return layNguoiCoTheMoi(cuocHopId, token, controller.signal)
         })
         .then((duLieu) => {
@@ -102,7 +110,7 @@ export default function ThanhVienCuocHopThuKy({
     }
 
     return () => controller.abort()
-  }, [cuocHopId, token, lanTai, choPhepMoi, onTrangThaiLich, lichHopIdKeHoachDaDuyet, phienDongBo])
+  }, [cuocHopId, token, lanTai, choPhepMoi, lichHopIdKeHoachDaDuyet, thongTinCuocHop, phienDongBo])
 
   const nguoiChon = (nguoiCoTheMoi ?? []).filter((nguoi) => nguoiChonIds.includes(nguoi.nguoiDungId))
   const ketQuaTim = nguoiCoTheMoi?.filter((nguoi) =>
@@ -115,6 +123,30 @@ export default function ThanhVienCuocHopThuKy({
     setNguoiChonIds((hienTai) => daChon ? [...hienTai, id] : hienTai.filter((muc) => muc !== id))
   }
 
+  function giayMoiCho(nguoiNhan) {
+    return thongTinGiayMoi(thongTinCuocHop, nguoiNhan.map(tenNguoiNhanGiayMoi).join('; '))
+  }
+
+  async function guiLaiLoiMoi(event) {
+    event.preventDefault()
+    if (dangGuiLai !== null || !nguoiGuiLai || !choPhepMoi || !coLichDaXacNhan) return
+    const nguoi = nguoiGuiLai
+    const duLieu = new FormData(event.currentTarget)
+    setDangGuiLai(nguoi.nguoiDungId)
+    setLoiMoi('')
+    setThongBao('')
+    try {
+      const email = await themTepVaoThuMoi({}, duLieu, giayMoiCho([nguoi]))
+      await guiLaiEmailLoiMoi(cuocHopId, nguoi.nguoiDungId, email, token)
+      setNguoiGuiLai(null)
+      setThongBao(`Đã yêu cầu gửi lại email lời mời cho ${nguoi.hoTen}.`)
+    } catch (loi) {
+      setLoiMoi(loi.message)
+    } finally {
+      setDangGuiLai(null)
+    }
+  }
+
   async function xuLyMoi(event) {
     event.preventDefault()
     if (dangMoi || !choPhepMoi || !coLichDaXacNhan || !nguoiChon.length) return
@@ -123,12 +155,15 @@ export default function ThanhVienCuocHopThuKy({
       return
     }
 
+    const form = event.currentTarget
+    const duLieu = new FormData(form)
     setDangMoi(true)
     setLoiMoi('')
     setThongBao('')
 
     try {
-      await moiDanhSachThanhVienCuocHop(cuocHopId, nguoiChon.map((nguoi) => nguoi.nguoiDungId), token)
+      const email = await themTepVaoThuMoi({}, duLieu, giayMoiCho(nguoiChon))
+      await moiDanhSachThanhVienCuocHop(cuocHopId, nguoiChon.map((nguoi) => nguoi.nguoiDungId), email, token)
       const thanhVienMoi = nguoiChon.map((nguoi) => ({
         ...nguoi,
         vaiTroTaiCuocHop: 'THAM_DU',
@@ -142,6 +177,7 @@ export default function ThanhVienCuocHopThuKy({
           ...thanhVienMoi.filter((nguoi) => !idsHienTai.has(nguoi.nguoiDungId)),
         ]
       })
+      form.reset()
       setNguoiChonIds([])
       setXacNhanMoi(false)
       setThongBao(`Đã mời ${nguoiChon.length} người tham dự cuộc họp.`)
@@ -258,6 +294,10 @@ export default function ThanhVienCuocHopThuKy({
               </button>
             </div>
           )}
+          <div hidden={!xacNhanMoi}>
+
+            <TepThuMoiFields thongTinCuocHop={thongTinCuocHop} disabled={!xacNhanMoi || dangMoi} layThongTin={() => giayMoiCho(nguoiChon)} />
+          </div>
           <button
             type="submit"
             disabled={dangMoi || !nguoiChon.length}
@@ -289,6 +329,21 @@ export default function ThanhVienCuocHopThuKy({
         {danhSach?.length === 0 && (
           <p className="text-sm text-slate-500">Chưa có thành viên được mời.</p>
         )}
+        {nguoiGuiLai && choPhepMoi && coLichDaXacNhan && (
+          <form onSubmit={guiLaiLoiMoi} key={nguoiGuiLai.nguoiDungId} className="mb-3 space-y-3 rounded-xl border border-blue-200 bg-blue-50 p-3">
+            <h4 className="text-sm font-semibold">Gửi lại lời mời cho {nguoiGuiLai.hoTen}</h4>
+
+            <TepThuMoiFields thongTinCuocHop={thongTinCuocHop} disabled={dangGuiLai !== null} layThongTin={() => giayMoiCho([nguoiGuiLai])} />
+            <div className="flex gap-3">
+              <button type="submit" disabled={dangGuiLai !== null} className="rounded-lg bg-blue-800 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">
+                {dangGuiLai !== null ? 'Đang yêu cầu…' : 'Gửi lại email'}
+              </button>
+              <button type="button" disabled={dangGuiLai !== null} onClick={() => setNguoiGuiLai(null)} className="text-sm font-semibold text-slate-700">
+                Hủy
+              </button>
+            </div>
+          </form>
+        )}
         {danhSach?.length > 0 && (
           <ul className="max-h-72 space-y-2 overflow-y-auto pr-1">
             {danhSach.map((thanhVien) => (
@@ -298,6 +353,7 @@ export default function ThanhVienCuocHopThuKy({
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block break-words text-sm font-semibold text-slate-900">{thanhVien.hoTen}</span>
+                  {thanhVien.vaiTroTaiCuocHop === 'THAM_DU' && <span className="block text-xs text-slate-600">Đã mời · {dinhDangNgayGio(thanhVien.ngayMoi)}</span>}
                   <span className="mt-1 grid gap-x-3 gap-y-1 text-xs text-slate-600 sm:grid-cols-2">
                     <span><strong>Phòng ban:</strong> {thanhVien.tenPhongBan || 'Chưa phân công'}</span>
                     <span><strong>Chức vụ:</strong> {thanhVien.chucVu || 'Chưa cập nhật'}</span>
@@ -305,9 +361,18 @@ export default function ThanhVienCuocHopThuKy({
                   </span>
                 </span>
                 {thanhVien.vaiTroTaiCuocHop === 'THAM_DU' && (
-                  <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${mauTrangThaiMoi(thanhVien.trangThaiMoi)}`}>
-                    {TEN_TRANG_THAI_MOI[thanhVien.trangThaiMoi] || thanhVien.trangThaiMoi || 'Chưa có trạng thái'}
-                  </span>
+                  <div className="flex shrink-0 flex-col items-end gap-2">
+                    <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${mauTrangThaiMoi(thanhVien.trangThaiMoi)}`}>
+                      {TEN_TRANG_THAI_MOI[thanhVien.trangThaiMoi] || thanhVien.trangThaiMoi || 'Chưa có trạng thái'}
+                    </span>
+                    {choPhepMoi && coLichDaXacNhan && thanhVien.trangThaiMoi === 'CHO_PHAN_HOI' && (
+                      <button type="button" disabled={dangGuiLai !== null} aria-label={`Gửi lại email cho ${thanhVien.hoTen}`}
+                        className="text-xs font-semibold text-blue-800 underline disabled:opacity-50"
+                        onClick={() => setNguoiGuiLai(thanhVien)}>
+                        {dangGuiLai === thanhVien.nguoiDungId ? 'Đang yêu cầu…' : 'Gửi lại email'}
+                      </button>
+                    )}
+                  </div>
                 )}
               </li>
             ))}

@@ -78,6 +78,9 @@ public class BienBanCuocHop {
     @Column(name = "ngay_trinh_duyet")
     private LocalDateTime ngayTrinhDuyet;
 
+    @Column(name = "ngay_phat_hanh")
+    private LocalDateTime ngayPhatHanh;
+
     @Column(name = "ngay_duyet")
     private LocalDateTime ngayDuyet;
 

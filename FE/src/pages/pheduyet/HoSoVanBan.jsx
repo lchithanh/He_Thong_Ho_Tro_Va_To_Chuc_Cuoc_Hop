@@ -11,10 +11,10 @@ const MUC = {
   'ket-luan': { ten: 'Kết luận', Trang: KetLuanChoPhatHanh },
 }
 
-function HoSoVanBan({ cheDo, nguoiDung, ...props }) {
+function HoSoVanBan({ cheDo, nguoiDung, viecDaChon, ...props }) {
   const laQuanLy = nguoiDung.maVaiTro === 'LANH_DAO' || (nguoiDung.maVaiTro === 'CAN_BO' && nguoiDung.truongPhong)
   const cacMuc = cheDo === 'duyet'
-    ? [...(laQuanLy ? ['ke-hoach'] : []), 'bien-ban-duyet', 'ket-luan']
+    ? viecDaChon ? ['ke-hoach'] : [...(laQuanLy ? ['ke-hoach'] : []), 'bien-ban-duyet', 'ket-luan']
     : ['bien-ban-phat-hanh', 'ket-luan']
   const [mucHienTai, setMucHienTai] = useState(cacMuc[0])
   const Trang = MUC[mucHienTai].Trang
@@ -36,7 +36,7 @@ function HoSoVanBan({ cheDo, nguoiDung, ...props }) {
           ))}
         </nav>
       </header>
-      <Trang key={mucHienTai} {...props} nguoiDung={nguoiDung} cheDo={cheDo} />
+      <Trang key={mucHienTai} {...props} nguoiDung={nguoiDung} cheDo={cheDo} viecDaChon={viecDaChon} />
     </div>
   )
 }

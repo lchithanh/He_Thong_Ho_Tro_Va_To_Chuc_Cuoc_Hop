@@ -14,6 +14,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import com.example.demo.dto.request.DiemDanhThanhVienRequest;
 import com.example.demo.dto.request.MoiThanhVienCuocHopRequest;
+import com.example.demo.dto.request.NoiDungThuMoi;
+import jakarta.validation.constraints.NotNull;
 import com.example.demo.dto.request.PhanHoiLoiMoiRequest;
 import com.example.demo.dto.response.CuocHopDangDienRaResponse;
 import com.example.demo.dto.response.ThanhVienCuocHopResponse;
@@ -42,21 +44,32 @@ public class ThanhVienCuocHopController {
         thanhVienCuocHopService.moiThanhVien(
                 cuocHopId,
                 request.nguoiDuocMoiId(),
-                thuKyId
+                thuKyId, request.thuMoi()
         );
 
         return ResponseEntity.noContent().build();
     }
     
-    public record MoiDanhSachRequest(List<Integer> nguoiDuocMoiIds) {}
+    public record MoiDanhSachRequest(List<Integer> nguoiDuocMoiIds, @NotNull @Valid NoiDungThuMoi thuMoi) {}
 
     @PostMapping("/{cuocHopId}/thanh-vien/moi-nhieu")
     public ResponseEntity<Void> moiDanhSachThanhVien(
             @PathVariable("cuocHopId") Integer cuocHopId,
-            @RequestBody MoiDanhSachRequest request, Authentication auth) {
+            @Valid @RequestBody MoiDanhSachRequest request, Authentication auth) {
         thanhVienCuocHopService.moiDanhSachThanhVien(
-                cuocHopId, request.nguoiDuocMoiIds(), nguoiDungHienTaiService.layNguoiDungId(auth));
+                cuocHopId, request.nguoiDuocMoiIds(), nguoiDungHienTaiService.layNguoiDungId(auth), request.thuMoi());
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{cuocHopId}/thanh-vien/{nguoiDungId}/gui-lai-email")
+    public ResponseEntity<Void> guiLaiEmailLoiMoi(
+            @PathVariable("cuocHopId") Integer cuocHopId,
+            @PathVariable("nguoiDungId") Integer nguoiDungId,
+            @Valid @RequestBody NoiDungThuMoi thuMoi,
+            Authentication authentication) {
+        thanhVienCuocHopService.guiLaiEmailLoiMoi(cuocHopId, nguoiDungId,
+                nguoiDungHienTaiService.layNguoiDungId(authentication), thuMoi);
+        return ResponseEntity.accepted().build();
     }
 
     @GetMapping("/{cuocHopId}/thanh-vien")
@@ -103,6 +116,13 @@ public class ThanhVienCuocHopController {
     public List<CuocHopDangDienRaResponse> layCuocHopDangDienRaCuaToi(Authentication authentication) {
         return thanhVienCuocHopService.layCuocHopDangDienRaCuaToi(
                 nguoiDungHienTaiService.layNguoiDungId(authentication));
+    }
+
+    @GetMapping("/{cuocHopId}/thanh-vien/phong-hop")
+    public CuocHopDangDienRaResponse layPhongHop(
+            @PathVariable("cuocHopId") Integer cuocHopId, Authentication authentication) {
+        return thanhVienCuocHopService.layPhongHop(
+                cuocHopId, nguoiDungHienTaiService.layNguoiDungId(authentication));
     }
 
     @PutMapping("/{cuocHopId}/thanh-vien/tham-gia")

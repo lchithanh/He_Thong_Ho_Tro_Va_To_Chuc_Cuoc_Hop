@@ -319,7 +319,8 @@ public List<LichSuKeHoachResponse> layLichSuPheDuyetKeHoach(
                                         Boolean.TRUE.equals(yc.getCuocHop().getCoKhachMoiBenNgoai())
                                                 || khachMoiCuocHopRepository
                                                         .existsByCuocHop_CuocHopIdAndTrangThaiMoiNot(
-                                                                yc.getCuocHop().getCuocHopId(), "DA_HUY")));
+                                                                yc.getCuocHop().getCuocHopId(), "DA_HUY")),
+                yc.getThoiGianTrinh());
     }
 
     private boolean laDuyetCapTrungGian(YeuCauPheDuyet yc) {

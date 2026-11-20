@@ -1,3 +1,4 @@
+import { dinhDangNgayGio } from '../utils/thoiGianCuocHop.js'
 import { useEffect, useMemo, useState } from 'react'
 import ArrowUpRight from 'lucide-react/dist/esm/icons/arrow-up-right.mjs'
 import CalendarDays from 'lucide-react/dist/esm/icons/calendar-days.mjs'
@@ -6,6 +7,7 @@ import CircleDot from 'lucide-react/dist/esm/icons/circle-dot.mjs'
 import Clock3 from 'lucide-react/dist/esm/icons/clock-3.mjs'
 import FileClock from 'lucide-react/dist/esm/icons/file-clock.mjs'
 import ViecChoXuLy from './ViecChoXuLy.jsx'
+import { useDongBoDuLieu } from '../services/useDongBoDuLieu.js'
 import Inbox from 'lucide-react/dist/esm/icons/inbox.mjs'
 import { layDanhSachDeXuat, layTrangThaiHienThiCuocHop } from '../api/cuocHopApi.js'
 
@@ -34,23 +36,18 @@ const THE_NHAN_TRANG_THAI = {
   DA_HUY: 'bg-red-50 text-red-800',
 }
 
-function dinhDangNgay(ngay) {
-  if (!ngay) return '—'
-  const ketQua = new Date(ngay)
-  return Number.isNaN(ketQua.getTime())
-    ? '—'
-    : ketQua.toLocaleDateString('vi-VN', { day: '2-digit', month: 'short', year: 'numeric' })
-}
-
 export default function TongQuanCuocHop({
   token,
   nguoiDung,
   coTheMoDanhSach,
+  onSoanVanBan,
   onMoDanhSach,
   onXemCuocHop,
   cacMucXuLy,
+  coQuyenDuyetKeHoach,
   onMoMuc,
 }) {
+  const phienDongBo = useDongBoDuLieu()
   const [xemTatCa, setXemTatCa] = useState(false)
   const [danhSach, setDanhSach] = useState(null)
   const [loi, setLoi] = useState('')
@@ -60,14 +57,17 @@ export default function TongQuanCuocHop({
 
     layDanhSachDeXuat(token, controller.signal)
       .then((duLieu) => {
-        if (!controller.signal.aborted) setDanhSach(duLieu)
+        if (!controller.signal.aborted) {
+          setDanhSach(duLieu)
+          setLoi('')
+        }
       })
       .catch((loiTai) => {
         if (!controller.signal.aborted) setLoi(loiTai.message)
       })
 
     return () => controller.abort()
-  }, [token])
+  }, [token, phienDongBo])
 
   const thongKe = useMemo(() => {
     const cacCuocHop = danhSach || []
@@ -100,8 +100,32 @@ export default function TongQuanCuocHop({
         <p className="text-sm font-medium text-slate-600">{nguoiDung.tenPhongBan || nguoiDung.tenVaiTro || nguoiDung.maVaiTro}</p>
       </header>
 
+      {danhSach?.some((hop) => hop.trangThai === 'DA_KET_THUC' && hop.duocToChuc && !hop.daHoanTatHoSo) && (
+        <section className="rounded-xl border border-slate-200 bg-white p-5">
+          <h2 className="font-bold">Văn bản sau cuộc họp</h2>
+          <ul className="mt-3 divide-y divide-slate-100">
+            {danhSach.filter((hop) => hop.trangThai === 'DA_KET_THUC' && hop.duocToChuc && !hop.daHoanTatHoSo).map((hop) => (
+              <li key={hop.cuocHopId} className="flex flex-wrap items-center justify-between gap-3 py-3">
+                <div>
+                  <p className="font-semibold">{hop.tieuDe}</p>
+                  <p className="text-sm text-slate-600">Kết thúc · {dinhDangNgayGio(hop.thoiGianKetThucThucTe)}</p>
+                </div>
+                <div className="flex gap-2">
+                  {['bien-ban', 'ket-luan'].map((tab) => (
+                    <button type="button" key={tab} className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-blue-900 hover:bg-blue-50"
+                      onClick={() => onSoanVanBan(hop.cuocHopId, tab)}>
+                      {tab === 'bien-ban' ? 'Mở biên bản' : 'Mở kết luận'}
+                    </button>
+                  ))}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       <ViecChoXuLy token={token} danhSach={danhSach} loiDanhSach={loi}
-        cacMucXuLy={cacMucXuLy} onMoMuc={onMoMuc} />
+        cacMucXuLy={cacMucXuLy} coQuyenDuyetKeHoach={coQuyenDuyetKeHoach} onMoMuc={onMoMuc} />
 
 
       <section aria-label="Thống kê trạng thái cuộc họp">
@@ -189,7 +213,7 @@ export default function TongQuanCuocHop({
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-slate-900">{cuocHop.tieuDe}</p>
                     <p className="mt-1 text-xs text-slate-500">
-                      {cuocHop.maCuocHop || `#${cuocHop.cuocHopId}`} · {dinhDangNgay(cuocHop.ngayTao)}
+                      {cuocHop.maCuocHop || `#${cuocHop.cuocHopId}`} · {dinhDangNgayGio(cuocHop.ngayTao)}
                     </p>
                   </div>
                   <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${THE_NHAN_TRANG_THAI[trangThai] || 'bg-slate-100 text-slate-700'}`}>

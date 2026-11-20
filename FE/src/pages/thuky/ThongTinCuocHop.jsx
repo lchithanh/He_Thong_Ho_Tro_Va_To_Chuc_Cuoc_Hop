@@ -1,6 +1,6 @@
+import { dinhDangNgayGio } from '../../utils/thoiGianCuocHop.js'
 import { layTrangThaiHienThiCuocHop } from '../../api/cuocHopApi.js'
 import { TEN_PHAM_VI } from './hienThiDeXuat.js'
-import NguonDeXuat from './NguonDeXuat.jsx' 
 const TEN_BUOC = {
   LAP_KE_HOACH: 'Thư ký lập kế hoạch',
   CHO_TRUONG_PHONG: 'Chờ trưởng phòng duyệt',
@@ -39,7 +39,10 @@ export default function ThongTinCuocHop({ chiTiet }) {
     ['Phạm vi', TEN_PHAM_VI[chiTiet.phamViCuocHop] || chiTiet.phamViCuocHop],
     ['Hình thức', HINH_THUC[chiTiet.loaiHinh] || chiTiet.loaiHinh],
     ['Người đề xuất', nguoi(chiTiet.tenNguoiDeXuat, chiTiet.nguoiDeXuatId)],
-    ['Ngày tạo', chiTiet.ngayTao ? new Date(chiTiet.ngayTao).toLocaleString('vi-VN') : null],
+    ['Ngày tạo', dinhDangNgayGio(chiTiet.ngayTao)],
+    ...(chiTiet.thoiGianChuyenCap
+      ? [['Đã chuyển cấp', dinhDangNgayGio(chiTiet.thoiGianChuyenCap)]]
+      : []),
     ['Chủ trì', nguoi(chiTiet.tenNguoiChuTri || chiTiet.tenChuTri, chiTiet.nguoiChuTriId)],
     ['Thư ký cuộc họp', nguoi(chiTiet.tenThuKyCuocHop, chiTiet.thuKyCuocHopId)],
     ['Phòng ban chủ trì', chiTiet.tenPhongBanChuTri || (chiTiet.phongBanChuTriId != null ? 'Mã phòng ban #' + chiTiet.phongBanChuTriId : null)],

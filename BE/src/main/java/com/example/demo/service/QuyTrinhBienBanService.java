@@ -352,7 +352,7 @@ public class QuyTrinhBienBanService {
                             phienBan.getSoPhienBan(),
                             phienBan.getNoiDung(),
                             yeuCau.getGhiChuTrinh(),
-                            "CHU_TRI");
+                            "CHU_TRI", yeuCau.getThoiGianTrinh());
                 })
                 .toList();
     }

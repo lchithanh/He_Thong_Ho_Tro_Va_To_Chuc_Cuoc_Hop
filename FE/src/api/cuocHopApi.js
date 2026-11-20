@@ -91,11 +91,11 @@ export async function taiLenTaiLieuKeHoach(cuocHopId, file, token) {
   return docPhanHoiTaiLieu(response)
 }
 
-export async function trinhLaiLichSauHuy(cuocHopId, lichHopId, token) {
+export async function trinhLaiLichSauHuy(cuocHopId, lichHopId, token, ghiChuTrinh) {
   const response = await goiApi(`/api/quy-trinh-ke-hoach/${cuocHopId}/trinh-lai-lich`, {
     method: 'POST',
     token,
-    duLieu: { lichHopId },
+    duLieu: { lichHopId, ghiChuTrinh },
   })
   return docPhanHoiJson(response, 'Không trình duyệt lại được lịch.')
 }
@@ -293,6 +293,11 @@ export async function ketThucCuocHop(cuocHopId, token) {
     response,
     `Không kết thúc được cuộc họp (HTTP ${response.status}).`,
   )
+}
+
+export async function layThuKyCoTheDeXuat(token, signal) {
+  const response = await goiApi('/api/cuoc-hop/de-xuat/thu-ky-co-the-chon', { token, signal })
+  return docPhanHoiJson(response, 'Không tải được danh sách thư ký cuộc họp.')
 }
 
 export async function taoDeXuatCuocHop(duLieu, token) {

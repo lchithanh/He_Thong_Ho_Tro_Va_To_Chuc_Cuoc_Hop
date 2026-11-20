@@ -1,3 +1,4 @@
+import KhungGioBieuQuyet from '../../components/KhungGioBieuQuyet.jsx'
 import { useEffect, useState } from 'react'
 import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
 import {
@@ -104,10 +105,7 @@ const [ketQuaDangXem, setKetQuaDangXem] = useState(null)
           <p className="text-sm text-slate-600">
             #{muc.bieuQuyetId} · {TEN_TRANG_THAI[muc.trangThai] ?? muc.trangThai}
           </p>
-          <p className="text-sm text-slate-600">
-            {new Date(muc.thoiGianBatDau).toLocaleString('vi-VN')} –{' '}
-            {new Date(muc.thoiGianKetThuc).toLocaleString('vi-VN')}
-          </p>
+          <KhungGioBieuQuyet muc={muc} />
 
           {dangDienRa && muc.trangThai === 'NHAP' && (
             <button

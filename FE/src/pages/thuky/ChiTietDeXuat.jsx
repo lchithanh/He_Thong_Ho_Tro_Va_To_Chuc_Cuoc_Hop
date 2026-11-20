@@ -34,6 +34,7 @@ import TiepNhanDeXuatAction from './thaoTacKeHoach/TiepNhanDeXuatAction.jsx'
 const TABS = [
   { id: 'thong-tin', ten: 'Đề xuất' },
   { id: 'ke-hoach', ten: 'Lịch và kế hoạch' },
+  { id: 'loi-moi', ten: 'Lời mời và thành viên' },
   { id: 'lich-su', ten: 'Lịch sử và phản hồi' },
   { id: 'diem-danh', ten: 'Điểm danh' },
   { id: 'bieu-quyet', ten: 'Biểu quyết' },
@@ -41,7 +42,7 @@ const TABS = [
   { id: 'ket-luan', ten: 'Kết luận' },
 ]
 
-export default function ChiTietDeXuat({ cuocHopId, token, nguoiDung, onQuayLai, onDaTiepNhan, onLapLich, tabBanDau, chiXem = false }) {
+export default function ChiTietDeXuat({ cuocHopId, token, nguoiDung, onQuayLai, onDaTiepNhan, onLapLich, onMoPhongHop, tabBanDau, chiXem = false }) {
   const [chiTiet, setChiTiet] = useState(null)
   const [loi, setLoi] = useState('')
   const [dangTiepNhan, setDangTiepNhan] = useState(false)
@@ -49,7 +50,6 @@ export default function ChiTietDeXuat({ cuocHopId, token, nguoiDung, onQuayLai, 
   const [thongBaoTiepNhan, setThongBaoTiepNhan] = useState('')
   const [dangBatDau, setDangBatDau] = useState(false)
   const [loiBatDau, setLoiBatDau] = useState('')
-  const [coLichXacNhan, setCoLichXacNhan] = useState(false)
   const [dangKetThuc, setDangKetThuc] = useState(false)
   const [loiKetThuc, setLoiKetThuc] = useState('')
   const [tabHienTai, setTabHienTai] = useState(tabBanDau)
@@ -199,7 +199,8 @@ export default function ChiTietDeXuat({ cuocHopId, token, nguoiDung, onQuayLai, 
       const ketQua = await batDauCuocHop(cuocHopId, token)
       setChiTiet((hienTai) => ({ ...hienTai, ...ketQua }))
       onDaTiepNhan?.(cuocHopId, ketQua)
-      setTabHienTai('diem-danh')
+      if (onMoPhongHop) onMoPhongHop(cuocHopId)
+      else setTabHienTai('diem-danh')
     } catch (loi) {
       setLoiBatDau(loi.message)
     } finally {
@@ -234,6 +235,7 @@ export default function ChiTietDeXuat({ cuocHopId, token, nguoiDung, onQuayLai, 
   const dangToChuc = chiTiet?.trangThai === 'DA_DUYET'
     && chiTiet.buocXuLyHienTai === 'THU_KY_TO_CHUC'
   const laThuKy = chiTiet?.duocToChuc === true
+  const coLichXacNhan = chiTiet?.coLichDaXacNhan === true
   const dangMoCapNhatKeHoach = moFormCapNhatKeHoach && laThuKy && dangToChuc
   const hienFormKeHoach = dangLapKeHoach || dangMoCapNhatKeHoach
   const coKhachNgoai = chiTiet?.coKhachMoiBenNgoai
@@ -263,6 +265,7 @@ export default function ChiTietDeXuat({ cuocHopId, token, nguoiDung, onQuayLai, 
   )
   const choTiepNhan = chiTiet?.trangThai === 'CHO_TIEP_NHAN'
   const cacTab = TABS.filter(({ id }) => {
+    if (id === 'loi-moi') return hienThanhVien
     if (id === 'ke-hoach') return true
     if (id === 'lich-su') {
       return !chiXem || Number(nguoiDung?.nguoiDungId) === Number(chiTiet?.nguoiDeXuatId)
@@ -294,8 +297,6 @@ export default function ChiTietDeXuat({ cuocHopId, token, nguoiDung, onQuayLai, 
         <p role="status" className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-600">Đang tải chi tiết cuộc họp…</p>
       ) : (
         <>
-          <div className={'grid items-start gap-5' + (hienThanhVien && !['ke-hoach', 'bien-ban', 'ket-luan'].includes(tabHienThi)
-            ? ' xl:grid-cols-[minmax(0,1fr)_300px]' : '')}>
             <section className="min-w-0 overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm shadow-slate-900/[0.02]">
               <div className="border-b border-[#334e68] bg-[#102a43] p-5 text-white sm:p-7">
                 <div className="flex flex-wrap items-start justify-between gap-4">
@@ -330,6 +331,20 @@ export default function ChiTietDeXuat({ cuocHopId, token, nguoiDung, onQuayLai, 
                 <TienDoCuocHop chiTiet={chiTiet} />
               </div>
 
+              {dangDienRa && (laChuTri || laThuKy) && (
+                <div className="px-5 pt-4 sm:px-7">
+                  <a href={`#cuoc-hop/${cuocHopId}`}
+                    onClick={onMoPhongHop ? (event) => {
+                      if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return
+                      event.preventDefault()
+                      onMoPhongHop(cuocHopId)
+                    } : undefined}
+                    className="inline-flex rounded-lg bg-emerald-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-900">
+                    Mở phòng họp đang diễn ra
+                  </a>
+                </div>
+              )}
+
               {(chiTiet.yeuCauChoGuiCapTrenId != null || thongBaoChuyenCap) && (
                 <div className="space-y-3 px-5 pt-4 sm:px-7">
                   {thongBaoChuyenCap && (
@@ -356,6 +371,15 @@ export default function ChiTietDeXuat({ cuocHopId, token, nguoiDung, onQuayLai, 
 
               {chiTiet.phanHoiKeHoach && (
                 <div className="px-5 pt-3"><NoiDungPhanHoi phanHoi={chiTiet.phanHoiKeHoach} /></div>
+              )}
+
+              {dangToChuc && hienThanhVien && laThuKy && !chiXem && tabHienThi !== 'loi-moi' && (
+                <div className="px-5 pt-4 sm:px-7">
+                  <button type="button" onClick={() => setTabHienTai('loi-moi')}
+                    className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-950 hover:bg-blue-100">
+                    Quản lý lời mời và thành viên
+                  </button>
+                </div>
               )}
 
               <nav
@@ -405,19 +429,27 @@ export default function ChiTietDeXuat({ cuocHopId, token, nguoiDung, onQuayLai, 
                       choPhepTaiLen={chiTiet.trangThai === 'NHAP' && nguoiDung.nguoiDungId === chiTiet.nguoiDeXuatId} />
                     {chiTiet.daHoanTatHoSo && <p className="text-sm font-semibold text-emerald-800">Đã hoàn tất hồ sơ.</p>}
 
-                    {!chiXem && laThuKy && dangToChuc && (
-                      <div className="flex flex-wrap items-center gap-3">
-                        {onLapLich && <button type="button" onClick={() => onLapLich(cuocHopId)}
-                          className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold">Mở Calendar</button>}
-                        {coLichXacNhan && <button type="button" disabled={dangBatDau} onClick={xuLyBatDau}
-                          className="rounded-lg bg-emerald-800 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">
-                          {dangBatDau ? 'Đang bắt đầu…' : 'Bắt đầu cuộc họp'}
-                        </button>}
-                        {loiBatDau && <p role="alert" className="text-sm text-red-800">{loiBatDau}</p>}
-                      </div>
+                    {dangToChuc && ((!chiXem && laThuKy) || laChuTri) && (
+                      <section className="space-y-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                        <h2 className="font-bold text-emerald-950">Bắt đầu và mở phòng họp</h2>
+                        <p className="text-sm text-emerald-900">
+                          {coLichXacNhan
+                            ? 'Chủ trì và thành viên có lời mời hợp lệ sẽ thấy thông báo và nút Tham gia.'
+                            : 'Cần xác nhận lịch trước khi mở phòng họp.'}
+                        </p>
+                        <div className="flex flex-wrap items-center gap-3">
+                          {!chiXem && laThuKy && onLapLich && <button type="button" onClick={() => onLapLich(cuocHopId)}
+                            className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold">Mở Calendar</button>}
+                          {coLichXacNhan && <button type="button" disabled={dangBatDau} onClick={xuLyBatDau}
+                            className="rounded-lg bg-emerald-800 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">
+                            {dangBatDau ? 'Đang bắt đầu…' : 'Bắt đầu cuộc họp'}
+                          </button>}
+                          {loiBatDau && <p role="alert" className="text-sm text-red-800">{loiBatDau}</p>}
+                        </div>
+                      </section>
                     )}
 
-                    {!chiXem && laThuKy && dangDienRa && (
+                    {!onMoPhongHop && !chiXem && laThuKy && dangDienRa && (
                       <div className="rounded-xl border border-rose-200 bg-rose-50 p-4">
                         <p className="text-sm font-semibold text-rose-950">Cuộc họp đang diễn ra</p>
                         <p className="mt-1 text-sm text-rose-800">Kết thúc cuộc họp sau khi hoàn tất nội dung và biểu quyết.</p>
@@ -495,6 +527,22 @@ export default function ChiTietDeXuat({ cuocHopId, token, nguoiDung, onQuayLai, 
                       loaiHinh={chiTiet.loaiHinh}
                       token={token}
                       lichHopIdKeHoachDaDuyet={chiTiet.lichHopIdKeHoachDaDuyet}
+                      coQuyenTrinhLai={!chiXem && laThuKy && dangToChuc}
+                      onDaTrinhLai={(ketQua) => {
+                        setChiTiet((hienTai) => ({
+                          ...hienTai,
+                          trangThai: ketQua.trangThai,
+                          buocXuLyHienTai: ketQua.buocXuLyHienTai,
+                          duocToChuc: false,
+                        }))
+                        setThongBaoTiepNhan(ketQua.message)
+                        layChiTietDeXuat(cuocHopId, token).then((chiTietMoi) => {
+                          setChiTiet(chiTietMoi)
+                          onDaTiepNhan?.(cuocHopId, chiTietMoi)
+                        }).catch(() => setThongBaoTiepNhan(
+                          'Đã trình lịch thay thế. Tải lại hồ sơ để xem người đang xử lý.',
+                        ))
+                      }}
                     />
 
                     {hienFormKeHoach ? (
@@ -600,6 +648,36 @@ export default function ChiTietDeXuat({ cuocHopId, token, nguoiDung, onQuayLai, 
                   </>
                 )}
 
+                {tabHienThi === 'loi-moi' && (
+                  <div className="grid min-w-0 items-start gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+                    <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm shadow-slate-900/[0.02]">
+                      <div className="mb-4">
+                        <p className="text-xs font-bold uppercase tracking-[0.14em] text-emerald-800">Thành viên</p>
+                        <h2 className="mt-1 text-lg font-bold text-slate-900">{!chiXem && laThuKy && dangToChuc ? 'Mời tham dự' : 'Thành viên cuộc họp'}</h2>
+                      </div>
+                      <ThanhVienCuocHopThuKy
+                        cuocHopId={cuocHopId}
+                        thongTinCuocHop={chiTiet.thongTinThuMoi}
+                        token={token}
+                        choPhepMoi={!chiXem && laThuKy && dangToChuc}
+                        onLapLich={onLapLich}
+                        lichHopIdKeHoachDaDuyet={chiTiet.lichHopIdKeHoachDaDuyet}
+                      />
+                    </div>
+                    {(coKhachNgoai || chiTiet.phamViCuocHop === 'BEN_NGOAI') && (laThuKy || laChuTri) && (
+                      <KhachNgoaiCuocHop
+                        key={cuocHopId}
+                        thongTinCuocHop={chiTiet.thongTinThuMoi}
+                        cuocHopId={cuocHopId}
+                        token={token}
+                        laThuKy={!chiXem && laThuKy}
+                        choPhepMoi={!chiXem && laThuKy && dangToChuc && Boolean(chiTiet.thongTinThuMoi)}
+                        trucTuyen={chiTiet.loaiHinh === 'TRUC_TUYEN'}
+                      />
+                    )}
+                  </div>
+                )}
+
                 {tabHienThi === 'diem-danh' && (dangDienRa || daKetThuc) && (
                   <DiemDanhThuKy cuocHopId={cuocHopId} token={token} readOnly={daKetThuc || !laThuKy} />
                 )}
@@ -648,35 +726,6 @@ export default function ChiTietDeXuat({ cuocHopId, token, nguoiDung, onQuayLai, 
               </div>
             </section>
 
-            {hienThanhVien && (
-              <aside className="min-w-0 space-y-4">
-                <div className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm shadow-slate-900/[0.02]">
-                  <div className="mb-4">
-                    <p className="text-xs font-bold uppercase tracking-[0.14em] text-emerald-800">Thành viên</p>
-                    <h2 className="mt-1 text-lg font-bold text-slate-900">{!chiXem && laThuKy && dangToChuc ? 'Mời tham dự' : 'Thành viên cuộc họp'}</h2>
-                  </div>
-                  <ThanhVienCuocHopThuKy
-                    cuocHopId={cuocHopId}
-                    token={token}
-                    choPhepMoi={!chiXem && laThuKy && dangToChuc}
-                    onTrangThaiLich={setCoLichXacNhan}
-                    onLapLich={onLapLich}
-                    lichHopIdKeHoachDaDuyet={chiTiet.lichHopIdKeHoachDaDuyet}
-                  />
-                </div>
-                {(coKhachNgoai || chiTiet.phamViCuocHop === 'BEN_NGOAI') && (laThuKy || laChuTri) && (
-                  <KhachNgoaiCuocHop
-                    key={cuocHopId}
-                    cuocHopId={cuocHopId}
-                    token={token}
-                    laThuKy={!chiXem && laThuKy}
-                    choPhepMoi={!chiXem && laThuKy && dangToChuc && coLichXacNhan}
-                    trucTuyen={chiTiet.loaiHinh === 'TRUC_TUYEN'}
-                  />
-                )}
-              </aside>
-            )}
-          </div>
         </>
       )}
     </div>

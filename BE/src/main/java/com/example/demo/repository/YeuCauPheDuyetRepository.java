@@ -88,6 +88,9 @@ public interface YeuCauPheDuyetRepository
             @Param("cuocHopId") Integer cuocHopId, @Param("loai") LoaiYeuCau loai,
             @Param("trangThai") TrangThai trangThai, Pageable gioiHan);
 
+    Optional<YeuCauPheDuyet> findFirstByCuocHop_CuocHopIdAndLoaiYeuCauAndTrangThaiOrderByYeuCauPheDuyetIdDesc(
+            Integer cuocHopId, LoaiYeuCau loaiYeuCau, TrangThai trangThai);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT yc FROM YeuCauPheDuyet yc WHERE yc.yeuCauPheDuyetId = :id")
     Optional<YeuCauPheDuyet> findByIdForUpdate(@Param("id") Integer id);

@@ -20,6 +20,7 @@ import lombok.RequiredArgsConstructor;
 class XacNhanLichHopService {
     private final LichHopRepository lichHopRepository;
     private final LichSuPheDuyetService lichSuPheDuyetService;
+    private final ThongBaoEmailCuocHop thongBaoEmail;
 
     // Bên gọi giữ khóa cuộc họp và thực hiện thao tác trong cùng giao dịch phê duyệt.
     void xacNhan(CuocHop cuocHop, LichHop lich, NguoiDung nguoiDuyet, YeuCauPheDuyet yeuCau) {
@@ -49,6 +50,7 @@ class XacNhanLichHopService {
                 nguoiDuyet.getNguoiDungId(), "LICH_HOP", "PHE_DUYET",
                 yeuCau == null ? "Lịch họp đã được xác nhận" : "Lịch họp được xác nhận cùng kế hoạch",
                 yeuCau);
+        thongBaoEmail.xacNhanLich(lich, lichCu != null);
     }
 
     void kiemTraLichCuaLanTrinh(CuocHop cuocHop, LichHop lich, LichHop lichDaDuyet, HttpStatus status) {

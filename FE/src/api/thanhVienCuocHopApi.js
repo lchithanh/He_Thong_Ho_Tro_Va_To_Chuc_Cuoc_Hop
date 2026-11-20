@@ -1,5 +1,12 @@
 import { docPhanHoiJson, goiApi } from './apiClient.js'
 
+export async function guiLaiEmailLoiMoi(cuocHopId, nguoiDungId, thuMoi, token) {
+  const response = await goiApi(`/api/cuoc-hop/${cuocHopId}/thanh-vien/${nguoiDungId}/gui-lai-email`, {
+    method: 'POST', token, duLieu: thuMoi,
+  })
+  return docPhanHoiJson(response, 'Chưa thể gửi lại email lời mời.')
+}
+
 export async function layThanhVienCuocHop(cuocHopId, token, signal) {
   const response = await goiApi(`/api/cuoc-hop/${cuocHopId}/thanh-vien`, {
     token,
@@ -13,11 +20,11 @@ export async function layThanhVienCuocHop(cuocHopId, token, signal) {
   return response.json()
 }
 
-export async function moiThanhVienCuocHop(cuocHopId, nguoiDuocMoiId, token) {
+export async function moiThanhVienCuocHop(cuocHopId, nguoiDuocMoiId, thuMoi, token) {
   const response = await goiApi(`/api/cuoc-hop/${cuocHopId}/thanh-vien`, {
     method: 'POST',
     token,
-    duLieu: { nguoiDuocMoiId },
+    duLieu: { nguoiDuocMoiId, thuMoi },
   })
 
   if (!response.ok) {
@@ -125,9 +132,9 @@ export async function ghiNhanRoiSom(cuocHopId, nguoiDungId, token) {
   }
 }
 
-export async function moiDanhSachThanhVienCuocHop(cuocHopId, nguoiDuocMoiIds, token) {
+export async function moiDanhSachThanhVienCuocHop(cuocHopId, nguoiDuocMoiIds, thuMoi, token) {
   const response = await goiApi(`/api/cuoc-hop/${cuocHopId}/thanh-vien/moi-nhieu`, {
-    method: 'POST', token, duLieu: { nguoiDuocMoiIds },
+    method: 'POST', token, duLieu: { nguoiDuocMoiIds, thuMoi },
   })
   return docPhanHoiJson(response, `Không gửi được lời mời (HTTP ${response.status}).`)
 }
@@ -135,6 +142,11 @@ export async function moiDanhSachThanhVienCuocHop(cuocHopId, nguoiDuocMoiIds, to
 export async function layCuocHopDangDienRaCuaToi(token, signal) {
   const response = await goiApi('/api/cuoc-hop/thanh-vien/dang-dien-ra-cua-toi', { token, signal })
   return docPhanHoiJson(response, 'Không tải được cuộc họp đang diễn ra.')
+}
+
+export async function layPhongHop(cuocHopId, token, signal) {
+  const response = await goiApi(`/api/cuoc-hop/${cuocHopId}/thanh-vien/phong-hop`, { token, signal })
+  return docPhanHoiJson(response, 'Không tải được phòng họp.')
 }
 
 export async function thamGiaCuocHop(cuocHopId, token) {

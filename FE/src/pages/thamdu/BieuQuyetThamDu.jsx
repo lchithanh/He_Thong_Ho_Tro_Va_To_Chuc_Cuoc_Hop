@@ -1,3 +1,4 @@
+import KhungGioBieuQuyet from '../../components/KhungGioBieuQuyet.jsx'
 import { useEffect, useState } from 'react'
 import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
 import {
@@ -7,7 +8,7 @@ import {
 import FormBoPhieu from '../../components/FormBoPhieu.jsx'
 import KetQuaBieuQuyetThamDu from './KetQuaBieuQuyetThamDu.jsx'
 
-export default function BieuQuyetThamDu({ token }) {
+export default function BieuQuyetThamDu({ token, cuocHopId: cuocHopIdLoc }) {
   const phienDongBo = useDongBoDuLieu()
   const [danhSach, setDanhSach] = useState(null)
   const [loiDanhSach, setLoiDanhSach] = useState('')
@@ -19,10 +20,10 @@ export default function BieuQuyetThamDu({ token }) {
   useEffect(() => {
     const controller = new AbortController()
 
-    layDanhSachBieuQuyetThamDu(token, controller.signal)
+    layDanhSachBieuQuyetThamDu(token, controller.signal, cuocHopIdLoc)
       .then((duLieu) => {
         if (!controller.signal.aborted) {
-          setDanhSach(duLieu)
+          setDanhSach(cuocHopIdLoc == null ? duLieu : duLieu.filter((muc) => muc.cuocHopId === cuocHopIdLoc))
           setLoiDanhSach('')
         }
       })
@@ -31,7 +32,7 @@ export default function BieuQuyetThamDu({ token }) {
       })
 
     return () => controller.abort()
-  }, [token, lanTai, phienDongBo])
+  }, [token, lanTai, phienDongBo, cuocHopIdLoc])
 
   useEffect(() => {
     if (!phienDangXem) return
@@ -101,6 +102,7 @@ export default function BieuQuyetThamDu({ token }) {
           {cacPhien.map((muc) => (
             <div key={muc.bieuQuyetId} className="space-y-2 rounded-lg border border-slate-200 p-3">
               <h4 className="text-sm font-semibold">{muc.tieuDeBieuQuyet}</h4>
+              <KhungGioBieuQuyet muc={muc} />
               <button
                 type="button"
                 onClick={() => xemPhien(muc)}
@@ -133,7 +135,7 @@ export default function BieuQuyetThamDu({ token }) {
         </section>
       ))}
       </section>
-      <KetQuaBieuQuyetThamDu token={token} />
+      <KetQuaBieuQuyetThamDu token={token} cuocHopId={cuocHopIdLoc} />
     </>
   )
   

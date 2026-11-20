@@ -229,6 +229,10 @@ public class TaiLieuKeHoachService {
         }
     }
 
+    public List<Integer> layIdTepLanTrinh(YeuCauPheDuyet lanTrinh) {
+        return yeuCauPheDuyetTaiLieuRepository.timIdTaiLieuTheoLanTrinh(lanTrinh.getYeuCauPheDuyetId());
+    }
+
     @Transactional(propagation = Propagation.MANDATORY)
     public void saoChepTepLanTrinh(YeuCauPheDuyet lanTrinhCu, YeuCauPheDuyet lanTrinhMoi) {
         List<TaiLieuCuocHop> taiLieu = yeuCauPheDuyetTaiLieuRepository

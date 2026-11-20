@@ -1,3 +1,4 @@
+import { dinhDangNgayGio } from '../../utils/thoiGianCuocHop.js'
 import { useEffect, useState } from 'react'
 import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
 import {
@@ -82,6 +83,7 @@ export default function PhanHoiLoiMoi({ token }) {
                   : 'Chưa có thông tin giờ họp'}
                 {' · '}{cuocHop.tenPhongHop || (cuocHop.loaiHinh === 'TRUC_TUYEN' ? 'Trực tuyến' : 'Chưa có thông tin phòng')}
               </p>
+              <p className="text-sm text-slate-600">Gửi lời mời · {dinhDangNgayGio(cuocHop.ngayMoi)}</p>
             </div>
 
             <details className="rounded-lg bg-slate-50 px-3 py-2 text-sm">

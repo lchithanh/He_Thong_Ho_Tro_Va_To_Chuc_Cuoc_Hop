@@ -1,9 +1,10 @@
+import { dinhDangNgayGio } from '../../utils/thoiGianCuocHop.js'
 import { useEffect, useState } from 'react'
 import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
 import { layKeHoachChoToiDuyet } from '../../api/cuocHopApi.js'
 import ChiTietKeHoachChoDuyet from './ChiTietKeHoachChoDuyet.jsx'
 
-export default function KeHoachChoDuyet({ token, cuocHopCanDuyet }) {
+export default function KeHoachChoDuyet({ token, cuocHopCanDuyet, viecDaChon }) {
   const phienDongBo = useDongBoDuLieu()
   const [danhSach, setDanhSach] = useState(null)
   const [loi, setLoi] = useState('')
@@ -21,7 +22,10 @@ export default function KeHoachChoDuyet({ token, cuocHopCanDuyet }) {
     async function taiDanhSach() {
       try {
         const duLieu = await layKeHoachChoToiDuyet(token, controller.signal)
-        if (!controller.signal.aborted) setDanhSach(duLieu)
+        if (controller.signal.aborted) return
+        const ids = viecDaChon && new Set(viecDaChon.map((muc) => muc.yeuCauPheDuyetId))
+        setDanhSach(ids ? duLieu.filter((muc) => ids.has(muc.yeuCauPheDuyetId)) : duLieu)
+        setLoi('')
       } catch (loiTaiDanhSach) {
         if (!controller.signal.aborted) setLoi(loiTaiDanhSach.message)
       }
@@ -29,7 +33,7 @@ export default function KeHoachChoDuyet({ token, cuocHopCanDuyet }) {
 
     taiDanhSach()
     return () => controller.abort()
-  }, [token, phienDongBo])
+  }, [token, phienDongBo, viecDaChon])
 
   return (
     <section className="space-y-4 rounded-xl border border-[#e2e8f0] bg-white p-5">
@@ -63,6 +67,7 @@ export default function KeHoachChoDuyet({ token, cuocHopCanDuyet }) {
             >
               <div>
                 <h3 className="font-semibold">{keHoach.tieuDe}</h3>
+                <p className="text-sm text-slate-600">Trình duyệt · {dinhDangNgayGio(keHoach.thoiGianTrinh)}</p>
                 <p className="mt-1 text-sm text-slate-600">
                   Cuộc họp #{keHoach.cuocHopId} · Yêu cầu #{keHoach.yeuCauPheDuyetId}
                 </p>

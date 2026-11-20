@@ -12,7 +12,8 @@ public record LoiMoiChoPhanHoiResponse(
         String loaiHinh,
         String tenNguoiChuTri,
         String mucTieu,
-        String noiDungDuKien
+        String noiDungDuKien,
+        LocalDateTime ngayMoi
 ) {}
 
 

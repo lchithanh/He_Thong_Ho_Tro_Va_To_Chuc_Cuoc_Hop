@@ -13,5 +13,12 @@ public record CuocHopDangDienRaResponse(
         String noiDungDuKien,
         String trangThaiThamDu,
         LocalDateTime thoiGianDiemDanh,
-        LocalDateTime thoiGianRoiCuocHop
+        LocalDateTime thoiGianRoiCuocHop,
+        LocalDateTime thoiGianTuDiemDanh,
+        LocalDateTime thoiGianDoiChieuDiemDanh,
+        String trangThai,
+        String trangThaiMoi,
+        boolean laThuKyToChuc,
+        String tenPhongHop,
+        LocalDateTime thoiGianKetThucThucTe
 ) {}

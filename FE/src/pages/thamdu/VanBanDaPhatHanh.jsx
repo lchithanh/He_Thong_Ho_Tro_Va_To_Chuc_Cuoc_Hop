@@ -1,3 +1,4 @@
+import { dinhDangNgayGio } from '../../utils/thoiGianCuocHop.js'
 import { useEffect, useState } from 'react'
 import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
 import { layBienBanDaPhatHanhCuaToi } from '../../api/bienBanApi.js'
@@ -100,6 +101,7 @@ export function DanhSachVanBanDaPhatHanh({ token, loai }) {
         return (
           <article key={id} className="rounded-lg border border-slate-200 p-4">
             <h3 className="font-semibold">{vanBan.tieuDeCuocHop || `Cuộc họp #${vanBan.cuocHopId}`}</h3>
+            <p className="text-sm text-slate-600">Phát hành · {dinhDangNgayGio(vanBan.ngayPhatHanh)}</p>
             <button
               type="button"
               aria-expanded={dangXem}

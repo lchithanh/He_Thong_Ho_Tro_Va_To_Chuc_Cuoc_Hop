@@ -11,6 +11,9 @@ public record ThanhVienCuocHopResponse(
         String trangThaiMoi,
         String trangThaiThamDu,
         LocalDateTime thoiGianDiemDanh,
-        LocalDateTime thoiGianRoiCuocHop
+        LocalDateTime thoiGianRoiCuocHop,
+        LocalDateTime thoiGianTuDiemDanh,
+        LocalDateTime thoiGianDoiChieuDiemDanh,
+        LocalDateTime ngayMoi
 ) {
 }

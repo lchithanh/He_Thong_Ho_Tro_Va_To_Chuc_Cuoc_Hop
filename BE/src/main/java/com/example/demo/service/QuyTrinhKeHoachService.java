@@ -225,6 +225,38 @@ public class QuyTrinhKeHoachService {
                 daLuu.getYeuCauPheDuyetId(), ch.getTrangThai(), ch.getBuocXuLyHienTai());
     }
 
+    public TrinhKeHoachResponse trinhLaiLichSauHuy(
+            Integer cuocHopId, Integer lichHopMoiId, Integer nguoiDungId, String ghiChuTrinh) {
+        nguoiDungHienTaiService.layTaiKhoanHoatDong(nguoiDungId);
+        CuocHop cuocHop = timVaKhoaCuocHop(cuocHopId);
+        YeuCauPheDuyet lanDaDuyet = phanCongXuLyKeHoachService.layLanDuyetCoLichDaXacNhan(cuocHopId);
+        if (lanDaDuyet == null || lanDaDuyet.getLichHop() == null
+                || !ThaoTacLichHop.daHuy(lanDaDuyet.getLichHop())
+                || (!ThaoTacCuocHop.coTheLapLich(cuocHop) && !ThaoTacCuocHop.dangLapKeHoach(cuocHop))) {
+            throw loi(HttpStatus.CONFLICT, "Chỉ trình lại khi lịch đã xác nhận bị hủy và cuộc họp chưa bắt đầu");
+        }
+        boolean laThuKyToChuc = lanDaDuyet.getThuKyBanGiao() == null
+                ? phanCongXuLyKeHoachService.laThuKyBanDau(cuocHopId, nguoiDungId)
+                : phanCongXuLyKeHoachService.laThuKyDaNhanBanGiao(lanDaDuyet, nguoiDungId);
+        if (!laThuKyToChuc) {
+            throw loi(HttpStatus.FORBIDDEN, "Chỉ thư ký được bàn giao cuộc họp được trình lịch thay thế");
+        }
+
+        LichHop lichMoi = lichHopMoiId == null ? null : lichHopRepository.findById(lichHopMoiId).orElse(null);
+        xacNhanLichHopService.kiemTraLichTruocKhiTrinh(cuocHop, lichMoi, HttpStatus.BAD_REQUEST);
+        String lyDo = ghiChuTrinh == null || ghiChuTrinh.isBlank() ? lichMoi.getLyDoThayDoi() : ghiChuTrinh;
+        if (lyDo == null || lyDo.isBlank()) {
+            throw loi(HttpStatus.BAD_REQUEST, "Nhập lý do đề xuất lịch thay thế");
+        }
+        if (ThaoTacCuocHop.coTheLapLich(cuocHop)) {
+            ThaoTacCuocHop.thucHien(() -> ThaoTacCuocHop.moLaiDeCapNhatKeHoach(cuocHop));
+        }
+        List<Integer> taiLieuIds = taiLieuKeHoachService.layIdTepLanTrinh(lanDaDuyet);
+        Integer yeuCauId = trinhKeHoachCuocHop(cuocHopId, lichHopMoiId, nguoiDungId, lyDo.trim(), null, taiLieuIds);
+        return new TrinhKeHoachResponse("Đã trình lịch thay thế", yeuCauId,
+                cuocHop.getTrangThai(), cuocHop.getBuocXuLyHienTai());
+    }
+
     public TrinhKeHoachResponse deXuatLaiLichKhiChoChuyenCap(
             Integer cuocHopId, Integer yeuCauId, Integer thuKyId) {
         nguoiDungHienTaiService.layTaiKhoanHoatDong(thuKyId);
@@ -435,6 +467,19 @@ public class QuyTrinhKeHoachService {
         lichSuPheDuyetService.ghiNhan(cuocHopId, null, null, nguoiId, "KE_HOACH",
                 "YEU_CAU_CHINH_SUA", "Mở lại để bổ sung khách ngoài: " + lyDo.trim(),
                 phanCongXuLyKeHoachService.layLanTrinhMoiNhat(cuocHopId));
+    }
+
+    @Transactional(readOnly = true)
+    public boolean coQuyenXuLyQuyetDinh(YeuCauPheDuyet yeuCau, Integer nguoiDungId) {
+        if (yeuCau == null || nguoiDungId == null) return false;
+        try {
+            kiemTraDanhTinhVaCapDuyet(yeuCau, nguoiDungId);
+            return true;
+        } catch (ResponseStatusException ex) {
+            int trangThai = ex.getStatusCode().value();
+            if (trangThai == 403 || trangThai == 409) return false;
+            throw ex;
+        }
     }
 
     private void kiemTraNguoiDuyet(YeuCauPheDuyet yc, Integer nguoiId) {

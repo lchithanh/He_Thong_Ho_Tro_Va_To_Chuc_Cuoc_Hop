@@ -373,18 +373,18 @@ public class BieuQuyetService {
     
     @Transactional(readOnly = true)
     public List<BieuQuyetThamDuResponse> layDanhSachBieuQuyetDaDongCuaToi(
-            Integer nguoiDangNhapId
+            Integer nguoiDangNhapId, Integer cuocHopId
     ) {
         nguoiDungHienTaiService.layTaiKhoanHoatDong(nguoiDangNhapId);
 
         return bieuQuyetRepository
-                .timBieuQuyetDaDongCuaThanhVien(nguoiDangNhapId)
+                .timBieuQuyetDaDongCuaThanhVien(cuocHopId, nguoiDangNhapId)
                 .stream()
                 .map(bq -> new BieuQuyetThamDuResponse(
                         bq.getCuocHop().getCuocHopId(),
                         bq.getCuocHop().getTieuDe(),
                         bq.getBieuQuyetId(),
-                        bq.getTieuDe()
+                        bq.getTieuDe(), bq.getThoiGianBatDau(), bq.getThoiGianKetThuc()
                 ))
                 .toList();
     }
@@ -469,12 +469,12 @@ public class BieuQuyetService {
     
     @Transactional(readOnly = true)
     public List<BieuQuyetThamDuResponse> layDanhSachBieuQuyetThamDu(
-            Integer nguoiDangNhapId
+            Integer nguoiDangNhapId, Integer cuocHopId
     ) {
         nguoiDungHienTaiService.layTaiKhoanHoatDong(nguoiDangNhapId);
 
         return bieuQuyetRepository
-                .timBieuQuyetDangMoCuaThanhVien(nguoiDangNhapId, LocalDateTime.now())
+                .timBieuQuyetDangMoCuaThanhVien(cuocHopId, nguoiDangNhapId, LocalDateTime.now())
                 .stream()
                 .filter(bq -> ThaoTacCuocHop.dangDienRa(bq.getCuocHop()))
                 .filter(bq -> duocThamGiaLuotBieuQuyet(
@@ -484,7 +484,7 @@ public class BieuQuyetService {
                         bq.getCuocHop().getCuocHopId(),
                         bq.getCuocHop().getTieuDe(),
                         bq.getBieuQuyetId(),
-                        bq.getTieuDe()
+                        bq.getTieuDe(), bq.getThoiGianBatDau(), bq.getThoiGianKetThuc()
                 ))
                 .toList();
     }

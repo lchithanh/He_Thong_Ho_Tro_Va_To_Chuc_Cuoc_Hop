@@ -3,15 +3,18 @@ package com.example.demo.service;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
+import com.example.demo.dto.request.NoiDungThuMoi;
 import com.example.demo.entity.LichHop;
 import com.example.demo.entity.NguoiDung;
 import com.example.demo.entity.ThanhVienCuocHop;
+import com.example.demo.entity.YeuCauPheDuyet;
 import com.example.demo.repository.ThanhVienCuocHopRepository;
 
 @Service
@@ -23,15 +26,23 @@ class ThongBaoEmailCuocHop {
     private final ApplicationEventPublisher suKien;
     private final ThanhVienCuocHopRepository thanhVienRepository;
 
+    private final ThongTinThuMoiDaDuyet thongTinThuMoi;
+
     ThongBaoEmailCuocHop(@Value("${app.email.enabled:false}") boolean batGuiEmail,
-            ApplicationEventPublisher suKien, ThanhVienCuocHopRepository thanhVienRepository) {
+            ApplicationEventPublisher suKien, ThanhVienCuocHopRepository thanhVienRepository,
+            ThongTinThuMoiDaDuyet thongTinThuMoi) {
         this.batGuiEmail = batGuiEmail;
         this.suKien = suKien;
         this.thanhVienRepository = thanhVienRepository;
+        this.thongTinThuMoi = thongTinThuMoi;
     }
 
-    void moiHop(LichHop lich, List<NguoiDung> nguoiDuocMoi) {
-        bao(lich, nguoiDuocMoi, "Lời mời họp", "Mở mục Lời mời họp trong hệ thống để phản hồi.");
+    boolean moiHop(YeuCauPheDuyet keHoach, List<NguoiDung> nguoiDuocMoi, NoiDungThuMoi thuMoi) {
+        var thongTin = thongTinThuMoi.doc(keHoach);
+        var tep = TepThuMoi.doc(thuMoi.tepDinhKem(), thongTin.lichHopId());
+        return gui(thongTin.lichHopId(), nguoiDuocMoi, thongTin.chuDe(thuMoi),
+                thongTin.noiDungEmail(thuMoi, "anh/chị", thongTin.diaDiem())
+                        + "\nMở mục Lời mời họp trong hệ thống để phản hồi.", tep);
     }
 
     void xacNhanLich(LichHop lich, boolean coLichCu) {
@@ -64,15 +75,10 @@ class ThongBaoEmailCuocHop {
     }
 
     private void bao(LichHop lich, List<NguoiDung> nguoiNhan, String suKienLich, String huongDan) {
-        if (!batGuiEmail) return;
-        List<String> diaChi = nguoiNhan.stream()
-                .map(NguoiDung::getEmail)
-                .filter(email -> email != null && !email.isBlank())
-                .map(String::strip)
-                .distinct()
-                .toList();
-        if (diaChi.isEmpty()) return;
+        bao(lich, nguoiNhan, "[Họp hành chính] " + suKienLich, suKienLich, huongDan, null);
+    }
 
+    private boolean bao(LichHop lich, List<NguoiDung> nguoiNhan, String chuDe, String moDau, String huongDan, TepThuMoi tep) {
         var cuocHop = lich.getCuocHop();
         String noiDung = """
                 %s
@@ -83,15 +89,30 @@ class ThongBaoEmailCuocHop {
                 Địa điểm: %s
 
                 %s
-                """.formatted(suKienLich, cuocHop.getTieuDe(), gio(lich.getThoiGianBatDau()),
+                """.formatted(moDau, cuocHop.getTieuDe(), gio(lich.getThoiGianBatDau()),
                         gio(lich.getThoiGianKetThuc()), lich.getPhongHop() == null
                                 ? "Trực tuyến" : lich.getPhongHop().getTenPhongHop(), huongDan);
-        suKien.publishEvent(new EmailCanGui(lich.getLichHopId(), diaChi, "[Họp hành chính] " + suKienLich, noiDung));
+        return gui(lich.getLichHopId(), nguoiNhan, chuDe, noiDung, tep);
+    }
+
+    private boolean gui(Integer lichHopId, List<NguoiDung> nguoiNhan, String chuDe, String noiDung, TepThuMoi tep) {
+        if (!batGuiEmail) return false;
+        List<String> diaChi = nguoiNhan.stream()
+                .map(NguoiDung::getEmail)
+                .filter(email -> email != null && !email.isBlank())
+                .map(String::strip)
+                .filter(email -> !email.toLowerCase(Locale.ROOT).endsWith(".invalid"))
+                .distinct()
+                .toList();
+        if (diaChi.isEmpty()) return false;
+
+        suKien.publishEvent(new EmailCanGui(lichHopId, diaChi, chuDe, noiDung, tep));
+        return true;
     }
 
     private String gio(LocalDateTime moc) {
         return moc == null ? "Chưa xác định" : DINH_DANG_GIO.format(moc);
     }
 
-    record EmailCanGui(Integer lichHopId, List<String> diaChi, String chuDe, String noiDung) {}
+    record EmailCanGui(Integer lichHopId, List<String> diaChi, String chuDe, String noiDung, TepThuMoi tep) {}
 }
