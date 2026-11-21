@@ -219,7 +219,7 @@ public class QuyTrinhKeHoachService {
                 "KE_HOACH", "TRINH_CAP_TREN", ghiChu, daLuu);
         thongBaoService.gui(ch, thuKyId, "KE_HOACH_CHUYEN_CAP_TREN",
                 "Hồ sơ cuộc họp đang chờ thư ký lãnh đạo tiếp nhận",
-                ch.getTieuDe(), thuKyLanhDao, lanhDao);
+                ch.getTieuDe(), thuKyLanhDao, lanhDao, ch.getNguoiDeXuat());
         return new TrinhKeHoachResponse(
                 "Đã chuyển hồ sơ lên thư ký lãnh đạo; kế hoạch chưa được duyệt cuối",
                 daLuu.getYeuCauPheDuyetId(), ch.getTrangThai(), ch.getBuocXuLyHienTai());
@@ -278,6 +278,9 @@ public class QuyTrinhKeHoachService {
         ThaoTacCuocHop.thucHien(() -> ThaoTacCuocHop.moLaiKeHoachChoChuyenCap(ch));
         lichSuPheDuyetService.ghiNhan(cuocHopId, null, null, thuKyId, "KE_HOACH",
                 "YEU_CAU_CHINH_SUA", "Thư ký mở lại hồ sơ để đề xuất lịch mới", yeuCau);
+        thongBaoService.gui(ch, thuKyId, "KE_HOACH_MO_LAI",
+                "Kế hoạch đã được mở lại để đề xuất lịch mới", ch.getTieuDe(),
+                ch.getNguoiDeXuat(), yeuCau.getNguoiDuyet());
         return new TrinhKeHoachResponse("Đã mở lại kế hoạch. Hãy chọn lịch mới và trình lại trưởng phòng.",
                 yeuCauId, ch.getTrangThai(), ch.getBuocXuLyHienTai());
     }
@@ -293,6 +296,9 @@ public class QuyTrinhKeHoachService {
         ThaoTacCuocHop.thucHien(() -> ThaoTacCuocHop.tiepNhanHoSoLanhDao(ch));
         lichSuPheDuyetService.ghiNhan(cuocHopId, null, null, thuKyId,
                 "KE_HOACH", "TIEP_NHAN", "Thư ký lãnh đạo tiếp nhận hồ sơ", yc);
+        thongBaoService.gui(ch, thuKyId, "KE_HOACH_DA_TIEP_NHAN",
+                "Thư ký lãnh đạo đã tiếp nhận hồ sơ", ch.getTieuDe(),
+                ch.getNguoiDeXuat(), yc.getNguoiTrinh(), yc.getNguoiDuyet());
     }
 
     public void trinhLanhDao(Integer cuocHopId, Integer yeuCauId, Integer thuKyId, String ghiChu) {
@@ -308,7 +314,7 @@ public class QuyTrinhKeHoachService {
                 "KE_HOACH", "TRINH_DUYET", ghiChu, yc);
         thongBaoService.gui(ch, thuKyId, "KE_HOACH_CHO_LANH_DAO",
                 "Kế hoạch cuộc họp đang chờ lãnh đạo phê duyệt",
-                ch.getTieuDe(), yc.getNguoiDuyet());
+                ch.getTieuDe(), yc.getNguoiDuyet(), yc.getNguoiTrinh(), ch.getNguoiDeXuat());
     }
 
     public boolean pheDuyetKeHoach(Integer cuocHopId, Integer yeuCauId, Integer nguoiDuyetId, String yKien) {
@@ -352,7 +358,7 @@ public class QuyTrinhKeHoachService {
                 "KE_HOACH", "PHE_DUYET", yKien, yc);
         thongBaoService.gui(ch, nguoiDuyetId, "KE_HOACH_DA_DUYET",
                 "Kế hoạch và lịch họp đã được duyệt", ch.getTieuDe(),
-                ch.getNguoiDeXuat(), yc.getNguoiTrinh(), yc.getThuKyBanGiao());
+                ch.getNguoiDeXuat(), yc.getNguoiTrinh(), yc.getThuKyBanGiao(), yc.getThuKyTiepNhan());
         return true;
     }
 

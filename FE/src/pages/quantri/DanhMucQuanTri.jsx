@@ -43,7 +43,7 @@ function so(form, key) {
   return Number(form.get(key)) || null
 }
 
-export default function DanhMucQuanTri({ token, loai }) {
+export default function DanhMucQuanTri({ token, loai, nguoiDungId, phongHopLoc, onXemThietBi }) {
   const phienDongBo = useDongBoDuLieu()
   const { ten, khoa, tenChinh, truongPhu, moTa, cot, trangThai, danhMucLienQuan } = CAU_HINH[loai]
   const danhTu = ten.toLocaleLowerCase('vi')
@@ -57,6 +57,7 @@ export default function DanhMucQuanTri({ token, loai }) {
   const [dangLuu, setDangLuu] = useState(false)
   const [tuKhoa, setTuKhoa] = useState('')
   const [loc, setLoc] = useState('')
+  const [locPhongHop, setLocPhongHop] = useState(() => String(phongHopLoc ?? ''))
   const [lanTai, setLanTai] = useState(0)
 
   useEffect(() => {
@@ -82,10 +83,13 @@ export default function DanhMucQuanTri({ token, loai }) {
   const khoaTrangThai = loai === 'equipment' ? 'tinhTrang' : 'trangThai'
   const ketQua = danhSach?.filter((muc) =>
     (!loc || muc[khoaTrangThai] === loc)
+    && (loai !== 'equipment' || !locPhongHop || String(muc.phongHopId ?? '') === locPhongHop)
     && [muc[tenChinh], muc[truongPhu], muc.email, ...cot.map(([, key]) => muc[key])]
       .some((giaTri) => String(giaTri ?? '').toLocaleLowerCase('vi').includes(dangLoc)),
   )
   const id = mucChon?.[khoa]
+  const laTaiKhoanHienTai = id != null && Number(nguoiDungId) === id
+  const trangThaiTaiKhoanMoi = mucChon?.trangThai === 'HOAT_DONG' ? 'BI_KHOA' : 'HOAT_DONG'
 
   function moForm(muc) {
     setMucChon(muc)
@@ -144,7 +148,7 @@ export default function DanhMucQuanTri({ token, loai }) {
 
   function luuThaoTac(event, duongDan, tenTruong, laSo, thanhCong) {
     event.preventDefault()
-    const form = new FormData(event.currentTarget)
+    const form = new FormData(event.currentTarget, event.nativeEvent.submitter)
     luu(`${loai}/${id}/${duongDan}`, 'PATCH', { [tenTruong]: laSo ? so(form, tenTruong) : text(form, tenTruong) }, thanhCong)
   }
 
@@ -170,6 +174,13 @@ export default function DanhMucQuanTri({ token, loai }) {
               <option value="">Tất cả trạng thái</option>
               {Object.entries(trangThai).map(([ma, [nhan]]) => <option key={ma} value={ma}>{nhan}</option>)}
             </select>
+            {loai === 'equipment' && lienQuan && (
+              <select className="adm-input adm-filter" aria-label="Lọc thiết bị theo phòng họp" value={locPhongHop}
+                onChange={(event) => setLocPhongHop(event.target.value)}>
+                <option value="">Tất cả phòng họp</option>
+                {lienQuan.map((phong) => <option key={phong.phongHopId} value={phong.phongHopId}>{phong.tenPhongHop}</option>)}
+              </select>
+            )}
             <p className="adm-result" aria-live="polite">{ketQua.length} / {danhSach.length} {danhTu}</p>
           </div>
           {ketQua.length ? (
@@ -186,10 +197,18 @@ export default function DanhMucQuanTri({ token, loai }) {
                       <th scope="row"><strong>{muc[tenChinh]}</strong><small>{muc.email || muc[truongPhu]}</small></th>
                       {cot.map(([, key]) => <td key={key}>{muc[key] ?? (key === 'tenTruongPhong' && muc.truongPhongId ? `#${muc.truongPhongId}` : '—')}</td>)}
                       <td><TrangThai ten={nhan} mau={mau} /></td>
-                      <td className="adm-actions"><button type="button" className="adm-btn adm-edit"
-                        aria-label={`Chỉnh sửa ${muc[tenChinh]}`} onClick={() => moForm(muc)}>
-                        <Pencil size={15} aria-hidden="true" /> Sửa
-                      </button></td>
+                      <td className="adm-actions">
+                        <div className="adm-form-actions">
+                          {loai === 'meeting-rooms' && <button type="button" className="adm-btn adm-edit"
+                            aria-label={`Thiết bị trong ${muc.tenPhongHop}`} onClick={() => onXemThietBi(muc.phongHopId)}>
+                            Thiết bị
+                          </button>}
+                          <button type="button" className="adm-btn adm-edit"
+                            aria-label={`Chỉnh sửa ${muc[tenChinh]}`} onClick={() => moForm(muc)}>
+                            <Pencil size={15} aria-hidden="true" /> Sửa
+                          </button>
+                        </div>
+                      </td>
                     </tr>
                   )
                 })}</tbody>
@@ -255,7 +274,13 @@ export default function DanhMucQuanTri({ token, loai }) {
               <LuaChon ten="truongPhongId" nhan="Trưởng phòng" giaTri={mucChon.truongPhongId}
                 trong={truongPhong.length ? 'Chọn cán bộ trong phòng ban' : 'Chưa có cán bộ đủ điều kiện'}
                 tuyChon={truongPhong.map((muc) => [muc.nguoiDungId, muc.hoTen])} disabled={dangLuu || !truongPhong.length} required />
-              <button type="submit" className="adm-btn adm-secondary" disabled={dangLuu || !truongPhong.length}>Phân công</button>
+              <div className="adm-form-actions">
+                <button type="submit" className="adm-btn adm-secondary" disabled={dangLuu || !truongPhong.length}>Phân công</button>
+                {mucChon.truongPhongId && <button type="button" className="adm-btn adm-secondary adm-danger-text" disabled={dangLuu}
+                  onClick={() => luu(`departments/${id}/leader`, 'PATCH', { truongPhongId: null }, 'Đã bỏ phân công trưởng phòng.')}>
+                  Bỏ phân công
+                </button>}
+              </div>
             </form>
           )}
           {id && loai === 'meeting-rooms' && (
@@ -266,13 +291,23 @@ export default function DanhMucQuanTri({ token, loai }) {
               <button type="submit" className="adm-btn adm-secondary" disabled={dangLuu}>Lưu trạng thái</button>
             </form>
           )}
-          {id && loai === 'users' && (
+          {id && loai === 'users' && !laTaiKhoanHienTai && (
             <form className="adm-subform" onSubmit={(event) => luuThaoTac(event, 'vai-tro', 'vaiTroId', true, 'Đã cập nhật vai trò.')}>
               <LuaChon ten="vaiTroId" nhan="Vai trò" giaTri={mucChon.vaiTroId}
                 trong={vaiTro?.length ? 'Chọn vai trò' : 'Chưa có vai trò khả dụng'}
                 tuyChon={(vaiTro ?? []).map((muc) => [muc.vaiTroId, muc.tenVaiTro || TEN_VAI_TRO[muc.maVaiTro]])}
                 disabled={dangLuu || !vaiTro?.length} required />
               <button type="submit" className="adm-btn adm-secondary" disabled={dangLuu || !vaiTro?.length}>Lưu vai trò</button>
+            </form>
+          )}
+          {id && loai === 'users' && !laTaiKhoanHienTai && (
+            <form className="adm-subform" onSubmit={(event) => luuThaoTac(event, 'status', 'trangThai', false, 'Đã cập nhật trạng thái tài khoản.')}>
+              <span>Trạng thái tài khoản <TrangThai ten={TRANG_THAI_TAI_KHOAN[mucChon.trangThai]?.[0] ?? mucChon.trangThai}
+                mau={TRANG_THAI_TAI_KHOAN[mucChon.trangThai]?.[1]} /></span>
+              <button name="trangThai" value={trangThaiTaiKhoanMoi} type="submit"
+                className={`adm-btn adm-secondary ${trangThaiTaiKhoanMoi === 'BI_KHOA' ? 'adm-danger-text' : ''}`} disabled={dangLuu}>
+                {trangThaiTaiKhoanMoi === 'BI_KHOA' ? 'Khóa tài khoản' : 'Kích hoạt tài khoản'}
+              </button>
             </form>
           )}
         </NganChinhSua>

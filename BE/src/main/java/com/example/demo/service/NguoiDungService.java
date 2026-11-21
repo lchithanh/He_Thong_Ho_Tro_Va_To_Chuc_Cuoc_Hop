@@ -1,6 +1,7 @@
 package com.example.demo.service;
 
 import java.util.List;
+import java.util.Objects;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -18,6 +19,7 @@ import com.example.demo.entity.VaiTro;
 import com.example.demo.repository.NguoiDungRepository;
 import com.example.demo.repository.NguoiDungVaiTroRepository;
 import com.example.demo.repository.PhongBanRepository;
+import com.example.demo.repository.PhanCongThuKyRepository;
 import com.example.demo.repository.VaiTroRepository;
 import com.example.demo.dto.request.CapNhatNguoiDungRequest;
 import com.example.demo.dto.request.CapNhatVaiTroRequest;
@@ -29,19 +31,22 @@ public class NguoiDungService {
     private final PhongBanRepository phongBanRepository;
     private final VaiTroRepository vaiTroRepository;
     private final PasswordEncoder passwordEncoder;
+    private final PhanCongThuKyRepository phanCongThuKyRepository;
 
     public NguoiDungService(
             NguoiDungRepository nguoiDungRepository,
             NguoiDungVaiTroRepository nguoiDungVaiTroRepository,
             PhongBanRepository phongBanRepository,
             VaiTroRepository vaiTroRepository,
-            PasswordEncoder passwordEncoder) {
+            PasswordEncoder passwordEncoder,
+            PhanCongThuKyRepository phanCongThuKyRepository) {
 
         this.nguoiDungRepository = nguoiDungRepository;
         this.nguoiDungVaiTroRepository = nguoiDungVaiTroRepository;
         this.phongBanRepository = phongBanRepository;
         this.vaiTroRepository = vaiTroRepository;
         this.passwordEncoder = passwordEncoder;
+        this.phanCongThuKyRepository = phanCongThuKyRepository;
     }
 
     // Lấy danh sách người dùng
@@ -130,7 +135,8 @@ public class NguoiDungService {
         NguoiDung nguoiDung = new NguoiDung();
 
         nguoiDung.setPhongBan(phongBan);
-        nguoiDung.setMaNhanVien(request.maNhanVien());
+        nguoiDung.setMaNhanVien(request.maNhanVien() == null || request.maNhanVien().isBlank()
+            ? null : request.maNhanVien().trim());
         nguoiDung.setHoTen(request.hoTen().trim());
         nguoiDung.setEmail(email);
         nguoiDung.setSoDienThoai(request.soDienThoai());
@@ -177,11 +183,12 @@ public NguoiDungResponse capNhatNguoiDung(
         Integer id,
         CapNhatNguoiDungRequest request) {
 
-    NguoiDung nguoiDung = nguoiDungRepository.findById(id)
-            .orElseThrow(() -> new ResponseStatusException(
-                    HttpStatus.NOT_FOUND,
-                    "Khong tim thay nguoi dung"
-            ));
+    NguoiDung nguoiDung = khoaNguoiDung(id);
+    Integer phongBanCuId = nguoiDung.getPhongBan() == null ? null : nguoiDung.getPhongBan().getPhongBanId();
+    if (!Objects.equals(phongBanCuId, request.phongBanId()) && laTruongPhong(id)) {
+        throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "Hãy bỏ phân công trưởng phòng trước khi chuyển phòng ban.");
+    }
 
     // Kiểm tra thông tin bắt buộc
     if (request.hoTen() == null || request.hoTen().isBlank()
@@ -239,7 +246,8 @@ public NguoiDungResponse capNhatNguoiDung(
     }
 
     // Cập nhật thông tin
-    nguoiDung.setMaNhanVien(request.maNhanVien());
+    nguoiDung.setMaNhanVien(request.maNhanVien() == null || request.maNhanVien().isBlank()
+            ? null : request.maNhanVien().trim());
     nguoiDung.setHoTen(request.hoTen().trim());
     nguoiDung.setEmail(email);
     nguoiDung.setSoDienThoai(request.soDienThoai());
@@ -250,54 +258,68 @@ public NguoiDungResponse capNhatNguoiDung(
 
     return chuyenDoiResponse(nguoiDung);
 }
-//Thay đổi vai trò người dùng
-@Transactional
-public NguoiDungResponse capNhatVaiTro(
-     Integer id,
-     CapNhatVaiTroRequest request) {
+    @Transactional
+    public NguoiDungResponse capNhatVaiTro(Integer id, CapNhatVaiTroRequest request, String tenDangNhapAdmin) {
+        NguoiDung nguoiDung = khoaNguoiDung(id);
+        if (request.vaiTroId() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Vui lòng chọn vai trò.");
+        }
+        VaiTro vaiTro = vaiTroRepository.findById(request.vaiTroId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy vai trò."));
+        if (!"HOAT_DONG".equals(vaiTro.getTrangThai())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Vai trò đang ngừng hoạt động.");
+        }
 
- NguoiDung nguoiDung = nguoiDungRepository.findById(id)
-         .orElseThrow(() -> new ResponseStatusException(
-                 HttpStatus.NOT_FOUND,
-                 "Khong tim thay nguoi dung"
-         ));
+        NguoiDungVaiTro phanQuyen = nguoiDungVaiTroRepository.findByNguoiDungId(id).orElse(null);
+        if (phanQuyen != null && vaiTro.getVaiTroId().equals(phanQuyen.getVaiTro().getVaiTroId())) {
+            return chuyenDoiResponse(nguoiDung);
+        }
+        if (nguoiDung.getTenDangNhap().equals(tenDangNhapAdmin)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Bạn không thể đổi vai trò của tài khoản đang đăng nhập.");
+        }
+        kiemTraPhanCong(id);
+        if (phanQuyen == null) {
+            phanQuyen = new NguoiDungVaiTro();
+            phanQuyen.setNguoiDung(nguoiDung);
+        }
+        phanQuyen.setVaiTro(vaiTro);
+        nguoiDungVaiTroRepository.save(phanQuyen);
+        return chuyenDoiResponse(nguoiDung);
+    }
 
- if (request.vaiTroId() == null) {
-     throw new ResponseStatusException(
-             HttpStatus.BAD_REQUEST,
-             "Vui long chon vai tro"
-     );
- }
+    @Transactional
+    public NguoiDungResponse capNhatTrangThai(Integer id, String trangThai, String tenDangNhapAdmin) {
+        if (!"HOAT_DONG".equals(trangThai) && !"BI_KHOA".equals(trangThai)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Trạng thái tài khoản không hợp lệ.");
+        }
+        NguoiDung nguoiDung = khoaNguoiDung(id);
+        if ("BI_KHOA".equals(trangThai)) {
+            if (nguoiDung.getTenDangNhap().equals(tenDangNhapAdmin)) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "Bạn không thể khóa tài khoản đang đăng nhập.");
+            }
+            kiemTraPhanCong(id);
+        }
+        nguoiDung.setTrangThai(trangThai);
+        return chuyenDoiResponse(nguoiDung);
+    }
 
- VaiTro vaiTro = vaiTroRepository.findById(request.vaiTroId())
-         .orElseThrow(() -> new ResponseStatusException(
-                 HttpStatus.NOT_FOUND,
-                 "Khong tim thay vai tro"
-         ));
+    private NguoiDung khoaNguoiDung(Integer id) {
+        return nguoiDungRepository.khoaTheoId(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy người dùng."));
+    }
 
- if (!"HOAT_DONG".equals(vaiTro.getTrangThai())) {
-     throw new ResponseStatusException(
-             HttpStatus.BAD_REQUEST,
-             "Vai tro dang khong hoat dong"
-     );
- }
+    private boolean laTruongPhong(Integer id) {
+        return !phongBanRepository.findByTruongPhongId(id).isEmpty();
+    }
 
- NguoiDungVaiTro nguoiDungVaiTro =
-         nguoiDungVaiTroRepository
-                 .findByNguoiDungId(id)
-                 .orElseGet(() -> {
-                     NguoiDungVaiTro moi = new NguoiDungVaiTro();
-                     moi.setNguoiDung(nguoiDung);
-                     return moi;
-                 });
+    private void kiemTraPhanCong(Integer id) {
+        if (laTruongPhong(id) || phanCongThuKyRepository.existsById(id)
+                || phanCongThuKyRepository.existsByThuKy_NguoiDungId(id)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Hãy bỏ phân công trưởng phòng hoặc thư ký mặc định liên quan trước khi thay đổi tài khoản.");
+        }
+    }
 
- nguoiDungVaiTro.setVaiTro(vaiTro);
- nguoiDungVaiTroRepository.save(nguoiDungVaiTro);
-
- return chuyenDoiResponse(nguoiDung);
-}
-
-    
     // Chuyển Entity thành Response DTO
     private NguoiDungResponse chuyenDoiResponse(NguoiDung nguoiDung) {
 

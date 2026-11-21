@@ -122,7 +122,7 @@ public class DeXuatCuocHopService {
             ganThuKy(daLuu, thuKy);
         }
         if (request.isGuiNgay()) {
-            capNhatRealtime.baoNguoiPhuTrach(daLuu, nguoiDangNhapId);
+            capNhatRealtime.baoBuocDeXuat(daLuu, nguoiDangNhapId);
         } else {
             capNhatRealtime.baoCho(nguoiDangNhapId);
         }
@@ -275,7 +275,7 @@ public class DeXuatCuocHopService {
         ganThuKy(cuocHop, thuKy);
         ThaoTacCuocHop.thucHien(() -> ThaoTacCuocHop.guiDeXuat(cuocHop));
         cuocHopRepository.save(cuocHop);
-        capNhatRealtime.baoNguoiPhuTrach(cuocHop, nguoiDangNhapId);
+        capNhatRealtime.baoBuocDeXuat(cuocHop, nguoiDangNhapId);
     }
     // TIẾP NHẬN ĐỀ XUẤT
     public void tiepNhanDeXuat(
@@ -304,7 +304,7 @@ public class DeXuatCuocHopService {
         }
         ThaoTacCuocHop.thucHien(() -> ThaoTacCuocHop.tiepNhanDeXuat(cuocHop));
         cuocHopRepository.save(cuocHop);
-        capNhatRealtime.baoNguoiPhuTrach(cuocHop, nguoiDangNhapId);
+        capNhatRealtime.baoBuocDeXuat(cuocHop, nguoiDangNhapId);
     }
 
     @Transactional(readOnly = true)

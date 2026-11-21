@@ -47,6 +47,10 @@ public class ThongBaoService {
             thongBaoRepository.save(thongBao);
         }
 
-        capNhatRealtime.baoCho(daThem, loai != null && loai.startsWith("KE_HOACH_"));
+        if (loai != null && loai.startsWith("KE_HOACH_")) {
+            capNhatRealtime.baoBuocDeXuat(daThem);
+        } else {
+            capNhatRealtime.baoCho(daThem, false);
+        }
     }
 }

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useKetNoiHoSo } from '../services/useKetNoiHoSo.js'
 import Building2 from 'lucide-react/dist/esm/icons/building-2.mjs'
 import CalendarDays from 'lucide-react/dist/esm/icons/calendar-days.mjs'
 import DoorOpen from 'lucide-react/dist/esm/icons/door-open.mjs'
@@ -37,13 +38,16 @@ const CAC_MUC = NHOM_MENU.flatMap(({ muc }) => muc)
 
 export default function KhongGianQuanTri({ nguoiDung, loi, onDangXuat }) {
   const [muc, setMuc] = useState('tong-quan')
+  const [phongHopLoc, setPhongHopLoc] = useState(null)
   const [moMenu, setMoMenu] = useState(false)
   const [hoSo, setHoSo] = useState(null)
   const tenMuc = CAC_MUC.find(({ id }) => id === muc)?.ten
-  const { token, hoTen } = nguoiDung
+  const { token, hoTen, nguoiDungId } = nguoiDung
+  useKetNoiHoSo(token)
   const chuDau = hoTen?.trim().split(/\s+/).slice(-2).map((tu) => tu[0]).join('').toLocaleUpperCase('vi') || 'QT'
 
-  function chonMuc(id) {
+  function chonMuc(id, phongHopId = null) {
+    setPhongHopLoc(phongHopId)
     setHoSo(null)
     setMuc(id)
     setMoMenu(false)
@@ -93,9 +97,10 @@ export default function KhongGianQuanTri({ nguoiDung, loi, onDangXuat }) {
             : muc === 'cuoc-hop' ? hoSo ? (
               <ChiTietDeXuat key={hoSo} cuocHopId={hoSo} token={token} nguoiDung={nguoiDung}
                 chiXem tabBanDau="thong-tin" onQuayLai={() => setHoSo(null)} />
-            ) : <TongQuanCuocHop token={token} nguoiDung={nguoiDung} onMoHoSoDangHop={setHoSo} />
+            ) : <TongQuanCuocHop token={token} nguoiDung={nguoiDung} onXemCuocHop={setHoSo} />
               : muc === 'phan-cong' ? <PhanCongThuKy token={token} />
-                : <DanhMucQuanTri key={muc} token={token} loai={muc} />}
+                : <DanhMucQuanTri key={muc} token={token} loai={muc} nguoiDungId={nguoiDungId} phongHopLoc={phongHopLoc}
+                  onXemThietBi={(phongHopId) => chonMuc('equipment', phongHopId)} />}
         </main>
       </div>
     </div>

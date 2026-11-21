@@ -3,6 +3,7 @@ import CalendarDays from 'lucide-react/dist/esm/icons/calendar-days.mjs'
 import ShieldCheck from 'lucide-react/dist/esm/icons/shield-check.mjs'
 import { dangNhap, layThongTinNguoiDung } from './api/authApi.js'
 import KhongGianLamViec from './layouts/KhongGianLamViec.jsx'
+import KhongGianQuanTri from './layouts/KhongGianQuanTri.jsx'
 
 const KHOA_PHIEN = 'phienDangNhap'
 
@@ -109,8 +110,9 @@ export default function App() {
     setLoi('')
   }
   if (nguoiDung) {
+    const KhongGian = nguoiDung.maVaiTro === 'ADMIN' ? KhongGianQuanTri : KhongGianLamViec
     return (
-      <KhongGianLamViec
+      <KhongGian
         nguoiDung={nguoiDung}
         loi={loi}
         onDangXuat={dangXuat}

@@ -24,8 +24,9 @@ public class JwtService {
             @Value("${jwt.secret}") String secret,
             @Value("${jwt.expiration}") long expiration) {
 
-        this.secretKey = Keys.hmacShaKeyFor(
-                secret.getBytes(StandardCharsets.UTF_8));
+        this.secretKey = secret.isBlank()
+                ? Jwts.SIG.HS256.key().build()
+                : Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
 
         this.expiration = expiration;
     }
@@ -59,10 +60,10 @@ public class JwtService {
         if (claims.getSubject() == null || claims.getSubject().isBlank() || claims.getExpiration() == null) {
             throw new JwtException("JWT thiếu thông tin phiên");
         }
-        return new PhienJwt(claims.getSubject(), claims.getExpiration().toInstant());
+        return new PhienJwt(claims.getSubject(), claims.getExpiration().toInstant(), claims.get("role", String.class));
     }
 
-    public record PhienJwt(String tenDangNhap, Instant hetHanLuc) {}
+    public record PhienJwt(String tenDangNhap, Instant hetHanLuc, String maVaiTro) {}
 
     // Kiểm tra token hợp lệ và chưa hết hạn
     public boolean isTokenValid(String token, String username) {

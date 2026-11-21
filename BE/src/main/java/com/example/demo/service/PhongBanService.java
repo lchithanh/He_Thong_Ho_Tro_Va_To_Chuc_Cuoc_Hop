@@ -2,6 +2,7 @@
 package com.example.demo.service;
 
 import java.util.List;
+import java.util.Objects;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -16,6 +17,7 @@ import com.example.demo.entity.PhongBan;
 import com.example.demo.repository.NguoiDungRepository;
 import com.example.demo.repository.NguoiDungVaiTroRepository;
 import com.example.demo.repository.PhongBanRepository;
+import com.example.demo.repository.PhanCongThuKyRepository;
 
 @Service
 public class PhongBanService {
@@ -23,15 +25,18 @@ public class PhongBanService {
     private final PhongBanRepository phongBanRepository;
     private final NguoiDungRepository nguoiDungRepository;
     private final NguoiDungVaiTroRepository nguoiDungVaiTroRepository;
+    private final PhanCongThuKyRepository phanCongThuKyRepository;
 
     public PhongBanService(
             PhongBanRepository phongBanRepository,
             NguoiDungRepository nguoiDungRepository,
-            NguoiDungVaiTroRepository nguoiDungVaiTroRepository) {
+            NguoiDungVaiTroRepository nguoiDungVaiTroRepository,
+            PhanCongThuKyRepository phanCongThuKyRepository) {
 
         this.phongBanRepository = phongBanRepository;
         this.nguoiDungRepository = nguoiDungRepository;
         this.nguoiDungVaiTroRepository = nguoiDungVaiTroRepository;
+        this.phanCongThuKyRepository = phanCongThuKyRepository;
     }
 
     // Lấy danh sách phòng ban
@@ -57,11 +62,11 @@ public class PhongBanService {
     public PhongBanResponse themPhongBan(TaoPhongBanRequest request) {
 
         if (request.tenPhongBan() == null
-                || request.tenPhongBan().isBlank()) {
+                || request.tenPhongBan().isBlank() || request.tenPhongBan().trim().length() > 150) {
 
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
-                    "Ten phong ban khong duoc de trong"
+                    "Tên phòng ban phải có từ 1 đến 150 ký tự."
             );
         }
 
@@ -70,7 +75,7 @@ public class PhongBanService {
         if (phongBanRepository.existsByTenPhongBanIgnoreCase(tenPhongBan)) {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT,
-                    "Ten phong ban da ton tai"
+                    "Tên phòng ban đã tồn tại."
             );
         }
 
@@ -79,13 +84,9 @@ public class PhongBanService {
         phongBan.setMoTa(request.moTa());
         phongBan.setTrangThai("HOAT_DONG");
 
-        // Nếu có chọn trưởng phòng thì kiểm tra và phân công
         if (request.truongPhongId() != null) {
-            NguoiDung truongPhong = kiemTraTruongPhong(
-                    request.truongPhongId()
-            );
-
-            phongBan.setTruongPhongId(truongPhong.getNguoiDungId());
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Hãy tạo phòng ban và thêm cán bộ vào phòng trước khi phân công trưởng phòng.");
         }
 
         phongBan = phongBanRepository.save(phongBan);
@@ -98,16 +99,17 @@ public class PhongBanService {
     public PhongBanResponse capNhatPhongBan(
             Integer id,
             CapNhatPhongBanRequest request) {
-    	System.out.println("===== UPDATE PHONG BAN =====");
-    	System.out.println("Request: " + request);
-        PhongBan phongBan = timPhongBan(id);
+        if (request.truongPhongId() != null) {
+            kiemTraTruongPhong(id, request.truongPhongId());
+        }
+        PhongBan phongBan = khoaPhongBan(id);
 
         if (request.tenPhongBan() == null
-                || request.tenPhongBan().isBlank()) {
+                || request.tenPhongBan().isBlank() || request.tenPhongBan().trim().length() > 150) {
 
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
-                    "Ten phong ban khong duoc de trong"
+                    "Tên phòng ban phải có từ 1 đến 150 ký tự."
             );
         }
 
@@ -117,25 +119,15 @@ public class PhongBanService {
                 tenPhongBan, id)) {
             throw new ResponseStatusException(
                 HttpStatus.CONFLICT,
-                "Ten phong ban da ton tai"
+                "Tên phòng ban đã tồn tại."
             );
         }
 
         phongBan.setTenPhongBan(tenPhongBan);
         phongBan.setMoTa(request.moTa());
 
-        // Chỉ cập nhật trưởng phòng nếu ID thay đổi
-        if (request.truongPhongId() != null
-                && !request.truongPhongId().equals(
-                        phongBan.getTruongPhongId())) {
-
-            NguoiDung truongPhong = kiemTraTruongPhong(
-                    request.truongPhongId()
-            );
-
-            boPhanCongTruongPhongCu(truongPhong.getNguoiDungId());
-
-            phongBan.setTruongPhongId(truongPhong.getNguoiDungId());
+        if (request.truongPhongId() != null) {
+            ganTruongPhong(phongBan, request.truongPhongId());
         }
 
         return chuyenDoiResponse(phongBanRepository.save(phongBan));
@@ -147,65 +139,44 @@ public class PhongBanService {
             Integer phongBanId,
             Integer nguoiDungId) {
 
-        PhongBan phongBan = timPhongBan(phongBanId);
-
-        NguoiDung truongPhong = kiemTraTruongPhong(nguoiDungId);
-
-        // Bỏ phân công tại phòng ban cũ
-        boPhanCongTruongPhongCu(nguoiDungId);
-
-        // Gán trưởng phòng mới
-        phongBan.setTruongPhongId(truongPhong.getNguoiDungId());
-
-        phongBanRepository.save(phongBan);
-
+        if (nguoiDungId != null) {
+            kiemTraTruongPhong(phongBanId, nguoiDungId);
+        }
+        PhongBan phongBan = khoaPhongBan(phongBanId);
+        ganTruongPhong(phongBan, nguoiDungId);
         return chuyenDoiResponse(phongBan);
     }
 
-    // Kiểm tra người dùng đủ điều kiện làm trưởng phòng
-    private NguoiDung kiemTraTruongPhong(Integer nguoiDungId) {
-
-        NguoiDung nguoiDung = nguoiDungRepository.findById(nguoiDungId)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "Khong tim thay nguoi dung"
-                ));
-
-        if (!"HOAT_DONG".equals(nguoiDung.getTrangThai())) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "Tai khoan nguoi dung khong hoat dong"
-            );
-        }
-
+    private void kiemTraTruongPhong(Integer phongBanId, Integer nguoiDungId) {
+        NguoiDung nguoiDung = nguoiDungRepository.khoaTheoId(nguoiDungId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy người dùng."));
         boolean laCanBo = nguoiDungVaiTroRepository
-                .findByNguoiDungIdAndVaiTro_MaVaiTro(
-                        nguoiDungId,
-                        "CAN_BO"
-                )
-                .isPresent();
-
-        if (!laCanBo) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "Truong phong phai co vai tro CAN_BO"
-            );
+                .findByNguoiDungIdAndVaiTro_MaVaiTro(nguoiDungId, "CAN_BO").isPresent();
+        if (!"HOAT_DONG".equals(nguoiDung.getTrangThai()) || !laCanBo || nguoiDung.getPhongBan() == null
+                || !phongBanId.equals(nguoiDung.getPhongBan().getPhongBanId())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Trưởng phòng phải là cán bộ đang hoạt động trong phòng ban này.");
         }
-
-        return nguoiDung;
+        if (phongBanRepository.findByTruongPhongId(nguoiDungId).stream()
+                .anyMatch(phong -> !phongBanId.equals(phong.getPhongBanId()))) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Cán bộ vẫn đang được phân công làm trưởng phòng ở phòng ban khác.");
+        }
     }
 
-    // Bỏ phân công trưởng phòng tại phòng ban cũ
-    private void boPhanCongTruongPhongCu(Integer nguoiDungId) {
-
-        List<PhongBan> phongBanCu =
-                phongBanRepository.findByTruongPhongId(nguoiDungId);
-
-        for (PhongBan phongBan : phongBanCu) {
-            phongBan.setTruongPhongId(null);
+    private void ganTruongPhong(PhongBan phongBan, Integer nguoiDungId) {
+        Integer nguoiCu = phongBan.getTruongPhongId();
+        if (Objects.equals(nguoiCu, nguoiDungId)) return;
+        if (nguoiCu != null && phanCongThuKyRepository.existsById(nguoiCu)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Hãy bỏ phân công thư ký mặc định của trưởng phòng hiện tại trước.");
         }
+        phongBan.setTruongPhongId(nguoiDungId);
+    }
 
-        phongBanRepository.saveAll(phongBanCu);
+    private PhongBan khoaPhongBan(Integer id) {
+        return phongBanRepository.khoaTheoId(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy phòng ban."));
     }
 
     // Tìm phòng ban

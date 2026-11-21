@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
 import {
   batDauCuocHop,
   ketThucCuocHop,
@@ -8,7 +9,6 @@ import {
   layLuaChonKeHoach,
   layTrangThaiHienThiCuocHop,
   tiepNhanDeXuat,
-  xuLyYeuCauKeHoach,
 } from '../../api/cuocHopApi.js'
 import TaiLieuKeHoachThuKy from './TaiLieuKeHoachThuKy.jsx'
 import FormKeHoachThuKy from './FormKeHoachThuKy.jsx'
@@ -43,6 +43,7 @@ const TABS = [
 ]
 
 export default function ChiTietDeXuat({ cuocHopId, token, nguoiDung, onQuayLai, onDaTiepNhan, onLapLich, onMoPhongHop, tabBanDau, chiXem = false }) {
+  const phienDongBo = useDongBoDuLieu()
   const [chiTiet, setChiTiet] = useState(null)
   const [loi, setLoi] = useState('')
   const [dangTiepNhan, setDangTiepNhan] = useState(false)
@@ -62,7 +63,6 @@ export default function ChiTietDeXuat({ cuocHopId, token, nguoiDung, onQuayLai, 
   const [loiTaiQuyenDuyet, setLoiTaiQuyenDuyet] = useState('')
   const [thongBaoChuyenCap, setThongBaoChuyenCap] = useState('')
   const buocXuLy = chiTiet?.buocXuLyHienTai
-  const [lyDoRaSoat, setLyDoRaSoat] = useState('')
 
   const buocThuKyLanhDao = ['CHO_THU_KY_LANH_DAO', 'THU_KY_LANH_DAO_XU_LY'].includes(buocXuLy)
 
@@ -72,7 +72,9 @@ export default function ChiTietDeXuat({ cuocHopId, token, nguoiDung, onQuayLai, 
     async function taiChiTiet() {
       try {
         const duLieu = await layChiTietDeXuat(cuocHopId, token, controller.signal)
-        if (!controller.signal.aborted) setChiTiet(duLieu)
+        if (controller.signal.aborted) return
+        setChiTiet(duLieu)
+        setLoi('')
       } catch (loiTaiChiTiet) {
         if (controller.signal.aborted) return
 
@@ -81,13 +83,14 @@ export default function ChiTietDeXuat({ cuocHopId, token, nguoiDung, onQuayLai, 
           404: 'Không tìm thấy đề xuất cuộc họp.',
         }
 
+        if (loiTaiChiTiet.status === 403 || loiTaiChiTiet.status === 404) setChiTiet(null)
         setLoi(thongBao[loiTaiChiTiet.status] || 'Không tải được chi tiết đề xuất.')
       }
     }
 
     taiChiTiet()
     return () => controller.abort()
-  }, [cuocHopId, token])
+  }, [cuocHopId, token, phienDongBo])
 
   useEffect(() => {
     if (chiXem || !buocThuKyLanhDao || nguoiDung?.maVaiTro !== 'THU_KY') return
@@ -105,7 +108,7 @@ export default function ChiTietDeXuat({ cuocHopId, token, nguoiDung, onQuayLai, 
       })
 
     return () => controller.abort()
-  }, [chiXem, buocThuKyLanhDao, cuocHopId, nguoiDung?.maVaiTro, token])
+  }, [chiXem, buocThuKyLanhDao, cuocHopId, nguoiDung?.maVaiTro, token, phienDongBo])
 
   useEffect(() => {
     if (!['CHO_TRUONG_PHONG', 'CHO_LANH_DAO'].includes(buocXuLy)) return
@@ -124,34 +127,7 @@ export default function ChiTietDeXuat({ cuocHopId, token, nguoiDung, onQuayLai, 
         if (!controller.signal.aborted) setLoiTaiQuyenDuyet(error.message)
       })
     return () => controller.abort()
-  }, [buocXuLy, cuocHopId, token])
-
-  async function xuLyHoSoThuKyLanhDao(thaoTac) {
-    if (dangTiepNhan || !yeuCauThuKy || !buocThuKyLanhDao) return
-
-    const ghiChu = lyDoRaSoat.trim()
-    if (['tra-lai', 'tu-choi-tiep-nhan'].includes(thaoTac) && !ghiChu) {
-      setLoiTiepNhan('Nhập lý do để thư ký lập hồ sơ nhận phản hồi.')
-      return
-    }
-    setDangTiepNhan(true)
-    setLoiTiepNhan('')
-    setThongBaoTiepNhan('')
-
-    try {
-      const ketQua = await xuLyYeuCauKeHoach(
-        cuocHopId, yeuCauThuKy.yeuCauPheDuyetId, thaoTac, ghiChu || null, token,
-      )
-      const chiTietMoi = await layChiTietDeXuat(cuocHopId, token)
-      setChiTiet(chiTietMoi)
-      onDaTiepNhan?.(cuocHopId, chiTietMoi)
-      setThongBaoTiepNhan(ketQua.message)
-    } catch (loiXuLy) {
-      setLoiTiepNhan(loiXuLy.message)
-    } finally {
-      setDangTiepNhan(false)
-    }
-  }
+  }, [buocXuLy, cuocHopId, token, phienDongBo])
 
   async function xuLyTiepNhan() {
     if (dangTiepNhan || chiTiet?.trangThai !== 'CHO_TIEP_NHAN') return
@@ -291,9 +267,8 @@ export default function ChiTietDeXuat({ cuocHopId, token, nguoiDung, onQuayLai, 
         <span aria-hidden="true">←</span> Quay lại danh sách
       </button>
 
-      {loi ? (
-        <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">{loi}</p>
-      ) : chiTiet === null ? (
+      {loi && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">{loi}</p>}
+      {chiTiet === null ? !loi && (
         <p role="status" className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-600">Đang tải chi tiết cuộc họp…</p>
       ) : (
         <>

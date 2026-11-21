@@ -2,9 +2,11 @@
 package com.example.demo.controller;
 
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import com.example.demo.dto.request.TaoNguoiDungRequest;
@@ -71,12 +73,18 @@ public class NguoiDungController {
     @PatchMapping("/{id}/vai-tro")
     public ResponseEntity<NguoiDungResponse> capNhatVaiTro(
             @PathVariable Integer id,
-            @RequestBody CapNhatVaiTroRequest request) {
+            @RequestBody CapNhatVaiTroRequest request, Authentication authentication) {
 
         return ResponseEntity.ok(
-                nguoiDungService.capNhatVaiTro(id, request)
+                nguoiDungService.capNhatVaiTro(id, request, authentication.getName())
         );
     }
+    @PatchMapping("/{id}/status")
+    public NguoiDungResponse capNhatTrangThai(@PathVariable Integer id,
+            @RequestBody Map<String, String> request, Authentication authentication) {
+        return nguoiDungService.capNhatTrangThai(id, request.get("trangThai"), authentication.getName());
+    }
+
     @GetMapping("/roles")
     public List<VaiTroLuaChonResponse> layVaiTroHoatDong() {
         return nguoiDungService.layVaiTroHoatDong();

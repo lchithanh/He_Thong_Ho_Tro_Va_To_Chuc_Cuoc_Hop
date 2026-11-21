@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import org.springframework.context.ApplicationEventPublisher;
@@ -17,6 +18,7 @@ import com.example.demo.entity.CuocHop;
 import com.example.demo.entity.NguoiDung;
 import com.example.demo.entity.YeuCauPheDuyet.LoaiYeuCau;
 import com.example.demo.entity.YeuCauPheDuyet.TrangThai;
+import com.example.demo.repository.NguoiDungVaiTroRepository;
 import com.example.demo.repository.ThanhVienCuocHopRepository;
 import com.example.demo.repository.YeuCauPheDuyetRepository;
 
@@ -33,6 +35,7 @@ public class CapNhatHoSoRealtime {
     private final ThanhVienCuocHopRepository thanhVienRepository;
     private final YeuCauPheDuyetRepository yeuCauRepository;
     private final SimpUserRegistry nguoiDungDangKetNoi;
+    private final NguoiDungVaiTroRepository vaiTroRepository;
     
     public void baoCho(Integer... nguoiNhanIds) {
         baoCho(Arrays.asList(nguoiNhanIds), false);
@@ -50,6 +53,21 @@ public class CapNhatHoSoRealtime {
         Set<Integer> ids = nguoiPhuTrach(cuocHop);
         ids.addAll(Arrays.asList(nguoiNhanThem));
         baoCho(ids, false);
+    }
+
+    public void baoBuocDeXuat(CuocHop cuocHop, Integer nguoiThaoTacId) {
+        Set<Integer> ids = nguoiPhuTrach(cuocHop);
+        ids.add(nguoiThaoTacId);
+        baoBuocDeXuat(ids);
+    }
+
+    void baoBuocDeXuat(Collection<Integer> nguoiNhanIds) {
+        var ketNoi = layIdDangKetNoi();
+        Set<Integer> ids = new HashSet<>(nguoiNhanIds);
+        if (!ketNoi.isEmpty()) {
+            ids.addAll(vaiTroRepository.locQuanTriVienHoatDong(ketNoi));
+        }
+        baoCho(ids, true);
     }
 
     public void baoCuocHop(CuocHop cuocHop, Integer nguoiThaoTacId) {
@@ -109,10 +127,12 @@ public class CapNhatHoSoRealtime {
     }
     
     public void baoDanhMucPhongVaThietBiThayDoi() {
-        var nguoiNhanIds = nguoiDungDangKetNoi.getUsers().stream()
+        baoCho(layIdDangKetNoi(), false);
+    }
+
+    private List<Integer> layIdDangKetNoi() {
+        return nguoiDungDangKetNoi.getUsers().stream()
                 .map(nguoiDung -> Integer.valueOf(nguoiDung.getName()))
                 .toList();
-
-        baoCho(nguoiNhanIds, false);
     }
 }

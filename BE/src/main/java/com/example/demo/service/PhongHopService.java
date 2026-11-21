@@ -126,7 +126,7 @@ public class PhongHopService {
                 "NGUNG_SU_DUNG"
         );
 
-        if (!trangThaiHopLe.contains(trangThai)) {
+        if (trangThai == null || !trangThaiHopLe.contains(trangThai)) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
                     "Trạng thái phòng họp không hợp lệ"

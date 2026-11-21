@@ -1,6 +1,7 @@
 import ThaoTacKeHoach from './ThaoTacKeHoach.jsx'
 import XemTruocTepKeHoach from './XemTruocTepKeHoach.jsx'
 import { useEffect, useState } from 'react'
+import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
 import {
   layChiTietKeHoachChoDuyet,
   layChiTietKeHoachHienTai,
@@ -16,6 +17,7 @@ const TEN_TRANG_THAI = {
 export default function HoSoDaTrinh({
   yeuCauId, cuocHopId, token, yeuCauDuyet, onDaXuLy, onDangXuLy, children,
 }) {
+  const phienDongBo = useDongBoDuLieu()
   const [hoSo, setHoSo] = useState(undefined)
   const [tep, setTep] = useState(null)
   const [loi, setLoi] = useState('')
@@ -28,10 +30,14 @@ export default function HoSoDaTrinh({
       ? layChiTietKeHoachChoDuyet(yeuCauId, token, controller.signal)
       : layChiTietKeHoachHienTai(cuocHopId, token, controller.signal)
     tacVu
-      .then((duLieu) => { if (!controller.signal.aborted) setHoSo(duLieu) })
+      .then((duLieu) => {
+        if (controller.signal.aborted) return
+        setHoSo(duLieu)
+        setLoi('')
+      })
       .catch((error) => { if (!controller.signal.aborted) setLoi(error.message) })
     return () => controller.abort()
-  }, [yeuCauId, cuocHopId, token])
+  }, [yeuCauId, cuocHopId, token, phienDongBo])
 
   useEffect(() => {
     if (lanTrinhId == null) return

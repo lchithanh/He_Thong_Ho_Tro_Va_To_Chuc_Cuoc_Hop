@@ -4,12 +4,16 @@ package com.example.demo.config;
 import com.example.demo.security.JwtAuthenticationFilter;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -36,7 +40,9 @@ public class SecurityConfig {
 
     // Cấu hình CORS cho ReactJS
     @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
+    public CorsConfigurationSource corsConfigurationSource(
+            @Value("${app.websocket.allowed-origins:http://localhost:5173,http://127.0.0.1:5173}")
+            List<String> nguonWebSocket) {
 
         CorsConfiguration configuration = new CorsConfiguration();
 
@@ -57,6 +63,9 @@ public class SecurityConfig {
         UrlBasedCorsConfigurationSource source =
                 new UrlBasedCorsConfigurationSource();
 
+        CorsConfiguration websocket = new CorsConfiguration(configuration);
+        websocket.setAllowedOrigins(nguonWebSocket);
+        source.registerCorsConfiguration("/ws", websocket);
         source.registerCorsConfiguration("/**", configuration);
 
         return source;
@@ -65,16 +74,19 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http,
-            JwtAuthenticationFilter jwtAuthenticationFilter)
+            JwtAuthenticationFilter jwtAuthenticationFilter,
+            @Qualifier("corsConfigurationSource") CorsConfigurationSource corsConfigurationSource)
             throws Exception {
 
         http
             // Bật CORS
             .cors(cors ->
-                cors.configurationSource(corsConfigurationSource())
+                cors.configurationSource(corsConfigurationSource)
             )
 
             .csrf(csrf -> csrf.disable())
+
+            .exceptionHandling(ex -> ex.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
 
             .sessionManagement(session ->
                 session.sessionCreationPolicy(

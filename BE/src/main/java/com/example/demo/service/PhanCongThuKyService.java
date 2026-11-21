@@ -13,8 +13,7 @@ import com.example.demo.entity.NguoiDung;
 import com.example.demo.entity.PhanCongThuKy;
 import com.example.demo.repository.NguoiDungRepository;
 import com.example.demo.repository.PhanCongThuKyRepository;
-import com.example.demo.service.NguoiDungHienTaiService;
-import com.example.demo.service.PhanQuyenCuocHopService;
+import com.example.demo.repository.PhongBanRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -25,6 +24,7 @@ public class PhanCongThuKyService {
 
     private final PhanCongThuKyRepository phanCongThuKyRepository;
     private final NguoiDungRepository nguoiDungRepository;
+    private final PhongBanRepository phongBanRepository;
     private final NguoiDungHienTaiService nguoiDungHienTaiService;
     private final PhanQuyenCuocHopService phanQuyenCuocHopService;
 
@@ -54,20 +54,19 @@ public class PhanCongThuKyService {
                     "Không thể phân công một người làm thư ký cho chính mình");
         }
 
-        NguoiDung nguoiDuocHoTro =
-                layNguoiDungHoatDong(nguoiDuocHoTroId);
+        NguoiDung taiKhoanNho = khoaTaiKhoanHoatDong(Math.min(nguoiDuocHoTroId, thuKyId));
+        NguoiDung taiKhoanLon = khoaTaiKhoanHoatDong(Math.max(nguoiDuocHoTroId, thuKyId));
+        boolean nguoiDuocHoTroKhoaTruoc = nguoiDuocHoTroId.equals(taiKhoanNho.getNguoiDungId());
+        NguoiDung nguoiDuocHoTro = nguoiDuocHoTroKhoaTruoc ? taiKhoanNho : taiKhoanLon;
+        NguoiDung thuKy = nguoiDuocHoTroKhoaTruoc ? taiKhoanLon : taiKhoanNho;
 
-        NguoiDung thuKy = layNguoiDungHoatDong(thuKyId);
-        nguoiDungRepository.khoaTheoId(thuKyId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
-                        "Không tìm thấy thư ký"));
-
-        boolean laLanhDao = phanQuyenCuocHopService.coVaiTro(
-                nguoiDuocHoTroId,
-                "LANH_DAO");
-
-        boolean laTruongPhong = phanQuyenCuocHopService.coVaiTro(nguoiDuocHoTroId, "CAN_BO")
-                && NguoiDungHienTaiService.laTruongPhongCuaPhongBanMinh(nguoiDuocHoTro);
+        boolean laLanhDao = phanQuyenCuocHopService.coVaiTro(nguoiDuocHoTroId, "LANH_DAO");
+        boolean laTruongPhong = !laLanhDao
+                && phanQuyenCuocHopService.coVaiTro(nguoiDuocHoTroId, "CAN_BO")
+                && nguoiDuocHoTro.getPhongBan() != null
+                && phongBanRepository.khoaTheoId(nguoiDuocHoTro.getPhongBan().getPhongBanId())
+                        .filter(phong -> nguoiDuocHoTroId.equals(phong.getTruongPhongId()))
+                        .isPresent();
 
         if (!laLanhDao && !laTruongPhong) {
             throw new ResponseStatusException(
@@ -206,7 +205,7 @@ public class PhanCongThuKyService {
         }
     }
 
-    private NguoiDung layNguoiDungHoatDong(Integer nguoiDungId) {
+    private NguoiDung khoaTaiKhoanHoatDong(Integer nguoiDungId) {
 
         if (nguoiDungId == null || nguoiDungId <= 0) {
             throw new ResponseStatusException(
@@ -214,14 +213,12 @@ public class PhanCongThuKyService {
                     "ID người dùng không hợp lệ");
         }
 
-        NguoiDung nguoiDung = nguoiDungRepository
-                .findById(nguoiDungId)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
+        NguoiDung nguoiDung = nguoiDungRepository.khoaTheoId(nguoiDungId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Không tìm thấy người dùng có ID: " + nguoiDungId));
-
-        nguoiDungHienTaiService.layTaiKhoanHoatDong(nguoiDungId);
-
+        if (!NguoiDungHienTaiService.dangHoatDong(nguoiDung)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Tài khoản được chọn không hoạt động.");
+        }
         return nguoiDung;
     }
 

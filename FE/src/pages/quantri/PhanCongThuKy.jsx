@@ -59,6 +59,7 @@ export default function PhanCongThuKy({ token }) {
         ...hienTai,
         phanCong: [...hienTai.phanCong.filter((muc) => muc.nguoiDuocHoTroId !== nguoiDuocHoTroId), ...(phanCong ? [phanCong] : [])],
       }))
+      setLanTai((lan) => lan + 1)
       setThongBao(phanCong
         ? `Đã phân công ${phanCong.tenThuKy} cho ${phanCong.tenNguoiDuocHoTro}.`
         : 'Đã bỏ phân công thư ký mặc định.')
@@ -71,6 +72,8 @@ export default function PhanCongThuKy({ token }) {
 
   const tuTim = tuKhoa.trim().toLocaleLowerCase('vi')
   const phanCongTheoId = new Map(duLieu?.phanCong.map((item) => [item.nguoiDuocHoTroId, item]))
+  const chuTheHopLe = new Set([...lanhDao, ...truongPhong].map((muc) => muc.nguoiDungId))
+  const phanCongCanXuLy = (duLieu?.phanCong ?? []).filter((muc) => !chuTheHopLe.has(muc.nguoiDuocHoTroId))
   const danhSach = (nhom === 'lanh-dao' ? lanhDao : truongPhong).filter((muc) =>
     [muc.hoTen, muc.tenPhongBan || phongTheoId.get(muc.phongBanId)?.tenPhongBan,
       phanCongTheoId.get(muc.nguoiDungId)?.tenThuKy]
@@ -138,6 +141,22 @@ export default function PhanCongThuKy({ token }) {
               })}
             </ul>
           )}
+        </section>
+      )}
+      {phanCongCanXuLy.length > 0 && (
+        <section className="adm-surface adm-section" aria-label="Phân công cần xử lý">
+          <div className="adm-section-heading"><h2>Phân công cần xử lý</h2></div>
+          <ul className="adm-watch-list">
+            {phanCongCanXuLy.map((muc) => (
+              <li key={muc.nguoiDuocHoTroId}>
+                <span>{muc.tenNguoiDuocHoTro} · Thư ký {muc.tenThuKy}</span>
+                <form onSubmit={(event) => luu(event, muc.nguoiDuocHoTroId)}>
+                  <button type="submit" value="huy" className="adm-btn adm-secondary adm-danger-text"
+                    disabled={dangLuuId !== null}>Bỏ phân công</button>
+                </form>
+              </li>
+            ))}
+          </ul>
         </section>
       )}
     </section>

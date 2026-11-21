@@ -1,5 +1,6 @@
 import { dinhDangNgayGio } from '../../utils/thoiGianCuocHop.js'
 import { useEffect, useState } from 'react'
+import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
 import CalendarDays from 'lucide-react/dist/esm/icons/calendar-days.mjs'
 import CheckCircle2 from 'lucide-react/dist/esm/icons/check-circle-2.mjs'
 import CircleDot from 'lucide-react/dist/esm/icons/circle-dot.mjs'
@@ -15,9 +16,9 @@ import ChiTietDeXuat from './ChiTietDeXuat.jsx'
 export { ChiTietDeXuat }
 export { default as LichCuaHoSo } from './LichCuaHoSo.jsx'
 export { default as HoSoDaTrinh } from './HoSoDaTrinh.jsx'
-import NguonDeXuat from './NguonDeXuat.jsx'
 
 export default function DanhSachDeXuatThuKy({ token, nguoiDung, onLapLich, onMoPhongHop, viecDaChon, chiXemPhanHoi = false, chiXemBanGiao = false, chiXemRaSoat = false, chiXemChuyenCap = false }) {
+  const phienDongBo = useDongBoDuLieu()
   const [danhSach, setDanhSach] = useState(null)
   const [loi, setLoi] = useState('')
   const [lanTai, setLanTai] = useState(0)
@@ -50,7 +51,7 @@ export default function DanhSachDeXuatThuKy({ token, nguoiDung, onLapLich, onMoP
 
     taiDanhSach()
     return () => controller.abort()
-  }, [token, lanTai, chiXemRaSoat])
+  }, [token, lanTai, chiXemRaSoat, phienDongBo])
 
   const khoa = chiXemRaSoat ? 'yeuCauPheDuyetId' : chiXemChuyenCap ? 'yeuCauChoGuiCapTrenId' : 'cuocHopId'
   const idsChoXuLy = viecDaChon && new Set(viecDaChon.map((muc) => muc[khoa]))

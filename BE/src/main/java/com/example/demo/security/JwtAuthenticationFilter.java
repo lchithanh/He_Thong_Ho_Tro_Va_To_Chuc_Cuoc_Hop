@@ -4,6 +4,10 @@ package com.example.demo.security;
 import java.io.IOException;
 import java.util.List;
 
+import com.example.demo.repository.NguoiDungVaiTroRepository;
+
+import io.jsonwebtoken.JwtException;
+
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -21,9 +25,11 @@ import jakarta.servlet.http.HttpServletResponse;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
+    private final NguoiDungVaiTroRepository vaiTroRepository;
 
-    public JwtAuthenticationFilter(JwtService jwtService) {
+    public JwtAuthenticationFilter(JwtService jwtService, NguoiDungVaiTroRepository vaiTroRepository) {
         this.jwtService = jwtService;
+        this.vaiTroRepository = vaiTroRepository;
     }
 
     @Override
@@ -32,80 +38,31 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             HttpServletResponse response,
             FilterChain filterChain)
             throws ServletException, IOException {
+        String authorization = request.getHeader("Authorization");
+        if (authorization != null && authorization.startsWith("Bearer ")
+                && SecurityContextHolder.getContext().getAuthentication() == null) {
+            xacThuc(request, authorization.substring(7));
+        }
+        filterChain.doFilter(request, response);
+    }
 
-        final String authHeader = request.getHeader("Authorization");
-
-        System.out.println("========== JWT FILTER ==========");
-        System.out.println("REQUEST: " + request.getRequestURI());
-        System.out.println("AUTH HEADER EXISTS: " + (authHeader != null));
-        System.out.println("AUTH HEADER BEARER: "
-                + (authHeader != null && authHeader.startsWith("Bearer ")));
-
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            filterChain.doFilter(request, response);
+    private void xacThuc(HttpServletRequest request, String token) {
+        JwtService.PhienJwt phien;
+        try {
+            phien = jwtService.docPhien(token);
+        } catch (JwtException | IllegalArgumentException ex) {
             return;
         }
 
-        String token = authHeader.substring(7);
-
-        try {
-            // Lấy username từ JWT
-            String username = jwtService.extractUsername(token);
-
-            // Kiểm tra chưa có Authentication
-            if (username != null
-                    && SecurityContextHolder.getContext()
-                            .getAuthentication() == null
-                    && jwtService.isTokenValid(token, username)) {
-
-                // Lấy vai trò từ JWT
-                String role = jwtService.extractRole(token);
-                System.out.println("========== JWT DEBUG ==========");
-                System.out.println("USERNAME: " + username);
-                System.out.println("ROLE: " + role);
-                System.out.println("AUTHORITY: ROLE_" + role);
-                System.out.println("================================");
-
-                if (role == null || role.isBlank()) {
-                    filterChain.doFilter(request, response);
-                    return;
-                }
-
-                User userDetails = new User(
-                        username,
-                        "",
-                        List.of(
-                                new SimpleGrantedAuthority("ROLE_" + role)
-                        )
-                );
-
-                UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(
-                                userDetails,
-                                null,
-                                userDetails.getAuthorities()
-                        );
-
-                authentication.setDetails(
-                        new WebAuthenticationDetailsSource()
-                                .buildDetails(request)
-                );
-
-                SecurityContextHolder.getContext()
-                        .setAuthentication(authentication);
-                System.out.println(
-                	    "CURRENT AUTHORITIES: " +
-                	    SecurityContextHolder.getContext()
-                	        .getAuthentication()
-                	        .getAuthorities()
-                	);
-            }
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            SecurityContextHolder.clearContext();
-        }
-
-        filterChain.doFilter(request, response);
+        vaiTroRepository.layMaVaiTroDangHoatDong(phien.tenDangNhap())
+                .filter(vaiTro -> vaiTro.equals(phien.maVaiTro()))
+                .ifPresent(vaiTro -> {
+                    User nguoiDung = new User(phien.tenDangNhap(), "",
+                            List.of(new SimpleGrantedAuthority("ROLE_" + vaiTro)));
+                    var xacThuc = UsernamePasswordAuthenticationToken.authenticated(
+                            nguoiDung, null, nguoiDung.getAuthorities());
+                    xacThuc.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(xacThuc);
+                });
     }
 }
