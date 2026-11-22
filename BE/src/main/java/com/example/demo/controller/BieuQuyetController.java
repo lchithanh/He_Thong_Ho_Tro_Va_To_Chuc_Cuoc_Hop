@@ -75,7 +75,7 @@ public class BieuQuyetController {
                 nguoiDungHienTaiService.layNguoiDungId(authentication);
 
         bieuQuyetService.guiPhieuBieuQuyet(
-                cuocHopId, bieuQuyetId, request.luaChonId(), nguoiDungId
+                cuocHopId, bieuQuyetId, request.luaChonId(), request.lyDoKhongDongY(), nguoiDungId
         );
 
         return ResponseEntity.noContent().build();
@@ -97,6 +97,14 @@ public class BieuQuyetController {
         return ResponseEntity.ok(ketQua);
     }
     
+    @GetMapping("/{cuocHopId}/bieu-quyet/{bieuQuyetId}/tai-lieu-nghi-quyet")
+    public ResponseEntity<byte[]> taiLieuNghiQuyet(
+            @PathVariable Integer cuocHopId, @PathVariable Integer bieuQuyetId, Authentication auth) {
+        var tep = bieuQuyetService.taiLieuNghiQuyet(cuocHopId, bieuQuyetId, nguoiDungHienTaiService.layNguoiDungId(auth));
+        return ResponseEntity.ok().cacheControl(org.springframework.http.CacheControl.noStore())
+                .contentType(org.springframework.http.MediaType.APPLICATION_PDF).body(tep.noiDung());
+    }
+
     @GetMapping("/{cuocHopId}/bieu-quyet/{bieuQuyetId}")
     public ResponseEntity<ChiTietBieuQuyetResponse> layChiTietBieuQuyet(
             @PathVariable("cuocHopId") Integer cuocHopId,

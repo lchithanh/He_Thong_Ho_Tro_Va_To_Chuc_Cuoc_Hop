@@ -2,7 +2,7 @@ import { dinhDangNgayGio } from '../../utils/thoiGianCuocHop.js'
 import { useEffect, useState } from 'react'
 import TepThuMoiFields from './TepThuMoiFields.jsx'
 import { tenNguoiNhanGiayMoi, themTepVaoThuMoi, thongTinGiayMoi } from './taoGiayMoi.js'
-import { layKhachNgoaiCuocHop, moiKhachNgoaiQuaEmail } from '../../api/khachNgoaiCuocHopApi.js'
+import { chiaSeTaiLieuKhach, chiaSeTepCoSan, taiLieuCoTheChiaSe, layKhachNgoaiCuocHop, moiKhachNgoaiQuaEmail } from '../../api/khachNgoaiCuocHopApi.js'
 
 const TRANG_THAI = {
   CHO_PHAN_HOI: 'Chờ phản hồi',
@@ -19,6 +19,7 @@ export default function KhachNgoaiCuocHop({ cuocHopId, token, laThuKy, choPhepMo
   const [loiGui, setLoiGui] = useState('')
   const [thongBao, setThongBao] = useState('')
   const [dangGui, setDangGui] = useState(false)
+  const [tepCoSan, setTepCoSan] = useState(null)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -54,11 +55,51 @@ export default function KhachNgoaiCuocHop({ cuocHopId, token, laThuKy, choPhepMo
       const loiMoi = await moiKhachNgoaiQuaEmail(cuocHopId, token, {
         ...khach, thuMoi: await themTepVaoThuMoi({}, duLieu, layThongTin(duLieu)),
       })
-      setDanhSach((hienTai) => [loiMoi, ...(hienTai ?? [])])
+      setDanhSach((hienTai) => [loiMoi, ...(hienTai ?? []).filter((muc) => muc.khachMoiCuocHopId !== loiMoi.khachMoiCuocHopId)])
       setThongBao('Đã gửi thư mời đến ' + loiMoi.email + '.')
       form.reset()
     } catch (loi) {
       setLoiGui(loi.message)
+    } finally {
+      setDangGui(false)
+    }
+  }
+
+  async function chiaSe(event) {
+    event.preventDefault()
+    const form = event.currentTarget
+    setDangGui(true)
+    setLoiGui('')
+    setThongBao('')
+    try {
+      await chiaSeTaiLieuKhach(cuocHopId, token, new FormData(form))
+      form.reset()
+      setThongBao('Đã chia sẻ tài liệu trong hồ sơ dành cho khách.')
+    } catch (error) {
+      setLoiGui(error.message)
+    } finally {
+      setDangGui(false)
+    }
+  }
+
+  async function layTepCoSan() {
+    setLoiGui('')
+    try {
+      setTepCoSan(await taiLieuCoTheChiaSe(cuocHopId, token))
+    } catch (error) {
+      setLoiGui(error.message)
+    }
+  }
+
+  async function chiaSeCoSan(taiLieuId) {
+    setDangGui(true)
+    setLoiGui('')
+    try {
+      await chiaSeTepCoSan(cuocHopId, token, taiLieuId)
+      setThongBao('Đã chia sẻ tài liệu trong hồ sơ dành cho khách.')
+      await layTepCoSan()
+    } catch (error) {
+      setLoiGui(error.message)
     } finally {
       setDangGui(false)
     }
@@ -116,13 +157,31 @@ export default function KhachNgoaiCuocHop({ cuocHopId, token, laThuKy, choPhepMo
             )}
             <TepThuMoiFields layThongTin={layThongTin} thongTinCuocHop={thongTinCuocHop} />
             <button type="submit" className="rounded-lg bg-emerald-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-60">
-              {dangGui ? 'Đang gửi…' : 'Gửi thư mời'}
+              {dangGui ? 'Đang xử lý…' : 'Gửi thư mời hoặc gửi bản cập nhật'}
             </button>
           </fieldset>
-          {loiGui && <p role="alert" className="text-sm text-red-700">{loiGui}</p>}
-          {thongBao && <p role="status" className="break-words text-sm text-emerald-800">{thongBao}</p>}
         </form>
       )}
+      {laThuKy && <form className="space-y-2 border-t pt-3" onSubmit={chiaSe}>
+        <label className="block text-sm font-semibold">Thêm tài liệu bổ sung cho tất cả khách của cuộc họp
+          <input type="file" name="tep" className={O_NHAP} accept=".pdf,.doc,.docx,.xls,.xlsx" required disabled={dangGui} />
+        </label>
+        <button type="submit" className="rounded-lg border px-3 py-2 text-sm font-semibold" disabled={dangGui}>Chia sẻ tài liệu</button>
+      </form>}
+      {laThuKy && <div className="space-y-2">
+        <button className="text-sm font-semibold underline" type="button" disabled={dangGui} onClick={layTepCoSan}>
+          Chọn tệp từ đề xuất hoặc kế hoạch
+        </button>
+        {tepCoSan?.length === 0 && <p className="text-sm">Chưa có tệp đề xuất hoặc kế hoạch.</p>}
+        {tepCoSan?.map((tep) => <div key={tep.taiLieuId} className="flex items-center justify-between gap-2 border-b py-2 text-sm">
+          <span className="break-words">{tep.tenTaiLieu}</span>
+          {tep.daChiaSe ? <span>Đã chia sẻ</span> :
+            <button type="button" disabled={dangGui} className="font-semibold underline"
+              onClick={() => chiaSeCoSan(tep.taiLieuId)}>Chia sẻ cho khách</button>}
+        </div>)}
+      </div>}
+      {loiGui && <p role="alert" className="text-sm text-red-700">{loiGui}</p>}
+      {thongBao && <p role="status" className="break-words text-sm text-emerald-800">{thongBao}</p>}
     </section>
   )
 }

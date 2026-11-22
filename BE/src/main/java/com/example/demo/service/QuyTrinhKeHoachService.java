@@ -25,6 +25,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 @Transactional
 public class QuyTrinhKeHoachService {
+    private final LienKetLoiMoiKhachService lienKetLoiMoiKhach;
     private final CuocHopRepository cuocHopRepository;
     private final KhachMoiCuocHopRepository khachMoiCuocHopRepository;
     private final LichHopRepository lichHopRepository;
@@ -362,6 +363,10 @@ public class QuyTrinhKeHoachService {
         }
         lichSuPheDuyetService.ghiNhan(cuocHopId, null, null, nguoiDuyetId,
                 "KE_HOACH", "PHE_DUYET", yKien, yc);
+        if (lich != null && lichDaDuyet != null && Objects.equals(lich.getLichHopId(), lichDaDuyet.getLichHopId())) {
+            lienKetLoiMoiKhach.baoCapNhat(ch, lich.getLichHopId(), "Cập nhật hồ sơ cuộc họp",
+                    "Kế hoạch cuộc họp đã được cập nhật và phê duyệt.");
+        }
         thongBaoService.gui(ch, nguoiDuyetId, "KE_HOACH_DA_DUYET",
                 "Kế hoạch và lịch họp đã được duyệt", ch.getTieuDe(),
                 ch.getNguoiDeXuat(), yc.getNguoiTrinh(), yc.getThuKyBanGiao(), yc.getThuKyTiepNhan());

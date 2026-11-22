@@ -87,7 +87,7 @@ export default function TaoBieuQuyet({ nguoiDung, cuocHopId: cuocHopIdDuocChon }
     goiNghiQuyet(cuocHopDangChon, token, '', { signal: controller.signal })
       .then((duLieu) => {
         if (controller.signal.aborted) return
-        setNghiQuyet(duLieu.filter((muc) => muc.trangThai === 'NHAP'))
+        setNghiQuyet(duLieu.filter((muc) => muc.trangThai === 'NHAP' && muc.ngayCongBo && muc.taiLieuId))
         setLoiNghiQuyet('')
       })
       .catch((error) => { if (!controller.signal.aborted) setLoiNghiQuyet(error.message) })
@@ -101,14 +101,22 @@ export default function TaoBieuQuyet({ nguoiDung, cuocHopId: cuocHopIdDuocChon }
     const form = event.currentTarget
     const duLieuForm = new FormData(form)
     const cuocHopId = Number(duLieuForm.get('cuocHopId'))
-    const tieuDe = nghiQuyetDaChon?.tieuDe || duLieuForm.get('tieuDe').trim()
+    const tieuDe = (nghiQuyetDaChon?.tieuDe ?? duLieuForm.get('tieuDe') ?? '').trim()
     const batDau = duLieuForm.get('thoiGianBatDau')
     const ketThuc = duLieuForm.get('thoiGianKetThuc')
     setLoiLuu('')
     setKetQua(null)
 
-    if (!tieuDe || ketThuc <= batDau) {
-      setLoiLuu('Nhập tiêu đề và chọn giờ kết thúc sau giờ bắt đầu.')
+    if (!tieuDe) {
+      setLoiLuu('Nhập tiêu đề biểu quyết.')
+      return
+    }
+    if (!batDau || !ketThuc) {
+      setLoiLuu('Chọn thời gian bắt đầu và thời gian kết thúc.')
+      return
+    }
+    if (ketThuc <= batDau) {
+      setLoiLuu('Thời gian kết thúc phải sau thời gian bắt đầu.')
       return
     }
     if (nguoiDuocBieuQuyetIds.length === 0) {

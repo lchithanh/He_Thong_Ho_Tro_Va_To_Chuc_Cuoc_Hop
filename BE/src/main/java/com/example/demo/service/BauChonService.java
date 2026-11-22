@@ -30,6 +30,7 @@ public class BauChonService {
 
     public record Nguoi(Integer nguoiDungId, String hoTen) {}
     public record UngVien(Integer nguoiDungId, String hoTen, Integer soLuotChon, String ketQua) {}
+    public record CauHinhVong(int soNguoiDuocChon, int soLuaChonMoiPhieu) {}
     public record CuocBau(Integer cuocBauId, String tieuDe) {}
     public record Vong(Integer vongBauId, Integer cuocBauId, Integer vongTruocId,
             int soVong, int soLuaChonMoiPhieu, int soNguoiDuocChon, String trangThai) {}
@@ -60,35 +61,38 @@ public class BauChonService {
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
-    public Integer tao(Integer cuocHopId, Integer nguoiDungId, String tieuDe, List<Integer> ungVienIds) {
+    public Integer tao(Integer cuocHopId, Integer nguoiDungId, String tieuDe, List<Integer> ungVienIds,
+            List<CauHinhVong> cacVong) {
         CuocHop hop = khoaHop(cuocHopId, nguoiDungId, true);
-        if (tieuDe == null || tieuDe.isBlank() || tieuDe.strip().length() > 255
-                || ungVienIds == null || ungVienIds.size() != 20 || new HashSet<>(ungVienIds).size() != 20) {
-            throw loi(HttpStatus.BAD_REQUEST, "Nhập tiêu đề và chọn đúng 20 ứng viên khác nhau");
+        if (tieuDe == null || tieuDe.isBlank() || tieuDe.strip().length() > 255) {
+            throw loi(HttpStatus.BAD_REQUEST, "Nhập tiêu đề cuộc bầu chọn");
         }
-        var ungVien = danhSachCoMat(cuocHopId).stream()
-                .filter(tv -> ungVienIds.contains(tv.nguoiDungId())).toList();
-        if (ungVien.size() != 20) {
-            throw loi(HttpStatus.BAD_REQUEST, "Cả 20 ứng viên phải là thành viên đang có mặt");
-        }
+        var ungVien = chonNguoiCoMat(cuocHopId, ungVienIds, "ứng viên");
+        kiemTraCauHinhVong(cacVong, ungVien.size());
         var khoa = new GeneratedKeyHolder();
         jdbc.sql("INSERT INTO cuoc_bau (cuoc_hop_id, tieu_de, nguoi_tao_id) VALUES (?, ?, ?)")
                 .params(cuocHopId, tieuDe.strip(), nguoiDungId).update(khoa, "cuoc_bau_id");
         int cuocBauId = Objects.requireNonNull(khoa.getKey()).intValue();
-        taoVong(cuocBauId, null, 1, 5, ungVien);
+        for (int i = 0; i < cacVong.size(); i++) {
+            var cauHinh = cacVong.get(i);
+            jdbc.sql("""
+                    INSERT INTO cau_hinh_vong_bau (cuoc_bau_id, so_vong, so_nguoi_duoc_chon, so_lua_chon_moi_phieu)
+                    VALUES (?, ?, ?, ?)
+                    """).params(cuocBauId, i + 1, cauHinh.soNguoiDuocChon(), cauHinh.soLuaChonMoiPhieu()).update();
+        }
+        taoVong(cuocBauId, null, 1, cacVong.getFirst(), ungVien);
         realtime.baoCuocHop(hop, nguoiDungId);
         return cuocBauId;
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
-    public void mo(Integer cuocHopId, Integer vongId, Integer nguoiDungId) {
+    public void mo(Integer cuocHopId, Integer vongId, Integer nguoiDungId, List<Integer> cuTriIds) {
         CuocHop hop = khoaHop(cuocHopId, nguoiDungId, true);
         Vong vong = timVong(cuocHopId, vongId);
         if (!"NHAP".equals(vong.trangThai())) {
             throw loi(HttpStatus.CONFLICT, "Chỉ mở vòng ở trạng thái nháp");
         }
-        var cuTri = danhSachCoMat(cuocHopId);
-        if (cuTri.isEmpty()) throw loi(HttpStatus.CONFLICT, "Chưa có cử tri được điểm danh");
+        var cuTri = chonNguoiCoMat(cuocHopId, cuTriIds, "người bỏ phiếu");
         for (Nguoi nguoi : cuTri) {
             jdbc.sql("INSERT INTO cu_tri_vong_bau VALUES (?, ?)")
                     .params(vongId, nguoi.nguoiDungId()).update();
@@ -159,7 +163,8 @@ public class BauChonService {
         }
         if (canBauPhu) {
             capNhatTrangThai(vongId, "CHO_PHAN_DINH");
-            taoVong(vong.cuocBauId(), vongId, vong.soVong(), soSuat - (int) soHon,
+            int soSuatConLai = soSuat - (int) soHon;
+            taoVong(vong.cuocBauId(), vongId, vong.soVong(), new CauHinhVong(soSuatConLai, soSuatConLai),
                     bangDiem.stream().map(u -> new Nguoi(u.nguoiDungId(), u.hoTen())).toList());
         } else {
             capNhatTrangThai(vongId, "DA_CHOT");
@@ -189,20 +194,43 @@ public class BauChonService {
             capNhatTrangThai(truoc.vongBauId(), "DA_CHOT");
             vong = truoc;
         }
-        if (vong.soVong() == 1) {
-            taoVong(vong.cuocBauId(), vong.vongBauId(), 2, 3, ungVien(vong.vongBauId()).stream()
+        int soVongKe = vong.soVong() + 1;
+        var cauHinh = jdbc.sql("""
+                SELECT so_nguoi_duoc_chon, so_lua_chon_moi_phieu FROM cau_hinh_vong_bau
+                WHERE cuoc_bau_id = ? AND so_vong = ?
+                """).params(vong.cuocBauId(), soVongKe).query(CauHinhVong.class).optional();
+        if (cauHinh.isPresent()) {
+            var duocChon = ungVien(vong.vongBauId()).stream()
                     .filter(u -> "DUOC_CHON".equals(u.ketQua()))
-                    .map(u -> new Nguoi(u.nguoiDungId(), u.hoTen())).toList());
+                    .map(u -> new Nguoi(u.nguoiDungId(), u.hoTen())).toList();
+            taoVong(vong.cuocBauId(), vong.vongBauId(), soVongKe, cauHinh.get(), duocChon);
         }
     }
 
-    private void taoVong(Integer cuocBauId, Integer vongTruocId, int soVong, int soSuat, List<Nguoi> ungVien) {
+    private void kiemTraCauHinhVong(List<CauHinhVong> cacVong, int soUngVien) {
+        if (cacVong == null || cacVong.isEmpty()) {
+            throw loi(HttpStatus.BAD_REQUEST, "Cấu hình ít nhất một vòng bầu");
+        }
+        int soCoTheChon = soUngVien;
+        for (int i = 0; i < cacVong.size(); i++) {
+            var vong = cacVong.get(i);
+            if (vong == null || vong.soNguoiDuocChon() < 1 || vong.soNguoiDuocChon() > soCoTheChon
+                    || (i > 0 && vong.soNguoiDuocChon() == soCoTheChon)
+                    || vong.soLuaChonMoiPhieu() < 1 || vong.soLuaChonMoiPhieu() > soCoTheChon) {
+                throw loi(HttpStatus.BAD_REQUEST, "Kiểm tra số suất và số lựa chọn ở vòng " + (i + 1));
+            }
+            soCoTheChon = vong.soNguoiDuocChon();
+        }
+    }
+
+    private void taoVong(Integer cuocBauId, Integer vongTruocId, int soVong, CauHinhVong cauHinh, List<Nguoi> ungVien) {
         var khoa = new GeneratedKeyHolder();
         jdbc.sql("""
                 INSERT INTO vong_bau (cuoc_bau_id, vong_truoc_id, so_vong, so_lua_chon_moi_phieu, so_nguoi_duoc_chon)
-                VALUES (:cuocBauId, :vongTruocId, :soVong, :soSuat, :soSuat)
+                VALUES (:cuocBauId, :vongTruocId, :soVong, :soLuaChon, :soSuat)
                 """).param("cuocBauId", cuocBauId).param("vongTruocId", vongTruocId, java.sql.Types.INTEGER)
-                .param("soVong", soVong).param("soSuat", soSuat).update(khoa, "vong_bau_id");
+                .param("soVong", soVong).param("soSuat", cauHinh.soNguoiDuocChon())
+                .param("soLuaChon", cauHinh.soLuaChonMoiPhieu()).update(khoa, "vong_bau_id");
         int vongId = Objects.requireNonNull(khoa.getKey()).intValue();
         for (Nguoi nguoi : ungVien) {
             jdbc.sql("INSERT INTO ung_vien_vong_bau (vong_bau_id, nguoi_dung_id, ho_ten) VALUES (?, ?, ?)")
@@ -255,6 +283,22 @@ public class BauChonService {
             throw loi(HttpStatus.CONFLICT, "Cần cuộc họp đang diễn ra");
         }
         return hop;
+    }
+
+    private List<Nguoi> chonNguoiCoMat(Integer cuocHopId, List<Integer> ids, String vaiTro) {
+        if (ids == null || ids.isEmpty() || ids.stream().anyMatch(Objects::isNull)) {
+            throw loi(HttpStatus.BAD_REQUEST, "Chọn ít nhất một " + vaiTro);
+        }
+        var idsDaChon = new HashSet<>(ids);
+        if (idsDaChon.size() != ids.size()) {
+            throw loi(HttpStatus.BAD_REQUEST, "Danh sách " + vaiTro + " có người bị chọn trùng");
+        }
+        var daChon = danhSachCoMat(cuocHopId).stream()
+                .filter(nguoi -> idsDaChon.contains(nguoi.nguoiDungId())).toList();
+        if (daChon.size() != idsDaChon.size()) {
+            throw loi(HttpStatus.BAD_REQUEST, "Chỉ chọn " + vaiTro + " trong số thành viên đang có mặt");
+        }
+        return daChon;
     }
 
     private List<Nguoi> danhSachCoMat(Integer cuocHopId) {

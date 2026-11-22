@@ -120,6 +120,7 @@ public class BieuQuyetService {
         } else {
             var nghiQuyet = nghiQuyetService.ganVaoBieuQuyet(cuocHopId, request.nghiQuyetId());
             bieuQuyet.setNghiQuyetId(nghiQuyet.nghiQuyetId());
+            bieuQuyet.setTaiLieuNghiQuyetId(nghiQuyet.taiLieuId());
             bieuQuyet.setTieuDe(nghiQuyet.tieuDe());
             bieuQuyet.setNoiDung(nghiQuyet.noiDung());
         }
@@ -214,6 +215,7 @@ public class BieuQuyetService {
             Integer cuocHopId,
             Integer bieuQuyetId,
             Integer luaChonId,
+            String lyDoKhongDongY,
             Integer nguoiDangNhapId) {
 
         if (nguoiDangNhapId == null) {
@@ -277,6 +279,12 @@ public class BieuQuyetService {
         PhieuBieuQuyet phieu = new PhieuBieuQuyet();
         phieu.setBieuQuyet(bieuQuyet);
         phieu.setLuaChonId(luaChon.getLuaChonId());
+        if (bieuQuyet.getNghiQuyetId() != null && "Không đồng ý".equals(luaChon.getNoiDungLuaChon())) {
+            if (lyDoKhongDongY == null || lyDoKhongDongY.isBlank() || lyDoKhongDongY.strip().length() > 500) {
+                throw loi(HttpStatus.BAD_REQUEST, "Nhập lý do không đồng ý tối đa 500 ký tự");
+            }
+            phieu.setLyDoKhongDongY(lyDoKhongDongY.strip());
+        }
 
         switch (bieuQuyet.getCheDoBieuQuyet()) {
             case "CONG_KHAI" -> {
@@ -335,7 +343,7 @@ public class BieuQuyetService {
         }
 
         chotBieuQuyet(cuocHopId, bieuQuyet);
-        return taoKetQuaBieuQuyet(bieuQuyet);
+        return taoKetQuaBieuQuyet(bieuQuyet, true);
     }
     
     @Transactional
@@ -367,7 +375,7 @@ public class BieuQuyetService {
         bieuQuyet.setSoThanhVienCoMatKhiDong(soThanhVienCoMat);
         bieuQuyet.setTrangThai("DA_DONG");
         if (bieuQuyet.getNghiQuyetId() != null) {
-            var phieu = taoKetQuaBieuQuyet(bieuQuyet).luaChon();
+            var phieu = taoKetQuaBieuQuyet(bieuQuyet, false).luaChon();
             long dongY = phieu.get(0).soPhieu();
             long khongDongY = phieu.get(1).soPhieu();
             bieuQuyet.setKetQuaNghiQuyet(nghiQuyetService.chotBieuQuyet(
@@ -460,6 +468,8 @@ public class BieuQuyetService {
                 bieuQuyet.getTrangThai(),
                 bieuQuyet.getThoiGianBatDau(),
                 bieuQuyet.getThoiGianKetThuc(),
+                bieuQuyet.getNghiQuyetId(),
+                bieuQuyet.getTaiLieuNghiQuyetId(),
                 luaChon
         );
     }
@@ -478,7 +488,7 @@ public class BieuQuyetService {
             throw loi(HttpStatus.CONFLICT, "Chỉ được xem kết quả sau khi đóng biểu quyết");
         }
 
-        return taoKetQuaBieuQuyet(bieuQuyet);
+        return taoKetQuaBieuQuyet(bieuQuyet, ThaoTacCuocHop.laNguoiChuTri(bieuQuyet.getCuocHop(), nguoiDangNhapId));
     }
     
     @Transactional(readOnly = true)
@@ -648,7 +658,13 @@ public class BieuQuyetService {
         return bieuQuyet;
     }
 
-    private KetQuaBieuQuyetResponse taoKetQuaBieuQuyet(BieuQuyet bieuQuyet) {
+    @Transactional(readOnly = true)
+    public LuuTaiLieuCuocHopService.TepTaiLieu taiLieuNghiQuyet(Integer cuocHopId, Integer bieuQuyetId, Integer nguoiDungId) {
+        var bieuQuyet = timBieuQuyetDuocPhepXem(cuocHopId, bieuQuyetId, nguoiDungId);
+        return nghiQuyetService.docTep(cuocHopId, bieuQuyet.getTaiLieuNghiQuyetId());
+    }
+
+    private KetQuaBieuQuyetResponse taoKetQuaBieuQuyet(BieuQuyet bieuQuyet, boolean xemLyDo) {
         Integer bieuQuyetId = bieuQuyet.getBieuQuyetId();
         Map<Integer, Long> soPhieuTheoLuaChon = new HashMap<>();
         for (var dong : phieuBieuQuyetRepository.demPhieuTheoLuaChon(bieuQuyetId)) {
@@ -685,7 +701,9 @@ public class BieuQuyetService {
                 luaChonThangId,
                 tongSoPhieu > 0 && luaChonDatCaoNhat.size() > 1,
                 ketQuaLuaChon,
-                bieuQuyet.getKetQuaNghiQuyet()
+                bieuQuyet.getKetQuaNghiQuyet(),
+                xemLyDo && bieuQuyet.getNghiQuyetId() != null
+                        ? phieuBieuQuyetRepository.layLyDoKhongDongY(bieuQuyetId) : List.of()
         );
     }
 }

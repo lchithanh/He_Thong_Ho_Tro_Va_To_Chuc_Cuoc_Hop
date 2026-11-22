@@ -11,6 +11,8 @@ public record ChiTietBieuQuyetResponse(
         String trangThai,
         LocalDateTime thoiGianBatDau,
         LocalDateTime thoiGianKetThuc,
+        Integer nghiQuyetId,
+        Integer taiLieuNghiQuyetId,
         List<LuaChonResponse> luaChon
 ) {
     public record LuaChonResponse(

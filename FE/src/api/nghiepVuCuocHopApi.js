@@ -26,3 +26,7 @@ export function phanHoiLoiMoiKhach(ma, thamDu) {
 export function doiLichHop(lichHopId, token, duLieu) {
   return goi(`/api/lich-hop/${lichHopId}/doi-lich`, { token, method: 'POST', duLieu })
 }
+
+export function layCuocHopCoNghiQuyet(token, signal) {
+  return goi('/api/cuoc-hop/nghi-quyet/cua-toi', { token, signal })
+}

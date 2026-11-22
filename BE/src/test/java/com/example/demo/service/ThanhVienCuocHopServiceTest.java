@@ -55,7 +55,7 @@ class ThanhVienCuocHopServiceTest {
             nguoiDungHienTai, phanQuyen, phanCong, yeuCauRepository,
             mock(CapNhatHoSoRealtime.class), thongBao, new ThongBaoEmailCuocHop(true, suKien, thanhVienRepository,
                     new ThongTinThuMoiDaDuyet(tools.jackson.databind.json.JsonMapper.builder().findAndAddModules().build()),
-                    mock(com.example.demo.repository.KhachMoiCuocHopRepository.class)));
+                    mock(LienKetLoiMoiKhachService.class)));
     private final CuocHop cuocHop = new CuocHop();
     private final ThanhVienCuocHop thanhVien = new ThanhVienCuocHop();
 

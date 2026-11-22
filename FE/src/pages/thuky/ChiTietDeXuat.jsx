@@ -252,7 +252,7 @@ export default function ChiTietDeXuat({ cuocHopId, token, nguoiDung, onQuayLai, 
     }
     if (id === 'diem-danh') return !chiXem && (laThuKy || coBanGiao) && (dangDienRa || daKetThuc)
     if (id === 'bieu-quyet' || id === 'bau-chon') return laChuTri && (dangDienRa || daKetThuc)
-    if (id === 'nghi-quyet') return laChuTri && (dangToChuc || dangDienRa || daKetThuc)
+    if (id === 'nghi-quyet') return (laChuTri || laThuKy) && (dangToChuc || dangDienRa || daKetThuc)
     if (id === 'bien-ban' || id === 'ket-luan') return daKetThuc && (laThuKy || coBanGiao || laChuTri)
     return true
   })
@@ -663,7 +663,7 @@ export default function ChiTietDeXuat({ cuocHopId, token, nguoiDung, onQuayLai, 
                 )}
 
                 {tabHienThi === 'bau-chon' && <BauChonCuocHop cuocHopId={cuocHopId} token={token} chiXem={daKetThuc} />}
-                {tabHienThi === 'nghi-quyet' && <NghiQuyetCuocHop cuocHopId={cuocHopId} token={token} laChuTri={!daKetThuc} />}
+                {tabHienThi === 'nghi-quyet' && <NghiQuyetCuocHop cuocHopId={cuocHopId} token={token} duocQuanLy={!daKetThuc && (laChuTri || laThuKy)} />}
                 {tabHienThi === 'bieu-quyet' && laChuTri && (
                   daKetThuc ? (
                     <DanhSachBieuQuyetChuTri

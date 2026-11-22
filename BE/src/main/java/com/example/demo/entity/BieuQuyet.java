@@ -73,6 +73,9 @@ public class BieuQuyet {
     @Column(name = "nghi_quyet_id")
     private Integer nghiQuyetId;
 
+    @Column(name = "tai_lieu_nghi_quyet_id")
+    private Integer taiLieuNghiQuyetId;
+
     @Column(name = "ket_qua_nghi_quyet")
     private String ketQuaNghiQuyet;
 

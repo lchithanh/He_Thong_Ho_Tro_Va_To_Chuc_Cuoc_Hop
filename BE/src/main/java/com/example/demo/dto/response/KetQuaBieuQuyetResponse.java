@@ -10,7 +10,8 @@ public record KetQuaBieuQuyetResponse(
         Integer luaChonThangId,
         boolean hoaPhieu,
         List<KetQuaLuaChon> luaChon,
-        String ketQuaNghiQuyet
+        String ketQuaNghiQuyet,
+        List<String> lyDoKhongDongY
 ) {
     public record KetQuaLuaChon(
             Integer luaChonId,

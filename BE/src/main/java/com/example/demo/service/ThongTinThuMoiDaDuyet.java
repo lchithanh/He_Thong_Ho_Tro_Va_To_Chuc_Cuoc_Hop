@@ -20,11 +20,15 @@ public class ThongTinThuMoiDaDuyet {
         this.objectMapper = objectMapper;
     }
 
-    DuLieu doc(YeuCauPheDuyet yeuCau) {
+    ChiTietKeHoachPheDuyetResponse docBanChup(YeuCauPheDuyet yeuCau) {
         String daTrinh = yeuCau.getKeHoachDaTrinh();
-        var banChup = daTrinh == null || daTrinh.isBlank()
+        return daTrinh == null || daTrinh.isBlank()
                 ? PheDuyetKeHoachService.taoBanChup(yeuCau)
                 : objectMapper.readValue(daTrinh, ChiTietKeHoachPheDuyetResponse.class);
+    }
+
+    DuLieu doc(YeuCauPheDuyet yeuCau) {
+        var banChup = docBanChup(yeuCau);
         var lich = ThaoTacCuocHop.lichHienHanh(yeuCau.getCuocHop());
         var phong = lich.getPhongHop();
         String diaDiem = phong == null ? "Họp trực tuyến" : phong.getTenPhongHop()

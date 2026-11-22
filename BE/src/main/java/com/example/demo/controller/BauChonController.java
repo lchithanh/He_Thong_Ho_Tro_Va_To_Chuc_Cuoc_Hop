@@ -25,7 +25,8 @@ public class BauChonController {
     private final BauChonService bauChon;
     private final NguoiDungHienTaiService nguoiDung;
 
-    public record Tao(String tieuDe, List<Integer> ungVienIds) {}
+    public record Tao(String tieuDe, List<Integer> ungVienIds, List<BauChonService.CauHinhVong> cacVong) {}
+    public record Mo(List<Integer> cuTriIds) {}
     public record Gui(List<Integer> ungVienIds) {}
 
     @GetMapping
@@ -37,13 +38,14 @@ public class BauChonController {
     @ResponseStatus(HttpStatus.CREATED)
     public Map<String, Integer> tao(@PathVariable Integer cuocHopId, @RequestBody Tao request, Authentication auth) {
         return Map.of("cuocBauId", bauChon.tao(cuocHopId, nguoiDung.layNguoiDungId(auth),
-                request.tieuDe(), request.ungVienIds()));
+                request.tieuDe(), request.ungVienIds(), request.cacVong()));
     }
 
     @PostMapping("/vong/{vongId}/mo")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void mo(@PathVariable Integer cuocHopId, @PathVariable Integer vongId, Authentication auth) {
-        bauChon.mo(cuocHopId, vongId, nguoiDung.layNguoiDungId(auth));
+    public void mo(@PathVariable Integer cuocHopId, @PathVariable Integer vongId,
+            @RequestBody Mo request, Authentication auth) {
+        bauChon.mo(cuocHopId, vongId, nguoiDung.layNguoiDungId(auth), request.cuTriIds());
     }
 
     @PostMapping("/vong/{vongId}/phieu")

@@ -3,6 +3,10 @@ package com.example.demo.controller;
 import java.util.List;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -44,6 +48,23 @@ public class KhachNgoaiCuocHopController {
         var loiMoi = khachNgoaiService.moiQuaEmail(
                 cuocHopId, nguoiDungHienTaiService.layNguoiDungId(auth), request);
         return ResponseEntity.status(HttpStatus.CREATED).body(loiMoi);
+    }
+
+    @GetMapping("/tai-lieu")
+    public List<KhachNgoaiCuocHopService.TepCoTheChiaSe> taiLieu(@PathVariable Integer cuocHopId, Authentication auth) {
+        return khachNgoaiService.taiLieuCoTheChiaSe(cuocHopId, nguoiDungHienTaiService.layNguoiDungId(auth));
+    }
+
+    @PostMapping("/tai-lieu/{taiLieuId}/chia-se")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void chiaSeTepCoSan(@PathVariable Integer cuocHopId, @PathVariable Integer taiLieuId, Authentication auth) {
+        khachNgoaiService.chiaSeTepCoSan(cuocHopId, nguoiDungHienTaiService.layNguoiDungId(auth), taiLieuId);
+    }
+
+    @PostMapping(value = "/tai-lieu", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void chiaSe(@PathVariable Integer cuocHopId, @RequestParam MultipartFile tep, Authentication auth) {
+        khachNgoaiService.chiaSeTaiLieu(cuocHopId, nguoiDungHienTaiService.layNguoiDungId(auth), tep);
     }
 
     @ExceptionHandler(ResponseStatusException.class)

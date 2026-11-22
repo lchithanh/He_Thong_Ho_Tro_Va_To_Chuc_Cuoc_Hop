@@ -159,6 +159,14 @@ const [ketQuaDangXem, setKetQuaDangXem] = useState(null)
                   </p>
                 )}
 
+               {ketQuaDangXem.duLieu.lyDoKhongDongY?.length > 0 && (
+                 <div>
+                   <p className="font-semibold">Lý do không đồng ý</p>
+                   <ul className="list-disc pl-5 break-words">
+                     {ketQuaDangXem.duLieu.lyDoKhongDongY.map((lyDo, i) => <li key={i}>{lyDo}</li>)}
+                   </ul>
+                 </div>
+               )}
                <ul className="space-y-1">
                 {ketQuaDangXem.duLieu.luaChon?.map((luaChon) => (
                     <li key={luaChon.luaChonId}>

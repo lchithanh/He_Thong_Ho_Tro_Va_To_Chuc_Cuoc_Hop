@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import TepHoSo from '../../components/TepHoSo.jsx'
 import { goiNghiQuyet } from '../../api/nghiepVuCuocHopApi.js'
 import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
 
@@ -30,7 +31,7 @@ function CayNghiQuyet({ danhSach, chaId = null, children }) {
   )
 }
 
-export default function NghiQuyetCuocHop({ cuocHopId, token, laChuTri = false }) {
+export default function NghiQuyetCuocHop({ cuocHopId, token, duocQuanLy = false }) {
   const phien = useDongBoDuLieu()
   const [danhSach, setDanhSach] = useState(null)
   const [lanTai, setLanTai] = useState(0)
@@ -49,7 +50,7 @@ export default function NghiQuyetCuocHop({ cuocHopId, token, laChuTri = false })
     setDangGui(true)
     setLoi('')
     try {
-      await goiNghiQuyet(cuocHopId, token, duongDan, { method, duLieu })
+      await goiNghiQuyet(cuocHopId, token, duongDan, duLieu instanceof FormData ? { method, body: duLieu } : { method, duLieu })
       setLanTai((lan) => lan + 1)
       setMucSua(null)
     } catch (error) {
@@ -66,11 +67,8 @@ export default function NghiQuyetCuocHop({ cuocHopId, token, laChuTri = false })
       gui(`/${mucSua.nghiQuyetId}/yeu-cau-sua`, { lyDo: duLieu.get('lyDo') })
       return
     }
-    gui(mucSua.nghiQuyetId ? `/${mucSua.nghiQuyetId}` : '', {
-      nghiQuyetChaId: mucSua.nghiQuyetChaId ?? null,
-      tieuDe: duLieu.get('tieuDe'),
-      noiDung: duLieu.get('noiDung'),
-    }, mucSua.nghiQuyetId ? 'PUT' : 'POST')
+    if (mucSua.nghiQuyetChaId != null) duLieu.set('nghiQuyetChaId', String(mucSua.nghiQuyetChaId))
+    gui(mucSua.nghiQuyetId ? `/${mucSua.nghiQuyetId}` : '', duLieu, mucSua.nghiQuyetId ? 'PUT' : 'POST')
   }
 
   return (
@@ -79,7 +77,7 @@ export default function NghiQuyetCuocHop({ cuocHopId, token, laChuTri = false })
       {loi && <p role="alert" className="text-red-800">{loi}</p>}
       {!danhSach && !loi && <p role="status">Đang tải nghị quyết…</p>}
       {danhSach?.length === 0 && <p>Chưa có nghị quyết.</p>}
-      {laChuTri && <button type="button" className={NUT} onClick={() => setMucSua({})}>Thêm nghị quyết cấp gốc</button>}
+      {duocQuanLy && <button type="button" className={NUT} onClick={() => setMucSua({})}>Thêm nghị quyết cấp gốc</button>}
       {mucSua && (
         <form key={JSON.stringify(mucSua)} className="space-y-2 rounded-lg border border-slate-200 p-3" onSubmit={luu}>
           {mucSua.yeuCauSua ? (
@@ -87,7 +85,7 @@ export default function NghiQuyetCuocHop({ cuocHopId, token, laChuTri = false })
           ) : (
             <>
               <label className="block">Tiêu đề<input className={TRUONG} name="tieuDe" required maxLength={255} defaultValue={mucSua.tieuDe} /></label>
-              <label className="block">Nội dung<textarea className={TRUONG} name="noiDung" required maxLength={10000} defaultValue={mucSua.noiDung} /></label>
+              <label className="block">Tệp nghị quyết (PDF)<input className={TRUONG} name="tep" type="file" required accept=".pdf,application/pdf" /></label>
             </>
           )}
           <div className="flex gap-2">
@@ -96,17 +94,25 @@ export default function NghiQuyetCuocHop({ cuocHopId, token, laChuTri = false })
           </div>
         </form>
       )}
-      {danhSach && <CayNghiQuyet danhSach={danhSach}>{(muc) => laChuTri && (
-        <div className="flex flex-wrap gap-2">
+      {danhSach && <CayNghiQuyet danhSach={danhSach}>{(muc) => (
+        <>
+        {muc.taiLieuId && <TepHoSo key={muc.taiLieuId} token={token} ten={muc.tieuDe + '.pdf'}
+          duongDan={`/api/cuoc-hop/${cuocHopId}/nghi-quyet/${muc.nghiQuyetId}/tep`} />}
+        {muc.ngayCongBo && <p>Đã công bố</p>}
+        {duocQuanLy && <div className="flex flex-wrap gap-2">
+          {muc.trangThai === 'NHAP' && muc.taiLieuId && !muc.ngayCongBo
+            && <button className={NUT} type="button" disabled={dangGui}
+              onClick={() => gui(`/${muc.nghiQuyetId}/cong-bo`)}>Công bố cho thành viên</button>}
           {muc.cap < 4 && <button type="button" className={NUT}
             onClick={() => setMucSua({ nghiQuyetChaId: muc.nghiQuyetId })}>Thêm nghị quyết cấp dưới</button>}
           {['NHAP', 'YEU_CAU_CHINH_SUA'].includes(muc.trangThai) && <button className={NUT} type="button"
             onClick={() => setMucSua(muc)}>Sửa nội dung</button>}
           {['KHONG_THONG_QUA', 'CHUA_DAT_DA_SO'].includes(muc.trangThai) && <button className={NUT} type="button"
             onClick={() => setMucSua({ ...muc, yeuCauSua: true })}>Yêu cầu chỉnh sửa</button>}
-        </div>
+        </div>}
+        </>
       )}</CayNghiQuyet>}
-      {laChuTri && <p>Chọn nghị quyết nháp từ mục Biểu quyết để lập phiên bỏ phiếu.</p>}
+      {duocQuanLy && <p>Sau khi công bố, chủ trì chọn nghị quyết trong mục Biểu quyết để mở phiên bỏ phiếu.</p>}
     </section>
   )
 }
