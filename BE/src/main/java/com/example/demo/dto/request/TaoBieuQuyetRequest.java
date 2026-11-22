@@ -11,6 +11,7 @@ public record TaoBieuQuyetRequest(
         BigDecimal tyLeThamGiaToiThieu,
         LocalDateTime thoiGianBatDau,
         LocalDateTime thoiGianKetThuc,
-        List<Integer> nguoiDuocBieuQuyetIds
+        List<Integer> nguoiDuocBieuQuyetIds,
+        Integer nghiQuyetId
 ) {
 }

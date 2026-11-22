@@ -17,6 +17,17 @@ import java.util.List;
 @Setter
 @NoArgsConstructor
 public class LichHop {
+    @Column(name = "la_lich_doi", nullable = false)
+    private boolean laLichDoi;
+
+    public boolean isLaLichDoi() {
+        return laLichDoi;
+    }
+
+    public void setLaLichDoi(boolean laLichDoi) {
+        this.laLichDoi = laLichDoi;
+    }
+
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

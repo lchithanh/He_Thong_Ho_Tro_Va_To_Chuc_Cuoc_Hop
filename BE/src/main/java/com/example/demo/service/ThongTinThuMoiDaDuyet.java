@@ -25,7 +25,7 @@ public class ThongTinThuMoiDaDuyet {
         var banChup = daTrinh == null || daTrinh.isBlank()
                 ? PheDuyetKeHoachService.taoBanChup(yeuCau)
                 : objectMapper.readValue(daTrinh, ChiTietKeHoachPheDuyetResponse.class);
-        var lich = yeuCau.getLichHop();
+        var lich = ThaoTacCuocHop.lichHienHanh(yeuCau.getCuocHop());
         var phong = lich.getPhongHop();
         String diaDiem = phong == null ? "Họp trực tuyến" : phong.getTenPhongHop()
                 + (phong.getViTri() == null || phong.getViTri().isBlank() ? "" : " – " + phong.getViTri());

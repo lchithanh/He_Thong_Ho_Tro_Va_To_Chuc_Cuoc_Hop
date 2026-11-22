@@ -102,6 +102,12 @@ public class LichHopController {
                 lichHopId, request, layNguoiDungId(authentication)));
     }
 
+    @PostMapping("/{lichHopId}/doi-lich")
+    public LichHopResponse doiLich(@PathVariable("lichHopId") Integer lichHopId,
+            @RequestBody CapNhatLichHopRequest request, Authentication auth) {
+        return lichHopService.doiLich(lichHopId, nguoiDungHienTaiService.layNguoiDungId(auth), request);
+    }
+
     @PutMapping("/{lichHopId}/xac-nhan")
     public ResponseEntity<LichHopResponse> xacNhanLichHop(
             @PathVariable("lichHopId") Integer lichHopId, Authentication authentication) {

@@ -196,8 +196,18 @@ final class ThaoTacCuocHop {
                 && !daBatDau(cuocHop) && !daKetThuc(cuocHop);
     }
 
+    static LichHop lichHienHanh(CuocHop cuocHop) {
+        return cuocHop.getDanhSachLichHop().stream().filter(ThaoTacLichHop::daXacNhan)
+                .max(java.util.Comparator.comparing(LichHop::getLichHopId)).orElse(null);
+    }
+
+    static boolean choXacNhanDoiLich(CuocHop cuocHop) {
+        return cuocHop.getDanhSachLichHop().stream()
+                .anyMatch(lich -> lich.isLaLichDoi() && ThaoTacLichHop.dangDeXuat(lich));
+    }
+
     static boolean coLichDaXacNhan(CuocHop cuocHop) {
-        return cuocHop.getDanhSachLichHop().stream().anyMatch(ThaoTacLichHop::daXacNhan);
+        return !choXacNhanDoiLich(cuocHop) && lichHienHanh(cuocHop) != null;
     }
     static boolean coLichMoiThamDu(CuocHop cuocHop, YeuCauPheDuyet yeuCau) {
         if (!coTheLapLich(cuocHop) || yeuCau == null
@@ -205,7 +215,7 @@ final class ThaoTacCuocHop {
             return false;
         }
 
-        LichHop lichHop = yeuCau.getLichHop();
+        LichHop lichHop = choXacNhanDoiLich(cuocHop) ? null : lichHienHanh(cuocHop);
         return lichHop != null
                 && lichHop.getCuocHop() != null
                 && Objects.equals(cuocHop.getCuocHopId(), lichHop.getCuocHop().getCuocHopId())

@@ -29,6 +29,8 @@ import HoSoDaTrinh from './HoSoDaTrinh.jsx'
 import ThaoTacKeHoach from './ThaoTacKeHoach.jsx'
 import ChuyenKeHoachCapTren from './ChuyenKeHoachCapTren.jsx'
 import TienDoCuocHop from './TienDoCuocHop.jsx'
+import BauChonCuocHop from '../thamdu/BauChonCuocHop.jsx'
+import NghiQuyetCuocHop from '../thamdu/NghiQuyetCuocHop.jsx'
 import LichSuKeHoach from './LichSuKeHoach.jsx'
 import TiepNhanDeXuatAction from './thaoTacKeHoach/TiepNhanDeXuatAction.jsx'
 const TABS = [
@@ -38,6 +40,8 @@ const TABS = [
   { id: 'lich-su', ten: 'Lịch sử và phản hồi' },
   { id: 'diem-danh', ten: 'Điểm danh' },
   { id: 'bieu-quyet', ten: 'Biểu quyết' },
+  { id: 'bau-chon', ten: 'Bầu chọn' },
+  { id: 'nghi-quyet', ten: 'Nghị quyết' },
   { id: 'bien-ban', ten: 'Biên bản' },
   { id: 'ket-luan', ten: 'Kết luận' },
 ]
@@ -247,7 +251,8 @@ export default function ChiTietDeXuat({ cuocHopId, token, nguoiDung, onQuayLai, 
       return !chiXem || Number(nguoiDung?.nguoiDungId) === Number(chiTiet?.nguoiDeXuatId)
     }
     if (id === 'diem-danh') return !chiXem && (laThuKy || coBanGiao) && (dangDienRa || daKetThuc)
-    if (id === 'bieu-quyet') return laChuTri && (dangDienRa || daKetThuc)
+    if (id === 'bieu-quyet' || id === 'bau-chon') return laChuTri && (dangDienRa || daKetThuc)
+    if (id === 'nghi-quyet') return laChuTri && (dangToChuc || dangDienRa || daKetThuc)
     if (id === 'bien-ban' || id === 'ket-luan') return daKetThuc && (laThuKy || coBanGiao || laChuTri)
     return true
   })
@@ -657,6 +662,8 @@ export default function ChiTietDeXuat({ cuocHopId, token, nguoiDung, onQuayLai, 
                   <DiemDanhThuKy cuocHopId={cuocHopId} token={token} readOnly={daKetThuc || !laThuKy} />
                 )}
 
+                {tabHienThi === 'bau-chon' && <BauChonCuocHop cuocHopId={cuocHopId} token={token} chiXem={daKetThuc} />}
+                {tabHienThi === 'nghi-quyet' && <NghiQuyetCuocHop cuocHopId={cuocHopId} token={token} laChuTri={!daKetThuc} />}
                 {tabHienThi === 'bieu-quyet' && laChuTri && (
                   daKetThuc ? (
                     <DanhSachBieuQuyetChuTri

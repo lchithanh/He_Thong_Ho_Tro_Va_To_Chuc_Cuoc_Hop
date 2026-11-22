@@ -17,6 +17,7 @@ import javax.crypto.spec.SecretKeySpec;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -49,6 +50,7 @@ import lombok.RequiredArgsConstructor;
 public class BieuQuyetService {
 
     private final CapNhatHoSoRealtime capNhatRealtime;
+    private final NghiQuyetService nghiQuyetService;
     private final CuocHopRepository cuocHopRepository;
     private final BieuQuyetRepository bieuQuyetRepository;
     private final LuaChonBieuQuyetRepository luaChonBieuQuyetRepository;
@@ -60,7 +62,7 @@ public class BieuQuyetService {
     @Value("${app.bieu-quyet.khoa-phieu:}")
     private String khoaPhieuBase64;
 
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public Integer taoBieuQuyet(
             Integer cuocHopId,
             TaoBieuQuyetRequest request,
@@ -112,10 +114,15 @@ public class BieuQuyetService {
         BieuQuyet bieuQuyet = new BieuQuyet();
         bieuQuyet.setCuocHop(cuocHop);
         bieuQuyet.setNguoiTao(nguoiTao);
-        bieuQuyet.setTieuDe(request.tieuDe().strip());
-        bieuQuyet.setNoiDung(
-                request.noiDung() == null ? null : request.noiDung().strip()
-        );
+        if (request.nghiQuyetId() == null) {
+            bieuQuyet.setTieuDe(request.tieuDe().strip());
+            bieuQuyet.setNoiDung(request.noiDung() == null ? null : request.noiDung().strip());
+        } else {
+            var nghiQuyet = nghiQuyetService.ganVaoBieuQuyet(cuocHopId, request.nghiQuyetId());
+            bieuQuyet.setNghiQuyetId(nghiQuyet.nghiQuyetId());
+            bieuQuyet.setTieuDe(nghiQuyet.tieuDe());
+            bieuQuyet.setNoiDung(nghiQuyet.noiDung());
+        }
         bieuQuyet.setCheDoBieuQuyet(request.cheDoBieuQuyet());
         bieuQuyet.setChoPhepTrangThai(true);
         bieuQuyet.setTyLeThamGiaToiThieu(null);
@@ -359,6 +366,13 @@ public class BieuQuyetService {
 
         bieuQuyet.setSoThanhVienCoMatKhiDong(soThanhVienCoMat);
         bieuQuyet.setTrangThai("DA_DONG");
+        if (bieuQuyet.getNghiQuyetId() != null) {
+            var phieu = taoKetQuaBieuQuyet(bieuQuyet).luaChon();
+            long dongY = phieu.get(0).soPhieu();
+            long khongDongY = phieu.get(1).soPhieu();
+            bieuQuyet.setKetQuaNghiQuyet(nghiQuyetService.chotBieuQuyet(
+                    bieuQuyet.getNghiQuyetId(), dongY, khongDongY, soThanhVienCoMat));
+        }
         Set<Integer> nguoiNhan = new HashSet<>();
         for (var thanhVien : thanhVienCuocHopRepository
                 .findByCuocHop_CuocHopIdOrderById_NguoiDungIdAsc(cuocHopId)) {
@@ -670,7 +684,8 @@ public class BieuQuyetService {
                 tongSoPhieu,
                 luaChonThangId,
                 tongSoPhieu > 0 && luaChonDatCaoNhat.size() > 1,
-                ketQuaLuaChon
+                ketQuaLuaChon,
+                bieuQuyet.getKetQuaNghiQuyet()
         );
     }
 }

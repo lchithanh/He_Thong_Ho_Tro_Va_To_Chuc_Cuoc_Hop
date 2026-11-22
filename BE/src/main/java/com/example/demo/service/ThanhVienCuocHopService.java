@@ -209,8 +209,7 @@ public class ThanhVienCuocHopService {
 	
     private LoiMoiChoPhanHoiResponse chuyenLoiMoi(ThanhVienCuocHop thanhVien) {
         CuocHop cuocHop = thanhVien.getCuocHop();
-        YeuCauPheDuyet yeuCau = layKeHoachMoiNhat(cuocHop.getCuocHopId());
-        var lich = yeuCau == null ? null : yeuCau.getLichHop();
+        var lich = ThaoTacCuocHop.lichHienHanh(cuocHop);
         if (lich == null || !ThaoTacLichHop.daXacNhan(lich)) {
             throw loi(HttpStatus.CONFLICT,
                     "Lịch gắn với kế hoạch mới nhất chưa được xác nhận");

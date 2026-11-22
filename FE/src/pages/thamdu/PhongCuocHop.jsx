@@ -7,6 +7,8 @@ import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
 import { dinhDangNgayGio } from '../../utils/thoiGianCuocHop.js'
 import TaoBieuQuyet from '../pheduyet/TaoBieuQuyet.jsx'
 import DiemDanhThuKy from '../thuky/DiemDanhThuKy.jsx'
+import BauChonCuocHop from './BauChonCuocHop.jsx'
+import NghiQuyetCuocHop from './NghiQuyetCuocHop.jsx'
 import BieuQuyetThamDu from './BieuQuyetThamDu.jsx'
 
 const LOP_NUT = 'rounded-lg bg-emerald-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-900 disabled:opacity-60'
@@ -81,7 +83,7 @@ export default function PhongCuocHop({ cuocHopId, nguoiDung, onQuayLai, onDaKetT
   const cacMuc = [
     ['noi-dung', 'Nội dung'],
     ...(laNguoiDieuHanh ? [['diem-danh', 'Danh sách và điểm danh']] : []),
-    ...(laChuTri || coMat ? [['bieu-quyet', 'Biểu quyết']] : []),
+    ...(laChuTri || coMat ? [['bieu-quyet', 'Biểu quyết'], ['bau-chon', 'Bầu chọn'], ['nghi-quyet', 'Nghị quyết']] : []),
   ]
   const mucHienTai = cacMuc.some(([id]) => id === muc) ? muc : laThuKy && dangHop ? 'diem-danh' : 'noi-dung'
 
@@ -171,6 +173,8 @@ export default function PhongCuocHop({ cuocHopId, nguoiDung, onQuayLai, onDaKetT
                   </div>
                 )}
                 {mucHienTai === 'diem-danh' && <DiemDanhThuKy cuocHopId={cuocHopId} token={token} readOnly={!laThuKy || !dangHop} />}
+                {mucHienTai === 'bau-chon' && <BauChonCuocHop cuocHopId={cuocHopId} token={token} />}
+                {mucHienTai === 'nghi-quyet' && <NghiQuyetCuocHop cuocHopId={cuocHopId} token={token} laChuTri={laChuTri} />}
                 {mucHienTai === 'bieu-quyet' && (laChuTri
                   ? <TaoBieuQuyet nguoiDung={nguoiDung} cuocHopId={cuocHopId} />
                   : <BieuQuyetThamDu token={token} cuocHopId={cuocHopId} />)}

@@ -537,7 +537,8 @@ public class DeXuatCuocHopService {
                 || yeuCau.getLichHop() == null) {
             return null;
         }
-        return yeuCau.getLichHop().getLichHopId();
+        var lichHienHanh = ThaoTacCuocHop.lichHienHanh(yeuCau.getCuocHop());
+        return lichHienHanh == null ? yeuCau.getLichHop().getLichHopId() : lichHienHanh.getLichHopId();
     }
 
     private PhanHoiKeHoach layPhanHoiKeHoach(CuocHop ch) {

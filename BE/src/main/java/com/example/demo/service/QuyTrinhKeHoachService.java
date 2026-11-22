@@ -75,6 +75,9 @@ public class QuyTrinhKeHoachService {
         List<TaiLieuCuocHop> taiLieuDaChon = taiLieuKeHoachService
                 .kiemTraTruocKhiTrinh(ch, nguoiTrinhId, taiLieuIds);
         LichHop lich = lichHopId == null ? null : lichHopRepository.findById(lichHopId).orElse(null);
+        if (lich != null && lich.isLaLichDoi() && ThaoTacLichHop.dangDeXuat(lich)) {
+            throw loi(HttpStatus.CONFLICT, "Xử lý lịch đang dời trong mục Lịch họp");
+        }
         var lanDaDuyet = phanCongXuLyKeHoachService.layLanDuyetCoLichDaXacNhan(cuocHopId);
         xacNhanLichHopService.kiemTraLichCuaLanTrinh(ch, lich, lichDaDuyet(lanDaDuyet), HttpStatus.BAD_REQUEST);
         boolean giuLichDaDuyet = lanDaDuyet != null
@@ -230,8 +233,11 @@ public class QuyTrinhKeHoachService {
         nguoiDungHienTaiService.layTaiKhoanHoatDong(nguoiDungId);
         CuocHop cuocHop = timVaKhoaCuocHop(cuocHopId);
         YeuCauPheDuyet lanDaDuyet = phanCongXuLyKeHoachService.layLanDuyetCoLichDaXacNhan(cuocHopId);
-        if (lanDaDuyet == null || lanDaDuyet.getLichHop() == null
-                || !ThaoTacLichHop.daHuy(lanDaDuyet.getLichHop())
+        boolean lichDaHuy = cuocHop.getDanhSachLichHop().stream()
+                .filter(lich -> lich.getThoiGianXacNhan() != null && !ThaoTacLichHop.daTuChoi(lich))
+                .max(java.util.Comparator.comparing(com.example.demo.entity.LichHop::getLichHopId))
+                .map(ThaoTacLichHop::daHuy).orElse(false);
+        if (lanDaDuyet == null || !lichDaHuy
                 || (!ThaoTacCuocHop.coTheLapLich(cuocHop) && !ThaoTacCuocHop.dangLapKeHoach(cuocHop))) {
             throw loi(HttpStatus.CONFLICT, "Chỉ trình lại khi lịch đã xác nhận bị hủy và cuộc họp chưa bắt đầu");
         }

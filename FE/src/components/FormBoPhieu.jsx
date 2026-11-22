@@ -34,6 +34,7 @@ export default function FormBoPhieu({ cuocHopId, chiTiet, luaChon, token }) {
     <form onSubmit={xuLyGuiPhieu}>
       <fieldset disabled={dangGui}>
         <legend>{chiTiet.tieuDe}</legend>
+        {chiTiet.noiDung && <p className="my-2 whitespace-pre-wrap break-words">{chiTiet.noiDung}</p>}
         {luaChon.map((phuongAn) => (
           <div key={phuongAn.luaChonId}>
             <label>

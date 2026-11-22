@@ -3,6 +3,13 @@ package com.example.demo.service;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Base64;
+import java.util.HexFormat;
+import java.util.Set;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+import java.time.LocalDateTime;
 import java.util.Locale;
 
 import org.springframework.beans.factory.ObjectProvider;
@@ -31,11 +38,19 @@ import com.example.demo.repository.NguoiDungRepository;
 import com.example.demo.repository.YeuCauPheDuyetRepository;
 
 import jakarta.mail.MessagingException;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
 public class KhachNgoaiCuocHopService {
+    private static final SecureRandom NGUON_MA = new SecureRandom();
+
+    public record LoiMoiKhach(String hoTen, String tieuDe, String noiDung, String chuTri, String loaiHinh,
+            String diaDiem, String duongDanHop, LocalDateTime batDau, LocalDateTime ketThuc,
+            String trangThaiLich, String trangThaiMoi, boolean duocPhanHoi) {}
+
 
     private final CuocHopRepository cuocHopRepository;
     private final YeuCauPheDuyetRepository yeuCauPheDuyetRepository;
@@ -47,6 +62,9 @@ public class KhachNgoaiCuocHopService {
     private final ObjectProvider<JavaMailSender> mailSenderProvider;
     private final Environment environment;
     private final ThongTinThuMoiDaDuyet thongTinThuMoi;
+    private final CapNhatHoSoRealtime capNhatRealtime;
+    @PersistenceContext
+    private EntityManager entityManager;
 
     @Transactional(readOnly = true)
     public List<KhachNgoaiCuocHopResponse> layDanhSach(Integer cuocHopId, Integer nguoiDungId) {
@@ -88,13 +106,21 @@ public class KhachNgoaiCuocHopService {
         if (nguoiDungRepository.existsByEmail(email)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Email này thuộc tài khoản nội bộ. Hãy mời qua mục Thành viên");
         }
-        if (khachMoiCuocHopRepository.existsByCuocHop_CuocHopIdAndKhachMoi_EmailIgnoreCase(cuocHopId, email)) {
+        KhachMoiCuocHop loiMoi = khachMoiCuocHopRepository
+                .findFirstByCuocHop_CuocHopIdAndKhachMoi_EmailIgnoreCaseOrderByKhachMoiCuocHopIdAsc(cuocHopId, email)
+                .orElseGet(KhachMoiCuocHop::new);
+        if (loiMoi.getHanTruyCap() != null || "DA_HUY".equals(loiMoi.getTrangThaiMoi())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Email này đã có lời mời cho cuộc họp");
         }
 
-        String diaDiemHop = layDiaDiemHop(cuocHop, keHoach.getLichHop(), request.duongDanHop());
-        KhachMoi khachMoi = khachMoiRepository.findFirstByEmailIgnoreCaseOrderByKhachMoiIdAsc(email)
-                .orElseGet(KhachMoi::new);
+        LichHop lich = ThaoTacCuocHop.lichHienHanh(cuocHop);
+        String diaDiemHop = layDiaDiemHop(cuocHop, lich, request.duongDanHop());
+        byte[] duLieuMa = new byte[32];
+        NGUON_MA.nextBytes(duLieuMa);
+        String ma = Base64.getUrlEncoder().withoutPadding().encodeToString(duLieuMa);
+        String lienKetLoiMoi = layUrlTrangLoiMoi(ma);
+        KhachMoi khachMoi = loiMoi.getKhachMoi() != null ? loiMoi.getKhachMoi()
+                : khachMoiRepository.findFirstByEmailIgnoreCaseOrderByKhachMoiIdAsc(email).orElseGet(KhachMoi::new);
         if (!"HOAT_DONG".equals(khachMoi.getTrangThai())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Hồ sơ khách mời này đã ngừng hoạt động");
         }
@@ -106,20 +132,111 @@ public class KhachNgoaiCuocHopService {
             khachMoiRepository.save(khachMoi);
         }
 
-        KhachMoiCuocHop loiMoi = new KhachMoiCuocHop();
         loiMoi.setKhachMoi(khachMoi);
         loiMoi.setCuocHop(cuocHop);
+        loiMoi.capMaTruyCap(bamMa(ma), ThaoTacCuocHop.laCuocHopTrucTuyen(cuocHop)
+                ? request.duongDanHop().strip() : null, lich.getThoiGianKetThuc().plusDays(7));
         // Ghi và kiểm tra ràng buộc trước khi gửi. Lỗi SMTP làm giao dịch quay lui.
         khachMoiCuocHopRepository.saveAndFlush(loiMoi);
-        guiThuMoi(khachMoi, thongTinThuMoi.doc(keHoach), diaDiemHop, request);
+        guiThuMoi(khachMoi, thongTinThuMoi.doc(keHoach), diaDiemHop, request, lienKetLoiMoi);
         return chuyenResponse(loiMoi);
+    }
+
+    @Transactional(readOnly = true)
+    public LoiMoiKhach xemLoiMoi(String ma) {
+        return taoLoiMoiKhach(timLoiMoi(ma));
+    }
+
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public LoiMoiKhach phanHoi(String ma, boolean thamDu) {
+        KhachMoiCuocHop loiMoi = timLoiMoi(ma);
+        cuocHopRepository.findByIdForUpdate(loiMoi.getCuocHop().getCuocHopId())
+                .orElseThrow(KhachNgoaiCuocHopService::khongTimThayLoiMoi);
+        // Đọc lại trạng thái sau khi khóa để hai phản hồi đồng thời không ghi đè nhau.
+        entityManager.refresh(loiMoi);
+        if (!taoLoiMoiKhach(loiMoi).duocPhanHoi()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Lời mời hiện không nhận phản hồi");
+        }
+        loiMoi.setTrangThaiMoi(thamDu ? "DONG_Y" : "TU_CHOI");
+        capNhatRealtime.baoCuocHop(loiMoi.getCuocHop(), null);
+        return taoLoiMoiKhach(loiMoi);
+    }
+
+    private KhachMoiCuocHop timLoiMoi(String ma) {
+        if (ma == null || !ma.matches("[A-Za-z0-9_-]{43}")) throw khongTimThayLoiMoi();
+        var loiMoi = khachMoiCuocHopRepository.findByMaTruyCapSha256(bamMa(ma))
+                .filter(muc -> !"DA_HUY".equals(muc.getTrangThaiMoi())
+                        && "HOAT_DONG".equals(muc.getKhachMoi().getTrangThai()))
+                .orElseThrow(KhachNgoaiCuocHopService::khongTimThayLoiMoi);
+        var lich = ThaoTacCuocHop.lichHienHanh(loiMoi.getCuocHop());
+        LocalDateTime han = loiMoi.getHanTruyCap();
+        if (han == null) throw khongTimThayLoiMoi();
+        if (lich != null && lich.getThoiGianKetThuc().plusDays(7).isAfter(han)) {
+            han = lich.getThoiGianKetThuc().plusDays(7);
+        }
+        if (!han.isAfter(LocalDateTime.now())) throw khongTimThayLoiMoi();
+        return loiMoi;
+    }
+
+    private LoiMoiKhach taoLoiMoiKhach(KhachMoiCuocHop loiMoi) {
+        CuocHop hop = loiMoi.getCuocHop();
+        LichHop lich = ThaoTacCuocHop.lichHienHanh(hop);
+        boolean choDoi = ThaoTacCuocHop.choXacNhanDoiLich(hop);
+        boolean lichHieuLuc = lich != null && !choDoi && !"DA_HUY".equals(hop.getTrangThai());
+        var hoSo = yeuCauPheDuyetRepository
+                .findFirstByCuocHop_CuocHopIdAndLoaiYeuCauOrderByYeuCauPheDuyetIdDesc(hop.getCuocHopId(),
+                        LoaiYeuCau.KE_HOACH_CUOC_HOP)
+                .filter(yc -> yc.getTrangThai() == com.example.demo.entity.YeuCauPheDuyet.TrangThai.DA_DUYET)
+                .orElse(null);
+        var duLieu = lich != null && hoSo != null ? thongTinThuMoi.doc(hoSo) : null;
+        boolean duocPhanHoi = lichHieuLuc && duLieu != null && duLieu.thoiGianBatDau().isAfter(LocalDateTime.now())
+                && "CHO_PHAN_HOI".equals(loiMoi.getTrangThaiMoi());
+        return new LoiMoiKhach(loiMoi.getKhachMoi().getHoTen(),
+                duLieu == null ? hop.getTieuDe() : duLieu.tieuDe(),
+                !lichHieuLuc || duLieu == null ? null : duLieu.noiDung(),
+                duLieu == null ? null : duLieu.chuTri(), hop.getLoaiHinh(),
+                duLieu == null ? null : duLieu.diaDiem(),
+                lichHieuLuc && duLieu != null && "DONG_Y".equals(loiMoi.getTrangThaiMoi()) ? loiMoi.getDuongDanHop() : null,
+                duLieu == null ? null : duLieu.thoiGianBatDau(), duLieu == null ? null : duLieu.thoiGianKetThuc(),
+                choDoi ? "CHO_DOI_LICH" : duLieu == null ? "DA_HUY" : "DA_XAC_NHAN",
+                loiMoi.getTrangThaiMoi(), duocPhanHoi);
+    }
+
+    private static ResponseStatusException khongTimThayLoiMoi() {
+        return new ResponseStatusException(HttpStatus.NOT_FOUND, "Lời mời không còn hiệu lực hoặc không hợp lệ");
+    }
+
+    private static String bamMa(String ma) {
+        try {
+            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
+                    .digest(ma.getBytes(StandardCharsets.US_ASCII)));
+        } catch (NoSuchAlgorithmException ex) {
+            throw new IllegalStateException(ex);
+        }
+    }
+
+    private String layUrlTrangLoiMoi(String ma) {
+        String cauHinh = environment.getProperty("app.url-cong-khai", "http://localhost:5173");
+        try {
+            URI uri = URI.create(cauHinh.strip());
+            boolean trangLocal = Set.of("localhost", "127.0.0.1").contains(
+                    uri.getHost() == null ? "" : uri.getHost());
+            if (uri.getHost() != null && uri.getUserInfo() == null && uri.getQuery() == null
+                    && uri.getFragment() == null && ("https".equalsIgnoreCase(uri.getScheme())
+                            || trangLocal && "http".equalsIgnoreCase(uri.getScheme()))) {
+                return uri.toASCIIString().replaceFirst("/+$", "") + "/loi-moi-khach#" + ma;
+            }
+        } catch (IllegalArgumentException ignored) {
+            // Dùng cùng thông báo cho các cấu hình URL không hợp lệ.
+        }
+        throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Chưa cấu hình URL trang khách hợp lệ");
     }
 
     private String layDiaDiemHop(CuocHop cuocHop, LichHop lichHop, String duongDan) {
         if (ThaoTacCuocHop.laCuocHopTrucTuyen(cuocHop)) {
             try {
                 URI uri = URI.create(duongDan == null ? "" : duongDan.strip());
-                if ("https".equalsIgnoreCase(uri.getScheme()) && uri.getHost() != null && uri.getUserInfo() == null) {
+                if (uri.toASCIIString().length() <= 2048 && "https".equalsIgnoreCase(uri.getScheme()) && uri.getHost() != null && uri.getUserInfo() == null) {
                     return "Link họp trực tuyến: " + uri;
                 }
             } catch (IllegalArgumentException ignored) {
@@ -137,7 +254,7 @@ public class KhachNgoaiCuocHopService {
     }
 
     private void guiThuMoi(KhachMoi khachMoi, ThongTinThuMoiDaDuyet.DuLieu thongTin,
-            String diaDiemHop, MoiKhachNgoaiRequest request) {
+            String diaDiemHop, MoiKhachNgoaiRequest request, String lienKetLoiMoi) {
         NoiDungThuMoi thuMoi = request.thuMoi();
         TepThuMoi tep = TepThuMoi.doc(thuMoi.tepDinhKem(), thongTin.lichHopId());
         JavaMailSender mailSender = mailSenderProvider.getIfAvailable();
@@ -155,7 +272,8 @@ public class KhachNgoaiCuocHopService {
             String nguoiNhan = java.util.stream.Stream.of(request.hoTen(), request.chucVu(),
                     request.donViCongTac(), request.truSo()).map(KhachNgoaiCuocHopService::chuanHoa)
                     .filter(java.util.Objects::nonNull).collect(java.util.stream.Collectors.joining(", "));
-            helper.setText(thongTin.noiDungEmail(thuMoi, nguoiNhan, diaDiemHop));
+            helper.setText(thongTin.noiDungEmail(thuMoi, nguoiNhan, diaDiemHop)
+                    + "\nXem cuộc họp và phản hồi lời mời tại:\n" + lienKetLoiMoi);
             if (tep != null) tep.dinhKem(helper);
             mailSender.send(message);
         } catch (MailException | MessagingException ex) {

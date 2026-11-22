@@ -20,6 +20,7 @@ public record LichHopResponse(
         String lyDoThayDoi,
         LocalDateTime thoiGianXacNhan,
         Integer lichThayTheId,
-        LocalDateTime ngayTao
+        LocalDateTime ngayTao,
+        boolean laLichDoi
 ) {
 }

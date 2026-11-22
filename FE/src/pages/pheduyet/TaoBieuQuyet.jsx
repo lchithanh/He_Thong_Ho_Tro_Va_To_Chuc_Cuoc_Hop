@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
+import { goiNghiQuyet } from '../../api/nghiepVuCuocHopApi.js'
 import { taoBieuQuyet } from '../../api/bieuQuyetApi.js'
 import { layDanhSachDeXuat } from '../../api/cuocHopApi.js'
 import { layThanhVienCuocHop } from '../../api/thanhVienCuocHopApi.js'
@@ -15,6 +16,10 @@ export default function TaoBieuQuyet({ nguoiDung, cuocHopId: cuocHopIdDuocChon }
   const [loiLuu, setLoiLuu] = useState('')
   const [dangLuu, setDangLuu] = useState(false)
   const [ketQua, setKetQua] = useState(null)
+  const [nghiQuyet, setNghiQuyet] = useState([])
+  const [nghiQuyetId, setNghiQuyetId] = useState('')
+  const [loiNghiQuyet, setLoiNghiQuyet] = useState('')
+  const nghiQuyetDaChon = nghiQuyet.find((muc) => String(muc.nghiQuyetId) === nghiQuyetId)
   const [thanhVien, setThanhVien] = useState(null)
   const [loiThanhVien, setLoiThanhVien] = useState('')
   const [nguoiDuocBieuQuyetIds, setNguoiDuocBieuQuyetIds] = useState([])
@@ -76,6 +81,19 @@ export default function TaoBieuQuyet({ nguoiDung, cuocHopId: cuocHopIdDuocChon }
     return () => controller.abort()
   }, [cuocHopDangChon, token])
 
+  useEffect(() => {
+    if (!cuocHopDangChon) return undefined
+    const controller = new AbortController()
+    goiNghiQuyet(cuocHopDangChon, token, '', { signal: controller.signal })
+      .then((duLieu) => {
+        if (controller.signal.aborted) return
+        setNghiQuyet(duLieu.filter((muc) => muc.trangThai === 'NHAP'))
+        setLoiNghiQuyet('')
+      })
+      .catch((error) => { if (!controller.signal.aborted) setLoiNghiQuyet(error.message) })
+    return () => controller.abort()
+  }, [cuocHopDangChon, token, phienDongBo, lanTao])
+
   async function xuLyTao(event) {
     event.preventDefault()
     if (dangLuu) return
@@ -83,7 +101,7 @@ export default function TaoBieuQuyet({ nguoiDung, cuocHopId: cuocHopIdDuocChon }
     const form = event.currentTarget
     const duLieuForm = new FormData(form)
     const cuocHopId = Number(duLieuForm.get('cuocHopId'))
-    const tieuDe = duLieuForm.get('tieuDe').trim()
+    const tieuDe = nghiQuyetDaChon?.tieuDe || duLieuForm.get('tieuDe').trim()
     const batDau = duLieuForm.get('thoiGianBatDau')
     const ketThuc = duLieuForm.get('thoiGianKetThuc')
     setLoiLuu('')
@@ -103,15 +121,17 @@ export default function TaoBieuQuyet({ nguoiDung, cuocHopId: cuocHopIdDuocChon }
     try {
       const phanHoi = await taoBieuQuyet(cuocHopId, {
         tieuDe,
-        noiDung: duLieuForm.get('noiDung').trim() || null,
+        noiDung: duLieuForm.get('noiDung')?.trim() || null,
         cheDoBieuQuyet: duLieuForm.get('cheDoBieuQuyet'),
         thoiGianBatDau: batDau,
         thoiGianKetThuc: ketThuc,
         nguoiDuocBieuQuyetIds,
+        nghiQuyetId: nghiQuyetDaChon?.nghiQuyetId,
       }, token)
 
       setKetQua({ cuocHopId, bieuQuyetId: phanHoi.bieuQuyetId })
       setNguoiDuocBieuQuyetIds([])
+      setNghiQuyetId('')
       setLanTao((hienTai) => hienTai + 1)
       form.reset()
     } catch (loi) {
@@ -148,7 +168,11 @@ export default function TaoBieuQuyet({ nguoiDung, cuocHopId: cuocHopIdDuocChon }
                 <select
                   name="cuocHopId"
                   value={cuocHopDangChon}
-                  onChange={(event) => setCuocHopDangChon(event.target.value)}
+                  onChange={(event) => {
+                    setNghiQuyetId('')
+                    setNghiQuyet([])
+                    setCuocHopDangChon(event.target.value)
+                  }}
                   required
                   className={LOP_TRUONG}
                 >
@@ -162,15 +186,33 @@ export default function TaoBieuQuyet({ nguoiDung, cuocHopId: cuocHopIdDuocChon }
               </label>
             )}
 
-            <label className="block font-medium">
-              Tiêu đề biểu quyết
-              <input name="tieuDe" maxLength={255} required className={LOP_TRUONG} />
-            </label>
-
-            <label className="block font-medium">
-              Nội dung cần biểu quyết
-              <textarea name="noiDung" rows={3} className={LOP_TRUONG} />
-            </label>
+            {loiNghiQuyet && <p role="alert" className="text-red-800">{loiNghiQuyet}</p>}
+            {nghiQuyet.length > 0 && (
+              <label className="block font-medium">Nghị quyết đưa ra biểu quyết
+                <select value={nghiQuyetId} onChange={(event) => setNghiQuyetId(event.target.value)} className={LOP_TRUONG}>
+                  <option value="">Biểu quyết nội dung khác</option>
+                  {nghiQuyet.map((muc) => <option key={muc.nghiQuyetId} value={muc.nghiQuyetId}>
+                    {muc.tieuDe} (cấp {muc.cap})
+                  </option>)}
+                </select>
+              </label>
+            )}
+            {nghiQuyetDaChon ? (
+              <div className="space-y-2 rounded-lg bg-slate-50 p-3">
+                <p className="font-semibold">{nghiQuyetDaChon.tieuDe}</p>
+                <p className="whitespace-pre-wrap break-words">{nghiQuyetDaChon.noiDung}</p>
+                <p>Nghị quyết thông qua khi trên một nửa số người có quyền bỏ phiếu chọn Đồng ý.</p>
+              </div>
+            ) : (
+              <>
+                <label className="block font-medium">Tiêu đề biểu quyết
+                  <input name="tieuDe" maxLength={255} required className={LOP_TRUONG} />
+                </label>
+                <label className="block font-medium">Nội dung cần biểu quyết
+                  <textarea name="noiDung" rows={3} className={LOP_TRUONG} />
+                </label>
+              </>
+            )}
 
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="block font-medium">

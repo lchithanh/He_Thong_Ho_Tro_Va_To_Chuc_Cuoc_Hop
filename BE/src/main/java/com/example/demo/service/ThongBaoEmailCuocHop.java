@@ -16,6 +16,7 @@ import com.example.demo.entity.NguoiDung;
 import com.example.demo.entity.ThanhVienCuocHop;
 import com.example.demo.entity.YeuCauPheDuyet;
 import com.example.demo.repository.ThanhVienCuocHopRepository;
+import com.example.demo.repository.KhachMoiCuocHopRepository;
 
 @Service
 class ThongBaoEmailCuocHop {
@@ -27,14 +28,16 @@ class ThongBaoEmailCuocHop {
     private final ThanhVienCuocHopRepository thanhVienRepository;
 
     private final ThongTinThuMoiDaDuyet thongTinThuMoi;
+    private final KhachMoiCuocHopRepository khachMoiRepository;
 
     ThongBaoEmailCuocHop(@Value("${app.email.enabled:false}") boolean batGuiEmail,
             ApplicationEventPublisher suKien, ThanhVienCuocHopRepository thanhVienRepository,
-            ThongTinThuMoiDaDuyet thongTinThuMoi) {
+            ThongTinThuMoiDaDuyet thongTinThuMoi, KhachMoiCuocHopRepository khachMoiRepository) {
         this.batGuiEmail = batGuiEmail;
         this.suKien = suKien;
         this.thanhVienRepository = thanhVienRepository;
         this.thongTinThuMoi = thongTinThuMoi;
+        this.khachMoiRepository = khachMoiRepository;
     }
 
     boolean moiHop(YeuCauPheDuyet keHoach, List<NguoiDung> nguoiDuocMoi, NoiDungThuMoi thuMoi) {
@@ -43,6 +46,12 @@ class ThongBaoEmailCuocHop {
         return gui(thongTin.lichHopId(), nguoiDuocMoi, thongTin.chuDe(thuMoi),
                 thongTin.noiDungEmail(thuMoi, "anh/chị", thongTin.diaDiem())
                         + "\nMở mục Lời mời họp trong hệ thống để phản hồi.", tep);
+    }
+
+    void deXuatDoiLich(LichHop lich) {
+        if (!batGuiEmail) return;
+        bao(lich, nguoiDuocMoi(lich), "Cuộc họp đang chờ dời lịch",
+                "Khung giờ mới đang chờ xác nhận. Lý do: " + lich.getLyDoThayDoi());
     }
 
     void xacNhanLich(LichHop lich, boolean coLichCu) {
@@ -92,6 +101,14 @@ class ThongBaoEmailCuocHop {
                 """.formatted(moDau, cuocHop.getTieuDe(), gio(lich.getThoiGianBatDau()),
                         gio(lich.getThoiGianKetThuc()), lich.getPhongHop() == null
                                 ? "Trực tuyến" : lich.getPhongHop().getTenPhongHop(), huongDan);
+        var diaChiKhach = khachMoiRepository
+                .findByCuocHop_CuocHopIdOrderByNgayMoiDescKhachMoiCuocHopIdDesc(cuocHop.getCuocHopId()).stream()
+                .filter(muc -> Set.of("CHO_PHAN_HOI", "DONG_Y").contains(muc.getTrangThaiMoi()))
+                .map(muc -> muc.getKhachMoi().getEmail()).filter(java.util.Objects::nonNull).distinct().toList();
+        if (!diaChiKhach.isEmpty()) {
+            suKien.publishEvent(new EmailCanGui(lich.getLichHopId(), diaChiKhach, chuDe,
+                    noiDung + "\nMở đường dẫn trong thư mời ban đầu để cập nhật thông tin.", tep));
+        }
         return gui(lich.getLichHopId(), nguoiNhan, chuDe, noiDung, tep);
     }
 
