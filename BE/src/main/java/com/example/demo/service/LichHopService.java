@@ -2,8 +2,10 @@ package com.example.demo.service;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import com.example.demo.dto.response.LichHopResponse;
+import com.example.demo.dto.request.CapNhatLichHopRequest;
 import com.example.demo.entity.CuocHop;
 import com.example.demo.entity.LichHop;
 import com.example.demo.entity.NguoiDung;
@@ -25,6 +27,8 @@ import org.springframework.web.server.ResponseStatusException;
 @Transactional
 public class LichHopService {
     private final CapNhatHoSoRealtime capNhatRealtime;
+    private final ThongBaoService thongBao;
+    private final PhanCongXuLyKeHoachService phanCong;
     private final ThongBaoEmailCuocHop thongBaoEmail;
     private final HuyCuocHopService huyCuocHopService;
     private final LichHopRepository lichHopRepository;
@@ -127,7 +131,8 @@ public class LichHopService {
                         cuocHopId, LoaiYeuCau.KE_HOACH_CUOC_HOP).orElse(null);
         boolean duocXacNhan = ThaoTacCuocHop.coTheLapLich(ch) && ThaoTacLichHop.coTheXacNhan(lich)
                 && lich.getThoiGianBatDau() != null && lich.getThoiGianBatDau().isAfter(LocalDateTime.now())
-                && yc != null && yc.getLichHop() != null && lichHopId.equals(yc.getLichHop().getLichHopId())
+                && (lich.isLaLichDoi()
+                        || (yc != null && yc.getLichHop() != null && lichHopId.equals(yc.getLichHop().getLichHopId())))
                 && quyTrinhKeHoachService.coQuyenXacNhanLich(ch, nguoiDungId);
         boolean nguoiDeXuat = ThaoTacCuocHop.laNguoiDeXuat(ch, nguoiDungId);
         boolean xemTep = yc != null && (nguoiDeXuat || phanQuyenCuocHopService.coVaiTro(nguoiDungId, "ADMIN")
@@ -148,7 +153,53 @@ public class LichHopService {
                 duocHuyLich(lich, nguoiDungId), huyCuocHopService.duocHuy(ch, nguoiDungId));
     }
 
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public LichHopResponse doiLich(Integer lichCuId, Integer nguoiDungId, CapNhatLichHopRequest request) {
+        LichHop lichCu = timLichHopVaKhoa(lichCuId);
+        CuocHop hop = lichCu.getCuocHop();
+        kiemTraTaiKhoanHoatDong(nguoiDungId);
+        if (!phanCong.laThuKyToChuc(hop, nguoiDungId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Chỉ thư ký tổ chức được dời lịch");
+        }
+        if (!ThaoTacCuocHop.coTheLapLich(hop) || !ThaoTacLichHop.daXacNhan(lichCu)
+                || ThaoTacCuocHop.choXacNhanDoiLich(hop)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Cần lịch đã xác nhận và chưa có yêu cầu dời lịch đang chờ xử lý");
+        }
+        if (request == null || request.lyDoThayDoi() == null || request.lyDoThayDoi().isBlank()
+                || request.lyDoThayDoi().strip().length() > 500) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Nhập lý do dời lịch tối đa 500 ký tự");
+        }
+        kiemTraThoiGian(request.thoiGianBatDau(), request.thoiGianKetThuc());
+        if (request.thoiGianBatDau().equals(lichCu.getThoiGianBatDau())
+                && request.thoiGianKetThuc().equals(lichCu.getThoiGianKetThuc())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Khung giờ mới phải khác lịch hiện tại");
+        }
+        var keHoach = yeuCauPheDuyetRepository
+                .findFirstByCuocHop_CuocHopIdAndLoaiYeuCauOrderByYeuCauPheDuyetIdDesc(
+                        hop.getCuocHopId(), LoaiYeuCau.KE_HOACH_CUOC_HOP)
+                .filter(yc -> yc.getTrangThai() == TrangThai.DA_DUYET)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT, "Cần kế hoạch đã duyệt"));
+        var lichMoi = ThaoTacLichHop.taoDeXuat(hop, lichCu.getPhongHop(), timNguoiDung(nguoiDungId),
+                request.thoiGianBatDau(), request.thoiGianKetThuc(), request.lyDoThayDoi().strip());
+        lichMoi.setLaLichDoi(true);
+        ThaoTacLichHop.ganVoiLichBiThayThe(lichMoi, lichCu);
+        lichHopRepository.saveAndFlush(lichMoi);
+        xacNhanLichHopService.kiemTraLichTruocKhiTrinh(hop, lichMoi, HttpStatus.CONFLICT);
+        lichSuPheDuyetService.ghiNhan(hop.getCuocHopId(), lichMoi.getLichHopId(), null,
+                nguoiDungId, "LICH_HOP", "DOI_LICH", lichMoi.getLyDoThayDoi());
+        var nguoiNhan = new java.util.ArrayList<>(nguoiDaDuocMoi(hop));
+        nguoiNhan.add(keHoach.getNguoiDuyet());
+        thongBao.gui(hop, nguoiDungId, "DOI_LICH", "Chờ xác nhận dời lịch",
+                "Giờ đề xuất: " + lichMoi.getThoiGianBatDau() + ". " + lichMoi.getLyDoThayDoi(),
+                nguoiNhan.toArray(NguoiDung[]::new));
+        thongBaoEmail.deXuatDoiLich(lichMoi);
+        capNhatRealtime.baoCuocHop(hop, nguoiDungId);
+        return chuyenDoiResponse(lichMoi);
+    }
+
     /** Xác nhận riêng cho hồ sơ đã được duyệt trước khi áp dụng duyệt kèm lịch. */
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public LichHopResponse xacNhanLichHop(Integer lichHopId, Integer nguoiXacNhanId) {
         kiemTraTaiKhoanHoatDong(nguoiXacNhanId);
         LichHop lich = timLichHopVaKhoa(lichHopId);
@@ -163,10 +214,17 @@ public class LichHopService {
                 .findFirstByCuocHop_CuocHopIdAndLoaiYeuCauOrderByYeuCauPheDuyetIdDesc(
                         cuocHop.getCuocHopId(), LoaiYeuCau.KE_HOACH_CUOC_HOP)
                 .orElseThrow();
-        if (yeuCau.getLichHop() == null || !lichHopId.equals(yeuCau.getLichHop().getLichHopId())) {
+        if (!lich.isLaLichDoi()
+                && (yeuCau.getLichHop() == null || !lichHopId.equals(yeuCau.getLichHop().getLichHopId()))) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Hãy trình lịch đề xuất cùng kế hoạch để duyệt.");
         }
         xacNhanLichHopService.xacNhan(cuocHop, lich, timNguoiDung(nguoiXacNhanId), null);
+        if (lich.isLaLichDoi()) {
+            var nguoiNhan = new java.util.ArrayList<>(nguoiDaDuocMoi(cuocHop));
+            nguoiNhan.add(lich.getNguoiDeXuat());
+            thongBao.gui(cuocHop, nguoiXacNhanId, "DOI_LICH", "Đã xác nhận giờ họp mới",
+                    "Giờ họp mới: " + lich.getThoiGianBatDau(), nguoiNhan.toArray(NguoiDung[]::new));
+        }
         capNhatRealtime.baoCuocHop(cuocHop, nguoiXacNhanId);
         return chuyenDoiResponse(lich);
     }
@@ -183,11 +241,13 @@ public class LichHopService {
         return tuChoiLichHop(lichHopId, nguoiXacNhanId, lyDoTuChoi);
     }
 
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public LichHopResponse tuChoiLichHop(
             Integer lichHopId, Integer nguoiXacNhanId, String lyDoTuChoi) {
         return xuLyLichKhongDuyet(lichHopId, nguoiXacNhanId, lyDoTuChoi, "TU_CHOI");
     }
 
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public LichHopResponse traLaiLichHop(Integer lichHopId, Integer nguoiXacNhanId, String lyDo) {
         return xuLyLichKhongDuyet(lichHopId, nguoiXacNhanId, lyDo, "YEU_CAU_CHINH_SUA");
     }
@@ -204,6 +264,24 @@ public class LichHopService {
                 HttpStatus.CONFLICT, "Chỉ được xử lý lịch đang đề xuất");
         if (lyDoTuChoi == null || lyDoTuChoi.isBlank()) throw new ResponseStatusException(
                 HttpStatus.BAD_REQUEST, "Vui lòng nhập lý do xử lý lịch");
+        if (lich.isLaLichDoi()) {
+            if (!"TU_CHOI".equals(hanhDong)) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "Hãy xác nhận lịch mới hoặc từ chối để hủy lịch");
+            }
+            LichHop lichCu = lich.getLichThayThe();
+            if (lichCu == null || !ThaoTacLichHop.daXacNhan(lichCu)) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "Lịch cũ không còn hiệu lực");
+            }
+            ThaoTacLichHop.huyLich(lichCu, lyDoTuChoi.strip());
+            lichSuPheDuyetService.ghiNhan(lich.getCuocHop().getCuocHopId(), lichCu.getLichHopId(), null,
+                    nguoiXacNhanId, "LICH_HOP", "HUY", lyDoTuChoi.strip());
+            thongBaoEmail.huyLich(lichCu, lyDoTuChoi.strip());
+            var nguoiNhan = new java.util.ArrayList<>(nguoiDaDuocMoi(lich.getCuocHop()));
+            nguoiNhan.add(lich.getNguoiDeXuat());
+            thongBao.gui(lich.getCuocHop(), nguoiXacNhanId, "DOI_LICH", "Lịch họp đã hủy",
+                    lyDoTuChoi.strip(), nguoiNhan.toArray(NguoiDung[]::new));
+            capNhatRealtime.baoCuocHop(lich.getCuocHop(), nguoiXacNhanId);
+        }
         NguoiDung nguoiTuChoi = timNguoiDung(nguoiXacNhanId);
         ThaoTacCuocHop.thucHien(() -> ThaoTacLichHop.tuChoi(lich, nguoiTuChoi, lyDoTuChoi.trim()));
         LichHop daLuu = lichHopRepository.save(lich);
@@ -260,6 +338,9 @@ public LichHopResponse huyLichHop(
      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Vui lòng nhập lý do hủy lịch");
  }
  // 3. Kiểm tra trạng thái lịch
+ if (ThaoTacCuocHop.choXacNhanDoiLich(cuocHop)) {
+     throw new ResponseStatusException(HttpStatus.CONFLICT, "Xử lý yêu cầu dời lịch đang chờ xác nhận");
+ }
  String trangThai = lichHop.getTrangThai();
  if ("DE_XUAT".equals(trangThai)) {
      // Người đề xuất được hủy lịch chưa xác nhận
@@ -519,13 +600,14 @@ LichHop saved = lichHopRepository.save(lichHop);
                 lichHop.getThoiGianXacNhan(),
                 lichThayThe != null
                         ? lichThayThe.getLichHopId() : null,
-                lichHop.getNgayTao()
+                lichHop.getNgayTao(),
+                lichHop.isLaLichDoi()
         );
     }
     private boolean duocHuyLich(LichHop lich, Integer nguoiDungId) {
         CuocHop cuocHop = lich.getCuocHop();
-        if (ThaoTacCuocHop.daBatDau(cuocHop) || ThaoTacCuocHop.daKetThuc(cuocHop)
-                || !ThaoTacCuocHop.coTheTiepTucXuLy(cuocHop) || !ThaoTacLichHop.coTheHuy(lich)
+        if (ThaoTacCuocHop.choXacNhanDoiLich(cuocHop) || ThaoTacCuocHop.daBatDau(cuocHop)
+                || ThaoTacCuocHop.daKetThuc(cuocHop) || !ThaoTacCuocHop.coTheTiepTucXuLy(cuocHop) || !ThaoTacLichHop.coTheHuy(lich)
                 || yeuCauPheDuyetRepository.existsByLichHop_LichHopIdAndLoaiYeuCauAndTrangThai(
                         lich.getLichHopId(), LoaiYeuCau.KE_HOACH_CUOC_HOP, TrangThai.CHO_DUYET)) {
             return false;
@@ -567,6 +649,13 @@ LichHop saved = lichHopRepository.save(lichHop);
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Mã " + doiTuong + " không hợp lệ");
         }
+    }
+
+    private List<NguoiDung> nguoiDaDuocMoi(CuocHop hop) {
+        return thanhVienCuocHopRepository.findByCuocHop_CuocHopIdOrderById_NguoiDungIdAsc(hop.getCuocHopId())
+                .stream().filter(tv -> "CHO_PHAN_HOI".equals(tv.getTrangThaiMoi())
+                        || "DA_XAC_NHAN".equals(tv.getTrangThaiMoi()))
+                .map(tv -> tv.getNguoiDung()).toList();
     }
 
     private void kiemTraTaiKhoanHoatDong(Integer nguoiDungId) {

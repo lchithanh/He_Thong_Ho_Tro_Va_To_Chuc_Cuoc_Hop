@@ -51,13 +51,13 @@ export async function layChiTietBieuQuyet(cuocHopId, bieuQuyetId, token, signal)
   return response.json()
 }
 
-export async function guiPhieuBieuQuyet(cuocHopId, bieuQuyetId, luaChonId, token) {
+export async function guiPhieuBieuQuyet(cuocHopId, bieuQuyetId, luaChonId, token, lyDoKhongDongY) {
   const response = await goiApi(
     `/api/cuoc-hop/${cuocHopId}/bieu-quyet/${bieuQuyetId}/phieu`,
     {
       method: 'POST',
       token,
-      duLieu: { luaChonId },
+      duLieu: { luaChonId, lyDoKhongDongY },
     },
   )
 

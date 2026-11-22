@@ -96,7 +96,9 @@ public class SecurityConfig {
 
             .authorizeHttpRequests(auth -> auth
                     // JWT được kiểm tra ở gói STOMP CONNECT sau khi nâng cấp WebSocket.
-                    .requestMatchers(HttpMethod.GET, "/ws").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/ws", "/api/loi-moi-khach", "/api/loi-moi-khach/giay-moi",
+                            "/api/loi-moi-khach/tai-lieu/*").permitAll()
+                    .requestMatchers(HttpMethod.POST, "/api/loi-moi-khach/phan-hoi").permitAll()
             	    .requestMatchers("/api/auth/**").permitAll()
             	    .requestMatchers("/error").permitAll()
             	    .requestMatchers("/api/admin/**").hasRole("ADMIN")

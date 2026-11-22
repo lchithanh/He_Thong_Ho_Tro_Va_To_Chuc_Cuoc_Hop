@@ -1,3 +1,5 @@
+import NghiQuyetCuocHop from './NghiQuyetCuocHop.jsx'
+import { layCuocHopCoNghiQuyet } from '../../api/nghiepVuCuocHopApi.js'
 import { dinhDangNgayGio } from '../../utils/thoiGianCuocHop.js'
 import { useEffect, useState } from 'react'
 import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
@@ -8,6 +10,9 @@ import {
 
 export default function PhanHoiLoiMoi({ token }) {
   const phienDongBo = useDongBoDuLieu()
+  const [cuocHopCoNghiQuyet, setCuocHopCoNghiQuyet] = useState([])
+  const [loiNghiQuyet, setLoiNghiQuyet] = useState('')
+  const [cuocHopDangXem, setCuocHopDangXem] = useState(null)
   const [loiMoi, setLoiMoi] = useState(null)
   const [loiTai, setLoiTai] = useState('')
   const [loiPhanHoi, setLoiPhanHoi] = useState('')
@@ -16,6 +21,15 @@ export default function PhanHoiLoiMoi({ token }) {
 
   useEffect(() => {
     const controller = new AbortController()
+
+    layCuocHopCoNghiQuyet(token, controller.signal).then((ds) => {
+      if (!controller.signal.aborted) {
+        setCuocHopCoNghiQuyet(ds)
+        setLoiNghiQuyet('')
+      }
+    }).catch((error) => {
+      if (!controller.signal.aborted) setLoiNghiQuyet(error.message)
+    })
 
     layLoiMoiCuaToi(token, controller.signal)
       .then((duLieu) => {
@@ -69,6 +83,18 @@ export default function PhanHoiLoiMoi({ token }) {
         <p className="text-sm text-slate-600">Bạn chưa có lời mời chờ phản hồi.</p>
       )}
 
+      {loiNghiQuyet && <p role="alert" className="text-sm text-red-800">{loiNghiQuyet}</p>}
+      {cuocHopCoNghiQuyet.length > 0 && <section className="space-y-2 rounded-lg border p-3">
+        <h3 className="font-semibold">Nghị quyết đã công bố</h3>
+        {cuocHopCoNghiQuyet.map((hop) => (
+          <div key={hop.cuocHopId} className="space-y-2">
+            <button type="button" className="text-sm font-semibold text-emerald-800 underline"
+              aria-expanded={cuocHopDangXem === hop.cuocHopId}
+              onClick={() => setCuocHopDangXem((id) => id === hop.cuocHopId ? null : hop.cuocHopId)}>{hop.tieuDe}</button>
+            {cuocHopDangXem === hop.cuocHopId && <NghiQuyetCuocHop cuocHopId={hop.cuocHopId} token={token} />}
+          </div>
+        ))}
+      </section>}
       <ul className="space-y-3">
         {loiMoi?.map((cuocHop) => (
           <li key={cuocHop.cuocHopId} className="space-y-3 rounded-lg border border-slate-200 p-4">

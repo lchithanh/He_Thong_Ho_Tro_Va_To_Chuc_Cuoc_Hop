@@ -144,7 +144,7 @@ public class LichSuPheDuyetService {
         switch (hanhDong) {
         case "TRINH_DUYET", "TRINH_CAP_TREN", "DONG_Y_TRINH_CAP_TREN",
                 "TIEP_NHAN", "PHE_DUYET", "TU_CHOI",
-                "YEU_CAU_CHINH_SUA", "HUY" -> {
+                "YEU_CAU_CHINH_SUA", "HUY", "DOI_LICH" -> {
             // Hành động phê duyệt hợp lệ
         }
         default -> throw new RuntimeException(

@@ -13,6 +13,12 @@ const TEN_TRANG_THAI = {
   DA_DONG: 'Đã đóng',
 }
 
+const TEN_KET_QUA_NGHI_QUYET = {
+  THONG_QUA: 'Nghị quyết được thông qua',
+  KHONG_THONG_QUA: 'Nghị quyết không được thông qua',
+  CHUA_DAT_DA_SO: 'Nghị quyết chưa đạt đa số',
+}
+
 export default function DanhSachBieuQuyetChuTri({
   cuocHopId, token, dangDienRa, lanTao,
 }) {
@@ -140,10 +146,11 @@ const [ketQuaDangXem, setKetQuaDangXem] = useState(null)
                 {ketQuaDangXem.duLieu.tongSoPhieu === 0 && (
                   <p>Chưa có phiếu; chưa thể xác định kết quả.</p>
                 )}
-                {ketQuaDangXem.duLieu.hoaPhieu && (
+                {ketQuaDangXem.duLieu.ketQuaNghiQuyet && <p className="font-semibold">{TEN_KET_QUA_NGHI_QUYET[ketQuaDangXem.duLieu.ketQuaNghiQuyet]}</p>}
+                {!ketQuaDangXem.duLieu.ketQuaNghiQuyet && ketQuaDangXem.duLieu.hoaPhieu && (
                   <p>Hòa phiếu; chưa có phương án thắng.</p>
                 )}
-                {ketQuaDangXem.duLieu.luaChonThangId != null && (
+                {!ketQuaDangXem.duLieu.ketQuaNghiQuyet && ketQuaDangXem.duLieu.luaChonThangId != null && (
                   <p>
                     Phương án nhiều phiếu nhất:{' '}
                     {ketQuaDangXem.duLieu.luaChon.find(
@@ -152,6 +159,14 @@ const [ketQuaDangXem, setKetQuaDangXem] = useState(null)
                   </p>
                 )}
 
+               {ketQuaDangXem.duLieu.lyDoKhongDongY?.length > 0 && (
+                 <div>
+                   <p className="font-semibold">Lý do không đồng ý</p>
+                   <ul className="list-disc pl-5 break-words">
+                     {ketQuaDangXem.duLieu.lyDoKhongDongY.map((lyDo, i) => <li key={i}>{lyDo}</li>)}
+                   </ul>
+                 </div>
+               )}
                <ul className="space-y-1">
                 {ketQuaDangXem.duLieu.luaChon?.map((luaChon) => (
                     <li key={luaChon.luaChonId}>

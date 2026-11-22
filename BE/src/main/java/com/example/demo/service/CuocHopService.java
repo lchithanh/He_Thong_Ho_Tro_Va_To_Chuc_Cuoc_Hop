@@ -7,6 +7,7 @@ import com.example.demo.dto.response.NguoiCoTheMoiResponse;
 import com.example.demo.repository.KhachMoiCuocHopRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import com.example.demo.dto.request.CapNhatKeHoachCuocHopRequest;
@@ -21,6 +22,7 @@ import lombok.RequiredArgsConstructor;
 @Transactional
 public class CuocHopService {
     private final CapNhatHoSoRealtime capNhatRealtime;
+    private final BauChonService bauChonService;
     private final ThanhVienCuocHopService thanhVienCuocHopService;
     private final NguoiDungRepository nguoiDungRepository;
     private final PhanQuyenCuocHopService phanQuyenCuocHopService;
@@ -129,6 +131,7 @@ public class CuocHopService {
         capNhatRealtime.baoNguoiPhuTrach(ch, nguoiDangNhapId);
     }
     
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public void batDauCuocHop(
             Integer cuocHopId,
             Integer nguoiDangNhapId) {
@@ -166,6 +169,7 @@ public class CuocHopService {
         capNhatRealtime.baoCuocHop(cuocHop, nguoiDangNhapId);
     }
 
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public void ketThucCuocHop(
             Integer cuocHopId,
             Integer nguoiDangNhapId) {
@@ -185,6 +189,9 @@ public class CuocHopService {
                     "Chỉ được kết thúc cuộc họp đang diễn ra");
         }
 
+        if (bauChonService.coVongDangMo(cuocHopId)) {
+            throw loi(HttpStatus.CONFLICT, "Chủ trì cần đóng vòng bầu đang mở trước khi kết thúc cuộc họp");
+        }
         try {
             ThaoTacCuocHop.ketThucCuocHop(cuocHop);
         } catch (IllegalStateException ex) {

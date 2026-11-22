@@ -60,6 +60,9 @@ public class PhieuBieuQuyet {
         )
     })
     private LuaChonBieuQuyet luaChon;
+    @Column(name = "ly_do_khong_dong_y", length = 500)
+    private String lyDoKhongDongY;
+
     @Column(name = "ma_phieu", length = 64)
     private String maPhieu;
 

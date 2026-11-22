@@ -327,7 +327,7 @@ function ChiTietLich({ lich, token, onDaXuLy }) {
         ? await xacNhanLichHop(lichHopId, token)
         : await xuLyLichKhongDuyet(lichHopId, thaoTac, lyDo.trim(), token)
       onDaXuLy(ketQua)
-      setThongBao({ 'xac-nhan': 'Đã xác nhận lịch.', 'tu-choi': 'Đã từ chối lịch.', 'tra-lai': 'Đã trả lại để thư ký đề xuất lịch mới.' }[thaoTac])
+      setThongBao({ 'xac-nhan': 'Đã xác nhận lịch.', 'tu-choi': lich.laLichDoi ? 'Đã từ chối đổi lịch và hủy lịch họp.' : 'Đã từ chối lịch.', 'tra-lai': 'Đã trả lại để thư ký đề xuất lịch mới.' }[thaoTac])
     } catch (loi) {
       setLoi(loi.message)
     } finally {
@@ -378,7 +378,10 @@ function ChiTietLich({ lich, token, onDaXuLy }) {
                 <textarea className={LOP_TRUONG} rows={2} value={lyDo} onChange={(event) => setLyDo(event.target.value)} />
               </label>
               <div className="flex flex-wrap gap-2">
-                {[['xac-nhan', 'Xác nhận lịch'], ['tu-choi', 'Từ chối lịch'], ['tra-lai', 'Trả lại để chỉnh lịch']].map(([ma, ten]) => (
+                {(lich.laLichDoi
+                  ? [['xac-nhan', 'Xác nhận giờ mới'], ['tu-choi', 'Từ chối và hủy lịch']]
+                  : [['xac-nhan', 'Xác nhận lịch'], ['tu-choi', 'Từ chối lịch'], ['tra-lai', 'Trả lại để chỉnh lịch']]
+                ).map(([ma, ten]) => (
                   <button key={ma} type="button" disabled={dangLuu} onClick={() => xuLy(ma)}
                     className={`rounded-lg border px-3 py-2 font-semibold disabled:opacity-60 ${ma === 'xac-nhan' ? 'bg-emerald-800 text-white' : 'border-slate-200'}`}>{ten}</button>
                 ))}

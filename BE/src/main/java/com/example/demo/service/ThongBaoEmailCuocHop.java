@@ -17,6 +17,7 @@ import com.example.demo.entity.ThanhVienCuocHop;
 import com.example.demo.entity.YeuCauPheDuyet;
 import com.example.demo.repository.ThanhVienCuocHopRepository;
 
+
 @Service
 class ThongBaoEmailCuocHop {
     private static final Set<String> LOI_MOI_CON_HIEU_LUC = Set.of("CHO_PHAN_HOI", "DA_XAC_NHAN");
@@ -27,14 +28,16 @@ class ThongBaoEmailCuocHop {
     private final ThanhVienCuocHopRepository thanhVienRepository;
 
     private final ThongTinThuMoiDaDuyet thongTinThuMoi;
+    private final LienKetLoiMoiKhachService lienKet;
 
     ThongBaoEmailCuocHop(@Value("${app.email.enabled:false}") boolean batGuiEmail,
             ApplicationEventPublisher suKien, ThanhVienCuocHopRepository thanhVienRepository,
-            ThongTinThuMoiDaDuyet thongTinThuMoi) {
+            ThongTinThuMoiDaDuyet thongTinThuMoi, LienKetLoiMoiKhachService lienKet) {
         this.batGuiEmail = batGuiEmail;
         this.suKien = suKien;
         this.thanhVienRepository = thanhVienRepository;
         this.thongTinThuMoi = thongTinThuMoi;
+        this.lienKet = lienKet;
     }
 
     boolean moiHop(YeuCauPheDuyet keHoach, List<NguoiDung> nguoiDuocMoi, NoiDungThuMoi thuMoi) {
@@ -45,21 +48,23 @@ class ThongBaoEmailCuocHop {
                         + "\nMở mục Lời mời họp trong hệ thống để phản hồi.", tep);
     }
 
+    void deXuatDoiLich(LichHop lich) {
+        bao(lich, nguoiDuocMoi(lich), "Cuộc họp đang chờ dời lịch",
+                "Khung giờ mới đang chờ xác nhận. Lý do: " + lich.getLyDoThayDoi());
+    }
+
     void xacNhanLich(LichHop lich, boolean coLichCu) {
-        if (!batGuiEmail) return;
         bao(lich, nguoiDuocMoi(lich), coLichCu ? "Thay đổi lịch họp" : "Xác nhận lịch họp",
                 "Mở mục Lịch họp trong hệ thống để xem lịch đã xác nhận.");
     }
 
     void huyLich(LichHop lich, String lyDo) {
-        if (!batGuiEmail) return;
         bao(lich, nguoiDuocMoi(lich), "Hủy lịch họp",
                 "Lịch ở trên đã bị hủy.\nLý do: " + lyDo
                         + "\nTheo dõi mục Lịch họp trong hệ thống để xem cập nhật tiếp theo.");
     }
 
     void huyCuocHop(LichHop lich, String lyDo) {
-        if (!batGuiEmail) return;
         bao(lich, nguoiDuocMoi(lich), "Hủy cuộc họp",
                 "Cuộc họp đã bị hủy.\nLý do: " + lyDo);
     }
@@ -92,6 +97,7 @@ class ThongBaoEmailCuocHop {
                 """.formatted(moDau, cuocHop.getTieuDe(), gio(lich.getThoiGianBatDau()),
                         gio(lich.getThoiGianKetThuc()), lich.getPhongHop() == null
                                 ? "Trực tuyến" : lich.getPhongHop().getTenPhongHop(), huongDan);
+        lienKet.baoCapNhat(cuocHop, lich.getLichHopId(), moDau, noiDung);
         return gui(lich.getLichHopId(), nguoiNhan, chuDe, noiDung, tep);
     }
 

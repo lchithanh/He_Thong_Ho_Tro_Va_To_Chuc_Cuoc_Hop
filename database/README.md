@@ -6,6 +6,10 @@
 
 Nếu MySQL đã có dữ liệu làm việc, hãy trỏ Spring Boot tới cơ sở dữ liệu đó qua `spring.datasource.url` hoặc `SPRING_DATASOURCE_URL`. Nếu cần phục hồi dữ liệu từ bản xuất riêng, hãy sao lưu rồi nhập bản xuất vào một cơ sở dữ liệu trống được chọn trong phpMyAdmin. Một số bản xuất có lệnh `DROP TABLE`.
 
+## Migration nghiệp vụ cuộc họp
+
+Sau khi tạo schema cơ sở hoặc sao lưu database đang sử dụng, chạy [migration bầu chọn, nghị quyết, khách mời và dời lịch](migrations/20261122_nghiep_vu_cuoc_hop.sql) một lần trước khi chạy backend mới. Xem [cấu hình và sơ đồ tuần tự](../docs/bo-sung-nghiep-vu-cuoc-hop.md).
+
 ## Khởi tạo từ mã nguồn
 
 1. Trên MySQL 8.4, dùng phpMyAdmin hoặc MySQL Workbench để chạy `quan_ly_cuoc_hop_schema.sql` khi cơ sở dữ liệu `quan_ly_cuoc_hop` còn trống. Nếu dùng tên khác, đổi tên ở hai lệnh đầu file và trong cấu hình backend.

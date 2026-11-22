@@ -70,6 +70,15 @@ public class BieuQuyet {
     @Column(name = "ngay_tao", insertable = false, updatable = false)
     private LocalDateTime ngayTao;
 
+    @Column(name = "nghi_quyet_id")
+    private Integer nghiQuyetId;
+
+    @Column(name = "tai_lieu_nghi_quyet_id")
+    private Integer taiLieuNghiQuyetId;
+
+    @Column(name = "ket_qua_nghi_quyet")
+    private String ketQuaNghiQuyet;
+
     // Các lựa chọn của biểu quyết
     @OneToMany(mappedBy = "bieuQuyet", fetch = FetchType.LAZY)
     private List<LuaChonBieuQuyet> danhSachLuaChon = new ArrayList<>();

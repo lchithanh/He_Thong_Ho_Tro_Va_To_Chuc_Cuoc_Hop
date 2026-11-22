@@ -55,6 +55,29 @@ public class KhachMoiCuocHop {
     @Column(name = "ngay_moi", nullable = false, updatable = false)
     private LocalDateTime ngayMoi;
 
+    @Column(name = "ma_truy_cap_sha256", length = 64)
+    private String maTruyCapSha256;
+
+    @Column(name = "duong_dan_hop", length = 2048)
+    private String duongDanHop;
+
+    @Column(name = "han_truy_cap")
+    private LocalDateTime hanTruyCap;
+
+    public void capMaTruyCap(String maTruyCapSha256, String duongDanHop, LocalDateTime hanTruyCap) {
+        this.maTruyCapSha256 = maTruyCapSha256;
+        this.duongDanHop = duongDanHop;
+        this.hanTruyCap = hanTruyCap;
+    }
+
+    public String getDuongDanHop() {
+        return duongDanHop;
+    }
+
+    public LocalDateTime getHanTruyCap() {
+        return hanTruyCap;
+    }
+
     public KhachMoiCuocHop() {
     }
 

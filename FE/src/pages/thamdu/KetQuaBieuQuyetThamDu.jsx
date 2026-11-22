@@ -6,6 +6,12 @@ import {
   layKetQuaBieuQuyet,
 } from '../../api/bieuQuyetApi.js'
 
+const TEN_KET_QUA_NGHI_QUYET = {
+  THONG_QUA: 'Nghị quyết được thông qua',
+  KHONG_THONG_QUA: 'Nghị quyết không được thông qua',
+  CHUA_DAT_DA_SO: 'Nghị quyết chưa đạt đa số',
+}
+
 export default function KetQuaBieuQuyetThamDu({ token, cuocHopId: cuocHopIdLoc }) {
   const phienDongBo = useDongBoDuLieu()
   const [danhSach, setDanhSach] = useState(null)
@@ -129,10 +135,11 @@ export default function KetQuaBieuQuyetThamDu({ token, cuocHopId: cuocHopIdLoc }
                         {ketQua.tongSoPhieu === 0 && (
                           <p>Chưa có phiếu; chưa thể xác định kết quả.</p>
                         )}
-                        {ketQua.hoaPhieu && (
+                        {ketQua.ketQuaNghiQuyet && <p className="font-semibold">{TEN_KET_QUA_NGHI_QUYET[ketQua.ketQuaNghiQuyet]}</p>}
+                {!ketQua.ketQuaNghiQuyet && ketQua.hoaPhieu && (
                           <p>Hòa phiếu; chưa có phương án thắng.</p>
                         )}
-                        {ketQua.luaChonThangId != null && (
+                        {!ketQua.ketQuaNghiQuyet && ketQua.luaChonThangId != null && (
                           <p>
                             Phương án nhiều phiếu nhất:{' '}
                             {ketQua.luaChon.find(

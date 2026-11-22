@@ -54,7 +54,8 @@ class ThanhVienCuocHopServiceTest {
             cuocHopRepository, nguoiDungRepository, thanhVienRepository,
             nguoiDungHienTai, phanQuyen, phanCong, yeuCauRepository,
             mock(CapNhatHoSoRealtime.class), thongBao, new ThongBaoEmailCuocHop(true, suKien, thanhVienRepository,
-                    new ThongTinThuMoiDaDuyet(tools.jackson.databind.json.JsonMapper.builder().findAndAddModules().build())));
+                    new ThongTinThuMoiDaDuyet(tools.jackson.databind.json.JsonMapper.builder().findAndAddModules().build()),
+                    mock(LienKetLoiMoiKhachService.class)));
     private final CuocHop cuocHop = new CuocHop();
     private final ThanhVienCuocHop thanhVien = new ThanhVienCuocHop();
 
@@ -229,7 +230,9 @@ class ThanhVienCuocHopServiceTest {
         cuocHop.setBuocXuLyHienTai("THU_KY_TO_CHUC");
         cuocHop.setThoiGianBatDauThucTe(null);
         LichHop lich = new LichHop();
+        lich.setLichHopId(21);
         lich.setCuocHop(cuocHop);
+        cuocHop.getDanhSachLichHop().add(lich);
         lich.setTrangThai("DA_XAC_NHAN");
         lich.setThoiGianBatDau(LocalDateTime.now().plusDays(1));
         lich.setThoiGianKetThuc(lich.getThoiGianBatDau().plusHours(1));

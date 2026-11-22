@@ -54,6 +54,7 @@ public class DeXuatLichHopService {
         lich = lichHopService.timLichHopVaKhoa(lichHopId);
         lichHopService.kiemTraQuyenDeXuatLich(ch, nguoiDungId);
         kiemTraDuocLapLich(ch);
+        if (lich.isLaLichDoi()) throw loi(HttpStatus.CONFLICT, "Lịch dời đã gửi thông báo");
         if (!ThaoTacLichHop.coTheCapNhat(lich)) throw loi(HttpStatus.CONFLICT, "Chỉ sửa lịch đang đề xuất");
         lichHopService.kiemTraNguoiTaoLich(lich, nguoiDungId);
         lichHopService.kiemTraLichKhongChoDuyetKeHoach(lichHopId);
@@ -93,6 +94,9 @@ public class DeXuatLichHopService {
         }
         lichHopService.kiemTraQuyenDeXuatLich(ch, nguoiDungId);
         kiemTraDuocLapLich(ch);
+        if (moi.isLaLichDoi() || ThaoTacCuocHop.choXacNhanDoiLich(ch)) {
+            throw loi(HttpStatus.CONFLICT, "Hãy xử lý lịch dời trong mục Lịch họp");
+        }
         if (!ThaoTacLichHop.daXacNhan(cu) || !ThaoTacLichHop.coTheXacNhan(moi)) {
             throw loi(HttpStatus.CONFLICT, "Lịch cũ phải đã xác nhận, lịch mới phải đang đề xuất");
         }

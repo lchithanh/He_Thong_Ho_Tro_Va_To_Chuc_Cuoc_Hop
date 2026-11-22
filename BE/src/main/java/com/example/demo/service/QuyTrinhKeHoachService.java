@@ -25,6 +25,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 @Transactional
 public class QuyTrinhKeHoachService {
+    private final LienKetLoiMoiKhachService lienKetLoiMoiKhach;
     private final CuocHopRepository cuocHopRepository;
     private final KhachMoiCuocHopRepository khachMoiCuocHopRepository;
     private final LichHopRepository lichHopRepository;
@@ -75,6 +76,9 @@ public class QuyTrinhKeHoachService {
         List<TaiLieuCuocHop> taiLieuDaChon = taiLieuKeHoachService
                 .kiemTraTruocKhiTrinh(ch, nguoiTrinhId, taiLieuIds);
         LichHop lich = lichHopId == null ? null : lichHopRepository.findById(lichHopId).orElse(null);
+        if (lich != null && lich.isLaLichDoi() && ThaoTacLichHop.dangDeXuat(lich)) {
+            throw loi(HttpStatus.CONFLICT, "Xử lý lịch đang dời trong mục Lịch họp");
+        }
         var lanDaDuyet = phanCongXuLyKeHoachService.layLanDuyetCoLichDaXacNhan(cuocHopId);
         xacNhanLichHopService.kiemTraLichCuaLanTrinh(ch, lich, lichDaDuyet(lanDaDuyet), HttpStatus.BAD_REQUEST);
         boolean giuLichDaDuyet = lanDaDuyet != null
@@ -230,8 +234,11 @@ public class QuyTrinhKeHoachService {
         nguoiDungHienTaiService.layTaiKhoanHoatDong(nguoiDungId);
         CuocHop cuocHop = timVaKhoaCuocHop(cuocHopId);
         YeuCauPheDuyet lanDaDuyet = phanCongXuLyKeHoachService.layLanDuyetCoLichDaXacNhan(cuocHopId);
-        if (lanDaDuyet == null || lanDaDuyet.getLichHop() == null
-                || !ThaoTacLichHop.daHuy(lanDaDuyet.getLichHop())
+        boolean lichDaHuy = cuocHop.getDanhSachLichHop().stream()
+                .filter(lich -> lich.getThoiGianXacNhan() != null && !ThaoTacLichHop.daTuChoi(lich))
+                .max(java.util.Comparator.comparing(com.example.demo.entity.LichHop::getLichHopId))
+                .map(ThaoTacLichHop::daHuy).orElse(false);
+        if (lanDaDuyet == null || !lichDaHuy
                 || (!ThaoTacCuocHop.coTheLapLich(cuocHop) && !ThaoTacCuocHop.dangLapKeHoach(cuocHop))) {
             throw loi(HttpStatus.CONFLICT, "Chỉ trình lại khi lịch đã xác nhận bị hủy và cuộc họp chưa bắt đầu");
         }
@@ -356,6 +363,10 @@ public class QuyTrinhKeHoachService {
         }
         lichSuPheDuyetService.ghiNhan(cuocHopId, null, null, nguoiDuyetId,
                 "KE_HOACH", "PHE_DUYET", yKien, yc);
+        if (lich != null && lichDaDuyet != null && Objects.equals(lich.getLichHopId(), lichDaDuyet.getLichHopId())) {
+            lienKetLoiMoiKhach.baoCapNhat(ch, lich.getLichHopId(), "Cập nhật hồ sơ cuộc họp",
+                    "Kế hoạch cuộc họp đã được cập nhật và phê duyệt.");
+        }
         thongBaoService.gui(ch, nguoiDuyetId, "KE_HOACH_DA_DUYET",
                 "Kế hoạch và lịch họp đã được duyệt", ch.getTieuDe(),
                 ch.getNguoiDeXuat(), yc.getNguoiTrinh(), yc.getThuKyBanGiao(), yc.getThuKyTiepNhan());

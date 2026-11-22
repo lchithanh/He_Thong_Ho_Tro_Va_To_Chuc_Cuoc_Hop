@@ -41,4 +41,10 @@ public interface PhieuBieuQuyetRepository
     List<SoPhieuTheoLuaChon> demPhieuTheoLuaChon(
             @Param("bieuQuyetId") Integer bieuQuyetId
     );
+    @Query("""
+            SELECT p.lyDoKhongDongY FROM PhieuBieuQuyet p
+            WHERE p.bieuQuyet.bieuQuyetId = :bieuQuyetId AND p.lyDoKhongDongY IS NOT NULL
+            ORDER BY p.lyDoKhongDongY
+            """)
+    List<String> layLyDoKhongDongY(@Param("bieuQuyetId") Integer bieuQuyetId);
 }
