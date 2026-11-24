@@ -7,6 +7,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -50,6 +52,19 @@ public class BieuQuyetController {
                 .body(Map.of("bieuQuyetId", bieuQuyetId));
     }
 
+    @PutMapping("/{cuocHopId}/bieu-quyet/{bieuQuyetId}")
+    public ResponseEntity<Void> capNhat(@PathVariable Integer cuocHopId, @PathVariable Integer bieuQuyetId,
+            @RequestBody TaoBieuQuyetRequest request, Authentication auth) {
+        bieuQuyetService.capNhatBieuQuyet(cuocHopId, bieuQuyetId, request, nguoiDungHienTaiService.layNguoiDungId(auth));
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/{cuocHopId}/bieu-quyet/{bieuQuyetId}")
+    public ResponseEntity<Void> xoa(@PathVariable Integer cuocHopId, @PathVariable Integer bieuQuyetId, Authentication auth) {
+        bieuQuyetService.xoaBieuQuyet(cuocHopId, bieuQuyetId, nguoiDungHienTaiService.layNguoiDungId(auth));
+        return ResponseEntity.noContent().build();
+    }
+
     @PostMapping("/{cuocHopId}/bieu-quyet/{bieuQuyetId}/mo")
     public ResponseEntity<Void> moBieuQuyet(
             @PathVariable("cuocHopId") Integer cuocHopId,
@@ -74,9 +89,12 @@ public class BieuQuyetController {
         Integer nguoiDungId =
                 nguoiDungHienTaiService.layNguoiDungId(authentication);
 
+        if (request.luaChonIds() != null) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "Mỗi phiếu chỉ được gửi một lựa chọn");
+        }
         bieuQuyetService.guiPhieuBieuQuyet(
-                cuocHopId, bieuQuyetId, request.luaChonId(), request.lyDoKhongDongY(), nguoiDungId
-        );
+                cuocHopId, bieuQuyetId, request.luaChonId(), request.lyDoKhongDongY(), nguoiDungId);
 
         return ResponseEntity.noContent().build();
     }

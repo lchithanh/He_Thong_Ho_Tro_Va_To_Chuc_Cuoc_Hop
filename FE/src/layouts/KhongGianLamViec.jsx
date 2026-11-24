@@ -10,7 +10,7 @@ import { useKetNoiHoSo } from '../services/useKetNoiHoSo.js'
 import { layMenuKhongGianLamViec } from './menuKhongGianLamViec.js'
 
 function docPhongHopTuHash() {
-  return /^#cuoc-hop\/([1-9]\d{0,9})$/.exec(window.location.hash)?.[1] ?? null
+  return /^#cuoc-hop\/([1-9]\d{0,9}(?:\/tai-lieu)?)$/.exec(window.location.hash)?.[1] ?? null
 }
 
 export default function KhongGianLamViec({ nguoiDung, loi, onDangXuat }) {
@@ -67,9 +67,15 @@ export default function KhongGianLamViec({ nguoiDung, loi, onDangXuat }) {
     veTongQuan()
   }, [veTongQuan])
 
+  function moHoSoTuPhongHop(id, laThuKyToChuc) {
+    veTongQuan()
+    setHoSoDangXem({ id, tab: 'ke-hoach', chiXem: !laThuKyToChuc })
+  }
+
   if (phongHopId) {
-    return <PhongCuocHop key={phongHopId} cuocHopId={Number(phongHopId)} nguoiDung={nguoiDung}
-      onQuayLai={veTongQuan} onDaKetThuc={sauKhiKetThuc} />
+    const [id, mucHoSo] = phongHopId.split('/')
+    return <PhongCuocHop key={phongHopId} cuocHopId={Number(id)} nguoiDung={nguoiDung} chiXemHoSo={mucHoSo === 'tai-lieu'}
+      onQuayLai={veTongQuan} onDaKetThuc={sauKhiKetThuc} onMoHoSo={moHoSoTuPhongHop} />
   }
 
   const oTongQuan = !hoSoDangXem && !TrangHienTai
@@ -78,29 +84,45 @@ export default function KhongGianLamViec({ nguoiDung, loi, onDangXuat }) {
     <BoCucChung
       nguoiDung={nguoiDung}
       onDangXuat={onDangXuat}
+      giaoDienToi={oTongQuan}
       dieuHuong={cacMuc}
       mucDangChon={mucDangChon}
       onChonMuc={chonMuc}
     >
       <CuocHopDangDienRa token={token} onMoPhongHop={moPhongHop} oTongQuan={oTongQuan} />
       {oTongQuan && hopVuaKetThuc && (
-        <section aria-label="Cuộc họp vừa kết thúc" className="rounded-xl border border-blue-200 bg-blue-50 p-4">
+        <section aria-label="Cuộc họp vừa kết thúc" className="rounded-xl border border-blue-200 phong-toi:border-phong-vien-xanh bg-blue-50 phong-toi:bg-phong-nhan-xanh p-4">
           <p role="status" className="font-semibold">Cuộc họp «{hopVuaKetThuc.tieuDe}» đã kết thúc.</p>
-          <p className="text-sm text-slate-600">{dinhDangNgayGio(hopVuaKetThuc.thoiGianKetThucThucTe)}</p>
+          <p className="text-sm text-slate-600 phong-toi:text-phong-chu-phu">{dinhDangNgayGio(hopVuaKetThuc.thoiGianKetThucThucTe)}</p>
+          <a href={`#cuoc-hop/${hopVuaKetThuc.cuocHopId}/tai-lieu`}
+            className="mt-2 inline-block text-sm font-semibold text-blue-900 underline phong-toi:text-phong-xanh">
+            Hồ sơ và tài liệu cuộc họp
+          </a>
           {hopVuaKetThuc.laThuKyToChuc && <p className="mt-1 text-sm">Soạn biên bản và kết luận, trình duyệt rồi theo dõi phát hành.</p>}
+          {(hopVuaKetThuc.laChuTri || hopVuaKetThuc.laThuKyToChuc) && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {[['bien-ban', 'Mở biên bản'], ['ket-luan', 'Mở kết luận']].map(([tab, ten]) => (
+                <button type="button" key={tab} className="rounded-lg border border-blue-200 px-3 py-2 text-sm font-semibold text-blue-900 hover:bg-blue-100 phong-toi:border-phong-vien-xanh phong-toi:text-phong-xanh phong-toi:hover:bg-phong-mat-noi"
+                  onClick={() => setHoSoDangXem({ id: hopVuaKetThuc.cuocHopId, tab, chiXem: !hopVuaKetThuc.laThuKyToChuc })}>
+                  {ten}
+                </button>
+              ))}
+            </div>
+          )}
+
         </section>
       )}
       {loi && (
-        <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+        <p role="alert" className="rounded-xl border border-red-200 phong-toi:border-phong-vien-do bg-red-50 phong-toi:bg-phong-nhan-do p-4 text-sm text-red-800 phong-toi:text-phong-do">
           {loi}
         </p>
       )}
 
       {!hoSoDangXem && !TrangHienTai && laQuanLy && (
-        <section className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4">
+        <section className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 phong-toi:border-phong-vien bg-white phong-toi:bg-phong-mat p-4">
           <div>
             <h2 className="font-semibold">{maVaiTro === 'LANH_DAO' ? 'Không gian lãnh đạo' : 'Không gian trưởng phòng'}</h2>
-            <p className="mt-1 text-sm text-slate-600">
+            <p className="mt-1 text-sm text-slate-600 phong-toi:text-phong-chu-phu">
               Thư ký mặc định · {nguoiDung.tenThuKyMacDinh || 'Chưa được phân công'}
             </p>
           </div>
@@ -142,7 +164,6 @@ export default function KhongGianLamViec({ nguoiDung, loi, onDangXuat }) {
       ) : (
         <TongQuanCuocHop
           token={token}
-          nguoiDung={nguoiDung}
           coTheMoDanhSach={cacMuc.some((muc) => muc.id === 'de-xuat')}
           onMoDanhSach={() => chonMuc('de-xuat')}
           cacMucXuLy={cacMuc.map((muc) => muc.id)}

@@ -1,6 +1,7 @@
 package com.example.demo.service;
 
 import java.nio.charset.StandardCharsets;
+import java.text.Normalizer;
 import java.security.GeneralSecurityException;
 import java.time.LocalDateTime;
 import java.util.Base64;
@@ -8,6 +9,8 @@ import java.util.HashMap;
 import java.util.HexFormat;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
 import java.util.Map;
 import java.util.Set;
 
@@ -68,36 +71,77 @@ public class BieuQuyetService {
             TaoBieuQuyetRequest request,
             Integer nguoiDangNhapId
     ) {
-        NguoiDung nguoiTao = nguoiDungHienTaiService
-                .layTaiKhoanHoatDong(nguoiDangNhapId);
+        return luuBieuQuyet(cuocHopId, null, request, nguoiDangNhapId);
+    }
 
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public void capNhatBieuQuyet(Integer cuocHopId, Integer id, TaoBieuQuyetRequest request, Integer nguoiDangNhapId) {
+        luuBieuQuyet(cuocHopId, id, request, nguoiDangNhapId);
+    }
+
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public void xoaBieuQuyet(Integer cuocHopId, Integer id, Integer nguoiDangNhapId) {
+        CuocHop cuocHop = khoaCuocHopDeLuu(cuocHopId, nguoiDangNhapId);
+        kiemTraCuocHopChoPhepLuu(cuocHop);
+        BieuQuyet bieuQuyet = khoaBanNhap(cuocHopId, id);
+        xoaCauHinh(id);
+        bieuQuyetRepository.delete(bieuQuyet);
+        if (bieuQuyet.getNghiQuyetId() != null) {
+            nghiQuyetService.goGanBieuQuyetNhap(cuocHopId, bieuQuyet.getNghiQuyetId());
+            capNhatRealtime.baoCuocHop(cuocHop, nguoiDangNhapId);
+        } else {
+            capNhatRealtime.baoCho(nguoiDangNhapId);
+        }
+    }
+
+    private CuocHop khoaCuocHopDeLuu(Integer cuocHopId, Integer nguoiDangNhapId) {
+        nguoiDungHienTaiService.layTaiKhoanHoatDong(nguoiDangNhapId);
         if (cuocHopId == null || cuocHopId <= 0) {
             throw loi(HttpStatus.BAD_REQUEST, "Mã cuộc họp không hợp lệ");
         }
-        kiemTraDuLieu(request);
         CuocHop cuocHop = cuocHopRepository.findByIdForUpdate(cuocHopId)
-                .orElseThrow(() -> loi(
-                        HttpStatus.NOT_FOUND, "Không tìm thấy cuộc họp"
-                ));
-
+                .orElseThrow(() -> loi(HttpStatus.NOT_FOUND, "Không tìm thấy cuộc họp"));
         if (!ThaoTacCuocHop.laNguoiChuTri(cuocHop, nguoiDangNhapId)) {
-            throw loi(
-                    HttpStatus.FORBIDDEN,
-                    "Chỉ người chủ trì được tạo biểu quyết"
-            );
+            throw loi(HttpStatus.FORBIDDEN, "Chỉ chủ trì được quản lý biểu quyết");
         }
+        return cuocHop;
+    }
 
-        if (!ThaoTacCuocHop.coTheLapLich(cuocHop)
-                && !ThaoTacCuocHop.dangDienRa(cuocHop)) {
-            throw loi(
-                    HttpStatus.CONFLICT,
-                    "Chỉ được tạo biểu quyết sau khi kế hoạch đã duyệt "
-                            + "và cuộc họp chưa kết thúc"
-            );
+    private void kiemTraCuocHopChoPhepLuu(CuocHop cuocHop) {
+        if (!ThaoTacCuocHop.coTheLapLich(cuocHop) && !ThaoTacCuocHop.dangDienRa(cuocHop)) {
+            throw loi(HttpStatus.CONFLICT, "Chỉ được quản lý bản nháp sau khi kế hoạch đã duyệt và trước khi họp kết thúc");
         }
+    }
+
+    private BieuQuyet khoaBanNhap(Integer cuocHopId, Integer id) {
+        BieuQuyet bieuQuyet = timVaKhoaBieuQuyet(cuocHopId, id);
+        if (!"NHAP".equals(bieuQuyet.getTrangThai())) {
+            throw loi(HttpStatus.CONFLICT, "Chỉ sửa hoặc xóa biểu quyết còn ở bản nháp");
+        }
+        return bieuQuyet;
+    }
+
+    private void xoaCauHinh(Integer id) {
+        thanhVienBieuQuyetRepository.xoaTheoBieuQuyet(id);
+        luaChonBieuQuyetRepository.xoaTheoBieuQuyet(id);
+    }
+
+    private Integer luuBieuQuyet(Integer cuocHopId, Integer id, TaoBieuQuyetRequest request, Integer nguoiDangNhapId) {
+        kiemTraDuLieu(request);
+        boolean moNgay = Boolean.TRUE.equals(request.moNgay());
+        if (moNgay && (id != null || request.thoiLuongPhut() == null)) {
+            throw loi(HttpStatus.BAD_REQUEST, "Tạo và mở cần một phiên mới có thời lượng");
+        }
+        CuocHop cuocHop = khoaCuocHopDeLuu(cuocHopId, nguoiDangNhapId);
+        kiemTraCuocHopChoPhepLuu(cuocHop);
+        if (moNgay && !ThaoTacCuocHop.dangDienRa(cuocHop)) {
+            throw loi(HttpStatus.CONFLICT, "Chỉ mở biểu quyết khi cuộc họp đang diễn ra");
+        }
+        String phuongThuc = request.phuongThuc() == null ? "TAN_THANH" : request.phuongThuc();
+        List<String> phuongAn = chuanHoaPhuongAn(request, phuongThuc);
         List<Integer> nguoiDuocBieuQuyetIds = request.nguoiDuocBieuQuyetIds();
         if (nguoiDuocBieuQuyetIds == null || nguoiDuocBieuQuyetIds.isEmpty()
-                || nguoiDuocBieuQuyetIds.stream().anyMatch(id -> id == null || id <= 0)
+                || nguoiDuocBieuQuyetIds.stream().anyMatch(nguoiId -> nguoiId == null || nguoiId <= 0)
                 || new HashSet<>(nguoiDuocBieuQuyetIds).size() != nguoiDuocBieuQuyetIds.size()) {
             throw loi(HttpStatus.BAD_REQUEST,
                     "Chọn ít nhất một thành viên, không chọn trùng người bỏ phiếu");
@@ -111,37 +155,56 @@ public class BieuQuyetService {
             throw loi(HttpStatus.BAD_REQUEST,
                     "Danh sách người bỏ phiếu có tài khoản không thuộc cuộc họp");
         }
-        BieuQuyet bieuQuyet = new BieuQuyet();
+        BieuQuyet bieuQuyet = id == null ? new BieuQuyet() : khoaBanNhap(cuocHopId, id);
         bieuQuyet.setCuocHop(cuocHop);
-        bieuQuyet.setNguoiTao(nguoiTao);
+        if (id == null) {
+            bieuQuyet.setNguoiTao(cuocHop.getNguoiChuTri());
+        } else {
+            if (!Objects.equals(bieuQuyet.getNghiQuyetId(), request.nghiQuyetId())) {
+                throw loi(HttpStatus.CONFLICT, "Không đổi liên kết nghị quyết khi sửa bản nháp");
+            }
+            xoaCauHinh(id);
+        }
         if (request.nghiQuyetId() == null) {
             bieuQuyet.setTieuDe(request.tieuDe().strip());
             bieuQuyet.setNoiDung(request.noiDung() == null ? null : request.noiDung().strip());
-        } else {
+        } else if (id == null) {
             var nghiQuyet = nghiQuyetService.ganVaoBieuQuyet(cuocHopId, request.nghiQuyetId());
             bieuQuyet.setNghiQuyetId(nghiQuyet.nghiQuyetId());
             bieuQuyet.setTaiLieuNghiQuyetId(nghiQuyet.taiLieuId());
             bieuQuyet.setTieuDe(nghiQuyet.tieuDe());
             bieuQuyet.setNoiDung(nghiQuyet.noiDung());
         }
+        bieuQuyet.setPhuongThuc(phuongThuc);
         bieuQuyet.setCheDoBieuQuyet(request.cheDoBieuQuyet());
-        bieuQuyet.setChoPhepTrangThai(true);
+        bieuQuyet.setChoPhepTrangThai("TAN_THANH".equals(phuongThuc));
         bieuQuyet.setTyLeThamGiaToiThieu(null);
-        bieuQuyet.setThoiGianBatDau(request.thoiGianBatDau());
-        bieuQuyet.setThoiGianKetThuc(request.thoiGianKetThuc());
+        bieuQuyet.setThoiLuongPhut(request.thoiLuongPhut());
+        if (request.thoiLuongPhut() == null) {
+            bieuQuyet.setThoiGianBatDau(request.thoiGianBatDau());
+            bieuQuyet.setThoiGianKetThuc(request.thoiGianKetThuc());
+        } else {
+            // Hai cột thời gian bắt buộc trong schema. Bản nháp được tính lại khi mở.
+            capNhatKhoangGio(bieuQuyet, LocalDateTime.now());
+        }
         bieuQuyet.setTrangThai("NHAP");
         BieuQuyet daLuu = bieuQuyetRepository.save(bieuQuyet);
         thanhVienBieuQuyetRepository.saveAll(nguoiDuocBieuQuyetIds.stream()
                 .map(nguoiDungId -> new com.example.demo.entity.ThanhVienBieuQuyet(
                         new ThanhVienBieuQuyetId(daLuu.getBieuQuyetId(), nguoiDungId)))
                 .toList());
-        luaChonBieuQuyetRepository.saveAll(List.of(
-                taoLuaChon(daLuu, "Đồng ý", 1, false),
-                taoLuaChon(daLuu, "Không đồng ý", 2, false),
-                taoLuaChon(daLuu, "Không ý kiến", 3, true)
-        ));
+        luaChonBieuQuyetRepository.saveAll(java.util.stream.IntStream.range(0, phuongAn.size())
+                .mapToObj(index -> taoLuaChon(daLuu, phuongAn.get(index), index + 1,
+                        "TAN_THANH".equals(phuongThuc) && index == 2))
+                .toList());
 
-        capNhatRealtime.baoCho(nguoiDangNhapId);
+        if (moNgay) {
+            moBanNhap(cuocHopId, daLuu, nguoiDangNhapId);
+        } else if (bieuQuyet.getNghiQuyetId() != null) {
+            capNhatRealtime.baoCuocHop(cuocHop, nguoiDangNhapId);
+        } else {
+            capNhatRealtime.baoCho(nguoiDangNhapId);
+        }
         return daLuu.getBieuQuyetId();
     }
 
@@ -174,15 +237,14 @@ public class BieuQuyetService {
                     "Chỉ được mở biểu quyết khi cuộc họp đang diễn ra");
         }
 
-        BieuQuyet bieuQuyet = timVaKhoaBieuQuyet(cuocHopId, bieuQuyetId);
-        if (!"NHAP".equals(bieuQuyet.getTrangThai())) {
-            throw loi(HttpStatus.CONFLICT,
-                    "Chỉ được mở biểu quyết đang ở trạng thái nháp");
-        }
+        moBanNhap(cuocHopId, khoaBanNhap(cuocHopId, bieuQuyetId), nguoiDangNhapId);
+    }
 
+    private void moBanNhap(Integer cuocHopId, BieuQuyet bieuQuyet, Integer nguoiDangNhapId) {
+        Integer bieuQuyetId = bieuQuyet.getBieuQuyetId();
         LocalDateTime hienTai = LocalDateTime.now();
-        if (hienTai.isBefore(bieuQuyet.getThoiGianBatDau())
-                || !hienTai.isBefore(bieuQuyet.getThoiGianKetThuc())) {
+        if (bieuQuyet.getThoiLuongPhut() == null && (hienTai.isBefore(bieuQuyet.getThoiGianBatDau())
+                || !hienTai.isBefore(bieuQuyet.getThoiGianKetThuc()))) {
             throw loi(HttpStatus.CONFLICT,
                     "Chỉ được mở biểu quyết trong khung thời gian đã thiết lập");
         }
@@ -203,6 +265,9 @@ public class BieuQuyetService {
                     "Chưa có thành viên được điểm danh có mặt và còn ở cuộc họp");
         }
 
+        if (bieuQuyet.getThoiLuongPhut() != null) {
+            capNhatKhoangGio(bieuQuyet, LocalDateTime.now());
+        }
         bieuQuyet.setTrangThai("DANG_MO");
         var nguoiNhan = new HashSet<>(thanhVienBieuQuyetRepository.timNguoiDuocBieuQuyet(bieuQuyetId));
         nguoiNhan.add(nguoiDangNhapId);
@@ -211,13 +276,8 @@ public class BieuQuyetService {
     
     
     @Transactional
-    public void guiPhieuBieuQuyet(
-            Integer cuocHopId,
-            Integer bieuQuyetId,
-            Integer luaChonId,
-            String lyDoKhongDongY,
-            Integer nguoiDangNhapId) {
-
+    public void guiPhieuBieuQuyet(Integer cuocHopId, Integer bieuQuyetId, Integer luaChonId,
+            String lyDoKhongDongY, Integer nguoiDangNhapId) {
         if (nguoiDangNhapId == null) {
             throw loi(HttpStatus.UNAUTHORIZED, "Bạn cần đăng nhập");
         }
@@ -273,13 +333,16 @@ public class BieuQuyetService {
 
         LuaChonBieuQuyet luaChon = luaChonBieuQuyetRepository
                 .findByLuaChonIdAndBieuQuyet_BieuQuyetId(luaChonId, bieuQuyetId)
-                .orElseThrow(() -> loi(HttpStatus.BAD_REQUEST,
-                        "Lựa chọn không thuộc biểu quyết này"));
-
+                .orElseThrow(() -> loi(HttpStatus.BAD_REQUEST, "Lựa chọn không thuộc biểu quyết này"));
+        boolean laPhieuCoKhong = "TAN_THANH".equals(bieuQuyet.getPhuongThuc());
+        if (laPhieuCoKhong && !List.of("Đồng ý", "Không đồng ý", "Phiếu trắng", "Không ý kiến").contains(luaChon.getNoiDungLuaChon())) {
+            throw loi(HttpStatus.BAD_REQUEST, "Phiếu này chỉ nhận Đồng ý, Không đồng ý hoặc Phiếu trắng");
+        }
         PhieuBieuQuyet phieu = new PhieuBieuQuyet();
         phieu.setBieuQuyet(bieuQuyet);
         phieu.setLuaChonId(luaChon.getLuaChonId());
-        if (bieuQuyet.getNghiQuyetId() != null && "Không đồng ý".equals(luaChon.getNoiDungLuaChon())) {
+        if (bieuQuyet.getNghiQuyetId() != null && laPhieuCoKhong
+                && "Không đồng ý".equals(luaChon.getNoiDungLuaChon())) {
             if (lyDoKhongDongY == null || lyDoKhongDongY.isBlank() || lyDoKhongDongY.strip().length() > 500) {
                 throw loi(HttpStatus.BAD_REQUEST, "Nhập lý do không đồng ý tối đa 500 ký tự");
             }
@@ -375,11 +438,18 @@ public class BieuQuyetService {
         bieuQuyet.setSoThanhVienCoMatKhiDong(soThanhVienCoMat);
         bieuQuyet.setTrangThai("DA_DONG");
         if (bieuQuyet.getNghiQuyetId() != null) {
-            var phieu = taoKetQuaBieuQuyet(bieuQuyet, false).luaChon();
-            long dongY = phieu.get(0).soPhieu();
-            long khongDongY = phieu.get(1).soPhieu();
-            bieuQuyet.setKetQuaNghiQuyet(nghiQuyetService.chotBieuQuyet(
-                    bieuQuyet.getNghiQuyetId(), dongY, khongDongY, soThanhVienCoMat));
+            var ketQua = taoKetQuaBieuQuyet(bieuQuyet, false);
+            if ("TAN_THANH".equals(bieuQuyet.getPhuongThuc())) {
+                bieuQuyet.setKetQuaNghiQuyet(nghiQuyetService.chotBieuQuyet(bieuQuyet.getNghiQuyetId(),
+                        ketQua.luaChon().get(0).soPhieu(), ketQua.luaChon().get(1).soPhieu(), soThanhVienCoMat));
+            } else {
+                long soPhieuDanDau = ketQua.luaChon().stream()
+                        .filter(pa -> pa.luaChonId().equals(ketQua.luaChonThangId()))
+                        .mapToLong(KetQuaLuaChon::soPhieu)
+                        .findFirst().orElse(0);
+                bieuQuyet.setKetQuaNghiQuyet(nghiQuyetService.chotBieuQuyetPhuongAn(
+                        bieuQuyet.getNghiQuyetId(), soPhieuDanDau > soThanhVienCoMat / 2));
+            }
         }
         Set<Integer> nguoiNhan = new HashSet<>();
         for (var thanhVien : thanhVienCuocHopRepository
@@ -406,7 +476,7 @@ public class BieuQuyetService {
                         bq.getCuocHop().getCuocHopId(),
                         bq.getCuocHop().getTieuDe(),
                         bq.getBieuQuyetId(),
-                        bq.getTieuDe(), bq.getThoiGianBatDau(), bq.getThoiGianKetThuc()
+                        bq.getTieuDe(), bq.getThoiGianBatDau(), bq.getThoiGianKetThuc(), bq.getNghiQuyetId()
                 ))
                 .toList();
     }
@@ -437,7 +507,10 @@ public class BieuQuyetService {
                         muc.getTieuDe(),
                         muc.getTrangThai(),
                         muc.getThoiGianBatDau(),
-                        muc.getThoiGianKetThuc()))
+                        muc.getThoiGianKetThuc(),
+                        muc.getNghiQuyetId(),
+                        muc.getPhuongThuc(),
+                        muc.getThoiLuongPhut()))
                 .toList();
     }
     
@@ -470,7 +543,11 @@ public class BieuQuyetService {
                 bieuQuyet.getThoiGianKetThuc(),
                 bieuQuyet.getNghiQuyetId(),
                 bieuQuyet.getTaiLieuNghiQuyetId(),
-                luaChon
+                luaChon,
+                bieuQuyet.getPhuongThuc(),
+                "NHAP".equals(bieuQuyet.getTrangThai())
+                        ? thanhVienBieuQuyetRepository.timNguoiDuocBieuQuyet(bieuQuyetId) : List.of(),
+                bieuQuyet.getThoiLuongPhut()
         );
     }
 
@@ -508,7 +585,7 @@ public class BieuQuyetService {
                         bq.getCuocHop().getCuocHopId(),
                         bq.getCuocHop().getTieuDe(),
                         bq.getBieuQuyetId(),
-                        bq.getTieuDe(), bq.getThoiGianBatDau(), bq.getThoiGianKetThuc()
+                        bq.getTieuDe(), bq.getThoiGianBatDau(), bq.getThoiGianKetThuc(), bq.getNghiQuyetId()
                 ))
                 .toList();
     }
@@ -521,6 +598,11 @@ public class BieuQuyetService {
         ) > 0 || thanhVienBieuQuyetRepository.demDanhSachBieuQuyet(bieuQuyetId) == 0;
     }
     
+
+    private void capNhatKhoangGio(BieuQuyet bieuQuyet, LocalDateTime batDau) {
+        bieuQuyet.setThoiGianBatDau(batDau);
+        bieuQuyet.setThoiGianKetThuc(batDau.plusMinutes(bieuQuyet.getThoiLuongPhut()));
+    }
 
     private void kiemTraDuLieu(TaoBieuQuyetRequest request) {
         if (request == null
@@ -541,6 +623,12 @@ public class BieuQuyetService {
             );
         }
 
+        if (request.thoiLuongPhut() != null) {
+            if (request.thoiLuongPhut() <= 0) {
+                throw loi(HttpStatus.BAD_REQUEST, "Thời lượng phải là số phút nguyên lớn hơn 0");
+            }
+            return;
+        }
         if (request.thoiGianBatDau() == null
                 || request.thoiGianKetThuc() == null
                 || !request.thoiGianKetThuc().isAfter(request.thoiGianBatDau())) {
@@ -551,17 +639,44 @@ public class BieuQuyetService {
         }
     }
 
+    private List<String> chuanHoaPhuongAn(TaoBieuQuyetRequest request, String phuongThuc) {
+        if ("TAN_THANH".equals(phuongThuc)) {
+            return List.of("Đồng ý", "Không đồng ý", "Phiếu trắng");
+        }
+        if (!"CHON_MOT".equals(phuongThuc)) {
+            throw loi(HttpStatus.BAD_REQUEST, "Chỉ hỗ trợ Có / Không hoặc chọn một phương án");
+        }
+        if (!"CONG_KHAI".equals(request.cheDoBieuQuyet())) {
+            throw loi(HttpStatus.BAD_REQUEST, "Chọn phương án chỉ hỗ trợ chế độ công khai");
+        }
+        List<String> danhSach = request.phuongAn();
+        if (danhSach == null || danhSach.size() < 2 || danhSach.size() > 20
+                || danhSach.stream().anyMatch(Objects::isNull)) {
+            throw loi(HttpStatus.BAD_REQUEST, "Nhập từ 2 đến 20 phương án");
+        }
+        List<String> phuongAn = danhSach.stream()
+                .map(pa -> Normalizer.normalize(pa.strip(), Normalizer.Form.NFC)).toList();
+        if (phuongAn.stream().anyMatch(pa -> pa.isBlank() || pa.length() > 255
+                || pa.indexOf('\n') >= 0 || pa.indexOf('\r') >= 0)) {
+            throw loi(HttpStatus.BAD_REQUEST, "Mỗi phương án phải có nội dung trên một dòng, tối đa 255 ký tự");
+        }
+        if (phuongAn.stream().map(pa -> pa.toLowerCase(Locale.ROOT)).distinct().count() != phuongAn.size()) {
+            throw loi(HttpStatus.BAD_REQUEST, "Các phương án phải khác nhau");
+        }
+        return phuongAn;
+    }
+
     private LuaChonBieuQuyet taoLuaChon(
             BieuQuyet bieuQuyet,
             String noiDung,
             int thuTu,
-            boolean laLuaChonTrangThai
+            boolean laPhieuTrang
     ) {
         LuaChonBieuQuyet luaChon = new LuaChonBieuQuyet();
         luaChon.setBieuQuyet(bieuQuyet);
         luaChon.setNoiDungLuaChon(noiDung);
         luaChon.setThuTuHienThi(thuTu);
-        luaChon.setLaLuaChonTrangThai(laLuaChonTrangThai);
+        luaChon.setLaLuaChonTrangThai(laPhieuTrang);
         return luaChon;
     }
 
@@ -670,6 +785,12 @@ public class BieuQuyetService {
         for (var dong : phieuBieuQuyetRepository.demPhieuTheoLuaChon(bieuQuyetId)) {
             soPhieuTheoLuaChon.put(dong.getLuaChonId(), dong.getSoPhieu());
         }
+        // Chỉ dùng để đọc dữ liệu nếu bản thử nghiệm chọn nhiều đã được cài trước đó.
+        if ("CHON_NHIEU".equals(bieuQuyet.getPhuongThuc())) {
+            for (var dong : phieuBieuQuyetRepository.demPhuongAnBoSung(bieuQuyetId)) {
+                soPhieuTheoLuaChon.merge(dong.getLuaChonId(), dong.getSoPhieu(), Long::sum);
+            }
+        }
         List<KetQuaLuaChon> ketQuaLuaChon = luaChonBieuQuyetRepository
                 .findByBieuQuyet_BieuQuyetIdOrderByThuTuHienThiAsc(bieuQuyetId)
                 .stream()
@@ -679,19 +800,21 @@ public class BieuQuyetService {
                         soPhieuTheoLuaChon.getOrDefault(luaChon.getLuaChonId(), 0L)
                 ))
                 .toList();
-        long tongSoPhieu = ketQuaLuaChon.stream()
-                .mapToLong(KetQuaLuaChon::soPhieu)
-                .sum();
+        long tongSoPhieu = phieuBieuQuyetRepository.countByBieuQuyet_BieuQuyetId(bieuQuyetId);
         long soNguoiDuocBieuQuyet = thanhVienBieuQuyetRepository
                 .demDanhSachBieuQuyet(bieuQuyetId);
-        long soPhieuCaoNhat = ketQuaLuaChon.stream()
+        List<KetQuaLuaChon> luaChonCoTheDanDau = "TAN_THANH".equals(bieuQuyet.getPhuongThuc())
+                ? ketQuaLuaChon.stream().filter(muc -> !"Phiếu trắng".equals(muc.noiDung())
+                        && !"Không ý kiến".equals(muc.noiDung())).toList()
+                : ketQuaLuaChon;
+        long soPhieuCaoNhat = luaChonCoTheDanDau.stream()
                 .mapToLong(KetQuaLuaChon::soPhieu)
                 .max()
                 .orElse(0);
-        List<KetQuaLuaChon> luaChonDatCaoNhat = ketQuaLuaChon.stream()
+        List<KetQuaLuaChon> luaChonDatCaoNhat = luaChonCoTheDanDau.stream()
                 .filter(luaChon -> luaChon.soPhieu() == soPhieuCaoNhat)
                 .toList();
-        Integer luaChonThangId = tongSoPhieu == 0 || luaChonDatCaoNhat.size() != 1
+        Integer luaChonThangId = soPhieuCaoNhat == 0 || luaChonDatCaoNhat.size() != 1
                 ? null : luaChonDatCaoNhat.get(0).luaChonId();
         return new KetQuaBieuQuyetResponse(
                 bieuQuyetId,
@@ -699,7 +822,7 @@ public class BieuQuyetService {
                 soNguoiDuocBieuQuyet,
                 tongSoPhieu,
                 luaChonThangId,
-                tongSoPhieu > 0 && luaChonDatCaoNhat.size() > 1,
+                soPhieuCaoNhat > 0 && luaChonDatCaoNhat.size() > 1,
                 ketQuaLuaChon,
                 bieuQuyet.getKetQuaNghiQuyet(),
                 xemLyDo && bieuQuyet.getNghiQuyetId() != null

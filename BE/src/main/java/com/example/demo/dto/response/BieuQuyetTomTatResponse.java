@@ -7,5 +7,8 @@ public record BieuQuyetTomTatResponse(
         String tieuDe,
         String trangThai,
         LocalDateTime thoiGianBatDau,
-        LocalDateTime thoiGianKetThuc
+        LocalDateTime thoiGianKetThuc,
+        Integer nghiQuyetId,
+        String phuongThuc,
+        Integer thoiLuongPhut
 ) {}

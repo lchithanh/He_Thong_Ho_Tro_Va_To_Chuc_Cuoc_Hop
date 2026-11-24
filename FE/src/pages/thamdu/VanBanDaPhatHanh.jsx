@@ -111,6 +111,12 @@ export function DanhSachVanBanDaPhatHanh({ token, loai }) {
               {dangXem ? 'Đóng chi tiết' : `Xem ${tenVietThuong}`}
             </button>
 
+            {vanBan.cuocHopId && (
+              <a href={`#cuoc-hop/${vanBan.cuocHopId}/tai-lieu`}
+                className="ml-4 inline-block text-sm font-semibold text-blue-800 underline">
+                Hồ sơ và tài liệu
+              </a>
+            )}
             {dangXem && (
               <div className="mt-3 space-y-4 rounded-xl border border-slate-100 bg-slate-50 p-4 sm:p-6">
                 {loai === 'bien-ban' ? (

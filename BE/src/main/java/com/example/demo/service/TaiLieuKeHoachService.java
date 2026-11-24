@@ -131,6 +131,25 @@ public class TaiLieuKeHoachService {
                 .toList();
     }
 
+    // Hồ sơ phòng họp đã kiểm tra quyền tham dự trước khi đọc bản được duyệt.
+    List<TaiLieuCuocHop> taiLieuDaDuyetCuaPhongHop(Integer cuocHopId) {
+        return yeuCauPheDuyetRepository
+                .findFirstByCuocHop_CuocHopIdAndLoaiYeuCauAndTrangThaiOrderByYeuCauPheDuyetIdDesc(
+                        cuocHopId, LoaiYeuCau.KE_HOACH_CUOC_HOP, YeuCauPheDuyet.TrangThai.DA_DUYET)
+                .map(yeuCau -> layIdTepLanTrinh(yeuCau).stream()
+                        .map(id -> timTaiLieu(cuocHopId, id))
+                        .toList())
+                .orElseGet(List::of);
+    }
+
+    TepTaiXuong docTepDaDuyetCuaPhongHop(Integer cuocHopId, Integer taiLieuId) {
+        return taiLieuDaDuyetCuaPhongHop(cuocHopId).stream()
+                .filter(tep -> taiLieuId.equals(tep.getTaiLieuId()))
+                .findFirst()
+                .map(this::docTep)
+                .orElseThrow(() -> loi(HttpStatus.NOT_FOUND, "Tệp không thuộc kế hoạch đã duyệt của cuộc họp"));
+    }
+
     @Transactional(readOnly = true)
     public TepTaiXuong taiXuongSoanThao(Integer cuocHopId, Integer taiLieuId, Integer nguoiId) {
         nguoiDungHienTaiService.layTaiKhoanHoatDong(nguoiId);

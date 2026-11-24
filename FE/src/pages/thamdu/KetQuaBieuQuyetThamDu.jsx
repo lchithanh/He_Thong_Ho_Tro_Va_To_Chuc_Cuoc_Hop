@@ -1,3 +1,7 @@
+import Vote from 'lucide-react/dist/esm/icons/vote.mjs'
+import { NhanHoSo, TieuDeHoSo } from '../../components/GiaoDienPhongHop.jsx'
+import { LOP_CHU_PHU, LOP_NOI, LOP_NUT_PHU, LOP_THE } from '../../components/giaoDienPhongHop.js'
+import BangKetQuaBieuQuyet from '../../components/BangKetQuaBieuQuyet.jsx'
 import KhungGioBieuQuyet from '../../components/KhungGioBieuQuyet.jsx'
 import { useEffect, useState } from 'react'
 import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
@@ -6,13 +10,7 @@ import {
   layKetQuaBieuQuyet,
 } from '../../api/bieuQuyetApi.js'
 
-const TEN_KET_QUA_NGHI_QUYET = {
-  THONG_QUA: 'Nghị quyết được thông qua',
-  KHONG_THONG_QUA: 'Nghị quyết không được thông qua',
-  CHUA_DAT_DA_SO: 'Nghị quyết chưa đạt đa số',
-}
-
-export default function KetQuaBieuQuyetThamDu({ token, cuocHopId: cuocHopIdLoc }) {
+export default function KetQuaBieuQuyetThamDu({ token, cuocHopId: cuocHopIdLoc, nghiQuyetId }) {
   const phienDongBo = useDongBoDuLieu()
   const [danhSach, setDanhSach] = useState(null)
   const [loiDanhSach, setLoiDanhSach] = useState('')
@@ -75,88 +73,58 @@ export default function KetQuaBieuQuyetThamDu({ token, cuocHopId: cuocHopIdLoc }
     })
   }
 
+  const danhSachLoc = nghiQuyetId == null ? danhSach : danhSach?.filter((muc) => muc.nghiQuyetId === nghiQuyetId)
   const nhomTheoCuocHop = new Map()
-  for (const phien of danhSach ?? []) {
+  for (const phien of danhSachLoc ?? []) {
     const nhom = nhomTheoCuocHop.get(phien.cuocHopId) ?? []
     nhom.push(phien)
     nhomTheoCuocHop.set(phien.cuocHopId, nhom)
   }
 
   return (
-    <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-5">
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="text-lg font-bold">Kết quả biểu quyết</h2>
-        <button
-          type="button"
-          onClick={taiLaiDanhSach}
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-        >
-          Tải lại
-        </button>
-      </div>
+    <section className={LOP_THE + ' space-y-4'}>
+      <TieuDeHoSo Icon={Vote} cap={cuocHopIdLoc ? 'h3' : 'h2'}
+        thaoTac={<button type="button" onClick={taiLaiDanhSach} className={LOP_NUT_PHU}>Tải lại</button>}>
+        Kết quả biểu quyết
+      </TieuDeHoSo>
 
       {loiDanhSach && <p role="alert">{loiDanhSach}</p>}
       {danhSach === null && !loiDanhSach && (
         <p role="status">Đang tải danh sách kết quả…</p>
       )}
-      {danhSach?.length === 0 && <p>Chưa có biểu quyết đã đóng.</p>}
+      {danhSachLoc?.length === 0 && <p className={LOP_CHU_PHU}>Chưa có biểu quyết đã đóng.</p>}
 
       {[...nhomTheoCuocHop.entries()].map(([cuocHopId, cacPhien]) => (
-        <section key={cuocHopId} className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
-          <h3 className="font-semibold">{cacPhien[0].tieuDeCuocHop || `Cuộc họp #${cuocHopId}`}</h3>
+        <section key={cuocHopId} className="space-y-3">
+          {!cuocHopIdLoc && <h3 className="font-semibold">{cacPhien[0].tieuDeCuocHop || `Cuộc họp #${cuocHopId}`}</h3>}
           {cacPhien.map((muc) => {
             const dangXem = phienDangXem?.bieuQuyetId === muc.bieuQuyetId
 
             return (
               <article
                 key={muc.bieuQuyetId}
-                className="space-y-2 rounded-lg border border-slate-200 p-3"
+                className={LOP_NOI + ' space-y-3'}
               >
-                  <h4 className="text-sm font-semibold">{muc.tieuDeBieuQuyet}</h4>
-              <KhungGioBieuQuyet muc={muc} />
+                <TieuDeHoSo Icon={Vote} cap="h4" thaoTac={<NhanHoSo mau="xanh">Đã đóng</NhanHoSo>}>
+                  {muc.tieuDeBieuQuyet ?? muc.tieuDe}
+                </TieuDeHoSo>
+                <KhungGioBieuQuyet muc={muc} />
 
                 <button
                   type="button"
                   onClick={() => xemKetQua(muc)}
                   disabled={dangXem && !ketQua && !loiKetQua}
-                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  className={LOP_NUT_PHU}
                 >
                   Xem kết quả
                 </button>
 
                 {dangXem && (
-                  <div className="space-y-2 border-t border-slate-200 pt-3 text-sm">
+                  <div className="space-y-2 border-t border-slate-200 phong-toi:border-phong-vien pt-3 text-sm">
                     {loiKetQua && <p role="alert">{loiKetQua}</p>}
                     {!ketQua && !loiKetQua && <p role="status">Đang tải kết quả…</p>}
 
-                    {ketQua && (
-                      <>
-                        <p>Tổng số phiếu: {ketQua.tongSoPhieu}</p>
-                        {ketQua.tongSoPhieu === 0 && (
-                          <p>Chưa có phiếu; chưa thể xác định kết quả.</p>
-                        )}
-                        {ketQua.ketQuaNghiQuyet && <p className="font-semibold">{TEN_KET_QUA_NGHI_QUYET[ketQua.ketQuaNghiQuyet]}</p>}
-                {!ketQua.ketQuaNghiQuyet && ketQua.hoaPhieu && (
-                          <p>Hòa phiếu; chưa có phương án thắng.</p>
-                        )}
-                        {!ketQua.ketQuaNghiQuyet && ketQua.luaChonThangId != null && (
-                          <p>
-                            Phương án nhiều phiếu nhất:{' '}
-                            {ketQua.luaChon.find(
-                              (luaChon) => luaChon.luaChonId === ketQua.luaChonThangId,
-                            )?.noiDung}
-                          </p>
-                        )}
-
-                        <ul className="space-y-1">
-                          {ketQua.luaChon.map((luaChon) => (
-                            <li key={luaChon.luaChonId}>
-                              {luaChon.noiDung}: {luaChon.soPhieu} phiếu
-                            </li>
-                          ))}
-                        </ul>
-                      </>
-                    )}
+                    {ketQua && <BangKetQuaBieuQuyet ketQua={ketQua} />}
                   </div>
                 )}
               </article>

@@ -47,15 +47,15 @@ export default function ViecChoXuLy({ token, danhSach, loiDanhSach, cacMucXuLy =
   if (!mucXuLy.length) return null
 
   return (
-    <section aria-label="Việc chờ bạn xử lý" className="space-y-3 rounded-xl border border-slate-200 bg-white p-5">
-      <h2 className="font-bold text-slate-900">Việc chờ bạn xử lý</h2>
+    <section aria-label="Việc chờ bạn xử lý" className="space-y-3 rounded-xl border border-slate-200 phong-toi:border-phong-vien bg-white phong-toi:bg-phong-mat p-5">
+      <h2 className="font-bold text-slate-900 phong-toi:text-phong-chu">Việc chờ bạn xử lý</h2>
       <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
         {mucXuLy.map(({ id, ten, ketQua }) => (
           <li key={id} className="min-w-0">
             <button type="button" disabled={!ketQua?.hoSo} onClick={() => onMoMuc(id, ketQua.hoSo)}
-              className="flex h-full w-full items-center justify-between gap-3 rounded-lg border border-slate-200 p-3 text-left text-sm hover:border-emerald-400 hover:bg-emerald-50">
-              <span className="font-semibold text-slate-800">{ten}</span>
-              <span className={ketQua?.loi ? 'text-xs text-amber-800' : 'font-semibold text-emerald-800'}>
+              className="flex h-full w-full items-center justify-between gap-3 rounded-lg border border-slate-200 phong-toi:border-phong-vien p-3 text-left text-sm hover:border-emerald-400 hover:bg-emerald-50 phong-toi:hover:bg-phong-mat-noi">
+              <span className="font-semibold text-slate-800 phong-toi:text-phong-chu">{ten}</span>
+              <span className={ketQua?.loi ? 'text-xs text-amber-800 phong-toi:text-phong-vang' : 'font-semibold text-emerald-800 phong-toi:text-phong-xanh'}>
                 {ketQua?.loi ? 'Chưa tải được' : ketQua?.hoSo?.length ?? '…'}
               </span>
             </button>

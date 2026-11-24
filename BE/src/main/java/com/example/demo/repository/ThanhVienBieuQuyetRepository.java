@@ -13,6 +13,10 @@ import com.example.demo.entity.ThanhVienBieuQuyetId;
 public interface ThanhVienBieuQuyetRepository
         extends JpaRepository<ThanhVienBieuQuyet, ThanhVienBieuQuyetId> {
 
+    @Modifying
+    @Query("DELETE FROM ThanhVienBieuQuyet tv WHERE tv.id.bieuQuyetId = :bieuQuyetId")
+    void xoaTheoBieuQuyet(@Param("bieuQuyetId") Integer bieuQuyetId);
+
     @Query("""
             SELECT tv.id.nguoiDungId
             FROM ThanhVienBieuQuyet tv

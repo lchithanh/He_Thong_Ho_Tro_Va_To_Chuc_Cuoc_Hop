@@ -1,0 +1,52 @@
+@custom-variant phong-toi (&:where(.khong-gian-toi, .khong-gian-toi *));
+
+@theme {
+  --color-phong-nen: #151719;
+  --color-phong-mat: #1c1f23;
+  --color-phong-mat-noi: #262a30;
+  --color-phong-vien: #3a4049;
+  --color-phong-chu: #f3f5f8;
+  --color-phong-chu-phu: #bbc5d4;
+  --color-phong-xanh: #b5d0ff;
+  --color-phong-nhan-xanh: #213956;
+  --color-phong-vien-xanh: #45608b;
+  --color-phong-nut: #2759bc;
+  --color-phong-nut-hover: #346bd1;
+  --color-phong-do: #ffafbe;
+  --color-phong-nhan-do: #3c2431;
+  --color-phong-vien-do: #704254;
+  --color-phong-vang: #fbd391;
+  --color-phong-nhan-vang: #3a3021;
+  --color-phong-vien-vang: #775c37;
+  --color-phong-luc: #8ce6c3;
+  --color-phong-nhan-luc: #143d36;
+  --color-phong-tim: #dcc7ff;
+  --color-phong-nhan-tim: #342b4d;
+  --color-phong-focus: #9fc7ff;
+  --color-phong-menu: #193875;
+  --color-phong-menu-chu: #e7efff;
+  --color-phong-menu-chu-phu: #d1dfff;
+  --color-phong-menu-hover: #284b89;
+  --color-phong-menu-chon: #101e39;
+  --color-phong-tieu-de: #254b96;
+  --color-phong-lua-chon: #263a59;
+}
+
+@utility truong-phong-hop {
+  @apply max-w-full border-phong-vien bg-phong-nen text-phong-chu placeholder:text-phong-chu-phu;
+}
+
+@utility mat-phong-toi {
+  @apply bg-phong-nen text-phong-chu accent-phong-focus [color-scheme:dark];
+}
+
+@utility mat-do-cuoc-hop {
+  --chieu-cao-khong-gian: 100dvh;
+  zoom: calc(1 / var(--ty-le-giao-dien, 1));
+}
+
+@layer base {
+  .khong-gian-toi :where(button, a, input, select, textarea, summary, ul):focus-visible {
+    @apply outline-2 outline-offset-2 outline-phong-focus;
+  }
+}

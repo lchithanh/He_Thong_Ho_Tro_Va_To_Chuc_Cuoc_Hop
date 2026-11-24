@@ -16,6 +16,20 @@ async function kiemTraPhanHoiBieuQuyet(response) {
   }
 }
 
+export async function capNhatBieuQuyet(cuocHopId, bieuQuyetId, duLieu, token) {
+  const response = await goiApi(`/api/cuoc-hop/${cuocHopId}/bieu-quyet/${bieuQuyetId}`, {
+    method: 'PUT', token, duLieu,
+  })
+  await kiemTraPhanHoiBieuQuyet(response)
+}
+
+export async function xoaBieuQuyet(cuocHopId, bieuQuyetId, token) {
+  const response = await goiApi(`/api/cuoc-hop/${cuocHopId}/bieu-quyet/${bieuQuyetId}`, {
+    method: 'DELETE', token,
+  })
+  await kiemTraPhanHoiBieuQuyet(response)
+}
+
 export async function layDanhSachBieuQuyetCuaChuTri(cuocHopId, token, signal) {
   const response = await goiApi(`/api/cuoc-hop/${cuocHopId}/bieu-quyet`, {
     token,

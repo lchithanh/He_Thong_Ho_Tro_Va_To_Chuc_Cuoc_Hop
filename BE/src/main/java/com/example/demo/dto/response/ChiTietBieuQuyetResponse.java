@@ -13,7 +13,10 @@ public record ChiTietBieuQuyetResponse(
         LocalDateTime thoiGianKetThuc,
         Integer nghiQuyetId,
         Integer taiLieuNghiQuyetId,
-        List<LuaChonResponse> luaChon
+        List<LuaChonResponse> luaChon,
+        String phuongThuc,
+        List<Integer> nguoiDuocBieuQuyetIds,
+        Integer thoiLuongPhut
 ) {
     public record LuaChonResponse(
             Integer luaChonId,

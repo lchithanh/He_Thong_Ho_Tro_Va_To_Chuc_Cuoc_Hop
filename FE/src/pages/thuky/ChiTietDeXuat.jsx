@@ -663,7 +663,7 @@ export default function ChiTietDeXuat({ cuocHopId, token, nguoiDung, onQuayLai, 
                 )}
 
                 {tabHienThi === 'bau-chon' && <BauChonCuocHop cuocHopId={cuocHopId} token={token} chiXem={daKetThuc} />}
-                {tabHienThi === 'nghi-quyet' && <NghiQuyetCuocHop cuocHopId={cuocHopId} token={token} duocQuanLy={!daKetThuc && (laChuTri || laThuKy)} />}
+                {tabHienThi === 'nghi-quyet' && <NghiQuyetCuocHop cuocHopId={cuocHopId} token={token} duocQuanLy={!daKetThuc && (laChuTri || laThuKy)} chuTri={laChuTri && !daKetThuc ? { ...nguoiDung, token } : undefined} />}
                 {tabHienThi === 'bieu-quyet' && laChuTri && (
                   daKetThuc ? (
                     <DanhSachBieuQuyetChuTri

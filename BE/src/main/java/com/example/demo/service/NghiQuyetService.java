@@ -38,7 +38,14 @@ public class NghiQuyetService {
     public record NoiDung(Integer nghiQuyetChaId, String tieuDe, String noiDung) {}
     public record Muc(Integer nghiQuyetId, Integer nghiQuyetChaId, int cap,
             String tieuDe, String noiDung, String trangThai, String lyDo, Integer taiLieuId,
-            LocalDateTime ngayCongBo) {}
+            LocalDateTime ngayCongBo, boolean coTheXoa) {}
+
+    private static final String CHON_NGHI_QUYET = """
+            SELECT nq.*, (nq.trang_thai = 'NHAP' AND nq.ngay_cong_bo IS NULL
+                AND NOT EXISTS (SELECT 1 FROM nghi_quyet con WHERE con.nghi_quyet_cha_id = nq.nghi_quyet_id)
+                AND NOT EXISTS (SELECT 1 FROM bieu_quyet bq WHERE bq.nghi_quyet_id = nq.nghi_quyet_id)) AS co_the_xoa
+            FROM nghi_quyet nq
+            """;
 
     public record CuocHopCoNghiQuyet(Integer cuocHopId, String tieuDe) {}
 
@@ -60,8 +67,8 @@ public class NghiQuyetService {
     @Transactional(readOnly = true)
     public List<Muc> xem(Integer cuocHopId, Integer nguoiDungId) {
         CuocHop hop = xemCuocHop(cuocHopId, nguoiDungId);
-        return jdbc.sql("""
-                SELECT * FROM nghi_quyet WHERE cuoc_hop_id = ?
+        return jdbc.sql(CHON_NGHI_QUYET + """
+                WHERE cuoc_hop_id = ?
                 AND (? OR ngay_cong_bo IS NOT NULL)
                 ORDER BY nghi_quyet_id
                 """).params(cuocHopId, duocQuanLy(hop, nguoiDungId)).query(Muc.class).list();
@@ -137,16 +144,44 @@ public class NghiQuyetService {
         CuocHop hop = khoaHop(cuocHopId, nguoiDungId);
         kiemTraNoiDung(request);
         Muc muc = tim(cuocHopId, id);
-        if (!List.of("NHAP", "YEU_CAU_CHINH_SUA").contains(muc.trangThai())
-                || !Objects.equals(request.nghiQuyetChaId(), muc.nghiQuyetChaId())) {
-            throw loi(HttpStatus.CONFLICT, "Chỉ sửa nội dung nghị quyết nháp hoặc đã yêu cầu chỉnh sửa");
+        boolean coTheSua = ("NHAP".equals(muc.trangThai()) && muc.ngayCongBo() == null)
+                || "YEU_CAU_CHINH_SUA".equals(muc.trangThai());
+        if (!coTheSua || !Objects.equals(request.nghiQuyetChaId(), muc.nghiQuyetChaId())) {
+            throw loi(HttpStatus.CONFLICT, "Chỉ sửa bản nháp chưa công bố hoặc nghị quyết được yêu cầu chỉnh sửa");
         }
-        Integer taiLieuId = luuTep(hop, nguoiDungId, tep);
+        Integer taiLieuId = tep == null || tep.isEmpty() ? muc.taiLieuId() : luuTep(hop, nguoiDungId, tep);
+        if (taiLieuId == null) throw loi(HttpStatus.BAD_REQUEST, "Chọn tệp nghị quyết PDF");
         jdbc.sql("""
-                UPDATE nghi_quyet SET tieu_de = ?, noi_dung = '', tai_lieu_id = ?, trang_thai = 'NHAP',
+                UPDATE nghi_quyet SET tieu_de = ?, tai_lieu_id = ?, trang_thai = 'NHAP',
                 ly_do = NULL, ngay_cong_bo = NULL WHERE nghi_quyet_id = ?
                 """).params(request.tieuDe().strip(), taiLieuId, id).update();
         realtime.baoCuocHop(hop, nguoiDungId);
+    }
+
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public void xoa(Integer cuocHopId, Integer id, Integer nguoiDungId) {
+        CuocHop hop = khoaHop(cuocHopId, nguoiDungId);
+        Muc muc = tim(cuocHopId, id);
+        if (!"NHAP".equals(muc.trangThai()) || muc.ngayCongBo() != null) {
+            throw loi(HttpStatus.CONFLICT, "Chỉ xóa nghị quyết nháp chưa công bố");
+        }
+        if (!muc.coTheXoa()) {
+            throw loi(HttpStatus.CONFLICT, "Không thể xóa nghị quyết có mục cấp dưới hoặc lịch sử biểu quyết");
+        }
+        jdbc.sql("DELETE FROM nghi_quyet WHERE cuoc_hop_id = ? AND nghi_quyet_id = ?")
+                .params(cuocHopId, id).update();
+        realtime.baoCuocHop(hop, nguoiDungId);
+    }
+
+    void goGanBieuQuyetNhap(Integer cuocHopId, Integer id) {
+        jdbc.sql("UPDATE nghi_quyet SET trang_thai = 'NHAP' WHERE cuoc_hop_id = ? AND nghi_quyet_id = ? AND trang_thai = 'DANG_BIEU_QUYET'")
+                .params(cuocHopId, id).update();
+    }
+
+    String chotBieuQuyetPhuongAn(Integer id, boolean datDaSo) {
+        String ketQua = datDaSo ? "THONG_QUA" : "CHUA_DAT_DA_SO";
+        capNhatTrangThai(id, ketQua);
+        return ketQua;
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
@@ -185,7 +220,7 @@ public class NghiQuyetService {
     }
 
     private Muc tim(Integer cuocHopId, Integer id) {
-        return jdbc.sql("SELECT * FROM nghi_quyet WHERE cuoc_hop_id = ? AND nghi_quyet_id = ?")
+        return jdbc.sql(CHON_NGHI_QUYET + " WHERE cuoc_hop_id = ? AND nghi_quyet_id = ?")
                 .params(cuocHopId, id).query(Muc.class).optional()
                 .orElseThrow(() -> loi(HttpStatus.NOT_FOUND, "Không tìm thấy nghị quyết trong cuộc họp"));
     }

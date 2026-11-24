@@ -27,6 +27,17 @@ public interface PhieuBieuQuyetRepository
             Integer bieuQuyetId,
             String maPhieu
     );
+    long countByBieuQuyet_BieuQuyetId(Integer bieuQuyetId);
+
+    @Query(value = """
+            SELECT pa.lua_chon_id AS luaChonId, COUNT(*) AS soPhieu
+            FROM phuong_an_bo_sung_cua_phieu pa
+            JOIN phieu_bieu_quyet p ON p.phieu_bieu_quyet_id = pa.phieu_bieu_quyet_id
+            WHERE p.bieu_quyet_id = :bieuQuyetId
+            GROUP BY pa.lua_chon_id
+            """, nativeQuery = true)
+    List<SoPhieuTheoLuaChon> demPhuongAnBoSung(@Param("bieuQuyetId") Integer bieuQuyetId);
+
     interface SoPhieuTheoLuaChon {
         Integer getLuaChonId();
         Long getSoPhieu();

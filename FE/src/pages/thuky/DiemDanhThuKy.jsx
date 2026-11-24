@@ -26,7 +26,7 @@ function dinhDangGio(thoiGian) {
     : ngay.toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
-export default function DiemDanhThuKy({ cuocHopId, token, readOnly = false }) {
+export default function DiemDanhThuKy({ hienTieuDe = true, cuocHopId, token, readOnly = false }) {
   const phienDongBo = useDongBoDuLieu()
   const [thanhVien, setThanhVien] = useState(null)
   const [batDauDuKien, setBatDauDuKien] = useState(null)
@@ -105,31 +105,30 @@ export default function DiemDanhThuKy({ cuocHopId, token, readOnly = false }) {
     <section className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.14em] text-emerald-800">Tham dự</p>
-          <h2 className="mt-1 text-xl font-bold text-slate-900">Tham dự cuộc họp</h2>
-          <p className="mt-1 text-sm text-slate-600">Đối chiếu giờ tự điểm danh với sự có mặt thực tế. Kết quả thư ký ghi nhận được dùng cho biểu quyết.</p>
-          <p className="mt-1 text-sm text-slate-500">
+          {hienTieuDe && <h2 className="text-xl font-bold text-slate-900 phong-toi:text-phong-chu">Tham dự cuộc họp</h2>}
+          <p className="mt-1 text-sm text-slate-600 phong-toi:text-phong-chu-phu">Đối chiếu giờ tự điểm danh với sự có mặt thực tế. Kết quả thư ký ghi nhận được dùng cho biểu quyết.</p>
+          <p className="mt-1 text-sm text-slate-500 phong-toi:text-phong-chu-phu">
             {mocBatDau
               ? `Lịch bắt đầu ${dinhDangGio(batDauDuKien)}`
               : 'Chưa có giờ bắt đầu đã xác nhận để đối chiếu giờ đến.'}
           </p>
         </div>
         <button type="button" onClick={() => setLanTai((lan) => lan + 1)}
-          className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50">
+          className="rounded-lg border border-slate-300 phong-toi:border-phong-vien bg-white phong-toi:bg-phong-mat px-3 py-2 text-sm font-semibold text-slate-800 phong-toi:text-phong-chu hover:bg-slate-50 phong-toi:hover:bg-phong-mat-noi">
           Làm mới danh sách
         </button>
         {readOnly && (
-          <span className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-600">
+          <span className="rounded-full bg-slate-100 phong-toi:bg-phong-mat-noi px-3 py-1.5 text-xs font-semibold text-slate-600 phong-toi:text-phong-chu-phu">
             Chế độ xem
           </span>
         )}
       </div>
 
-      {loiTai && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{loiTai}</p>}
-      {loiDiemDanh && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{loiDiemDanh}</p>}
+      {loiTai && <p role="alert" className="rounded-xl border border-red-200 phong-toi:border-phong-vien-do bg-red-50 phong-toi:bg-phong-nhan-do p-3 text-sm text-red-800 phong-toi:text-phong-do">{loiTai}</p>}
+      {loiDiemDanh && <p role="alert" className="rounded-xl border border-red-200 phong-toi:border-phong-vien-do bg-red-50 phong-toi:bg-phong-nhan-do p-3 text-sm text-red-800 phong-toi:text-phong-do">{loiDiemDanh}</p>}
 
       {!readOnly && thongKe.canDoiChieu > 0 && (
-        <p role="status" className="rounded-lg bg-amber-50 px-3 py-2 text-sm font-medium text-amber-900">
+        <p role="status" className="rounded-lg bg-amber-50 phong-toi:bg-phong-nhan-vang px-3 py-2 text-sm font-medium text-amber-900 phong-toi:text-phong-vang">
           {thongKe.canDoiChieu} người đã tự điểm danh và đang chờ đối chiếu.
         </p>
       )}
@@ -137,16 +136,16 @@ export default function DiemDanhThuKy({ cuocHopId, token, readOnly = false }) {
       {thanhVien !== null && (
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {[
-            { ten: 'Trong danh sách', so: thongKe.tong, BieuTuong: UserRoundCheck, mau: 'bg-slate-100 text-slate-600' },
-            { ten: 'Có mặt', so: thongKe.coMat, BieuTuong: CheckCircle2, mau: 'bg-emerald-50 text-emerald-700' },
-            { ten: 'Vắng mặt', so: thongKe.vangMat, BieuTuong: UserRoundX, mau: 'bg-rose-50 text-rose-700' },
-            { ten: 'Rời sớm', so: thongKe.roiSom, BieuTuong: LogOut, mau: 'bg-amber-50 text-amber-700' },
+            { ten: 'Trong danh sách', so: thongKe.tong, BieuTuong: UserRoundCheck, mau: 'bg-slate-100 phong-toi:bg-phong-mat-noi text-slate-600 phong-toi:text-phong-chu-phu' },
+            { ten: 'Có mặt', so: thongKe.coMat, BieuTuong: CheckCircle2, mau: 'bg-emerald-50 phong-toi:bg-phong-nhan-xanh text-emerald-700 phong-toi:text-phong-xanh' },
+            { ten: 'Vắng mặt', so: thongKe.vangMat, BieuTuong: UserRoundX, mau: 'bg-rose-50 phong-toi:bg-phong-nhan-do text-rose-700 phong-toi:text-phong-do' },
+            { ten: 'Rời sớm', so: thongKe.roiSom, BieuTuong: LogOut, mau: 'bg-amber-50 phong-toi:bg-phong-nhan-vang text-amber-700 phong-toi:text-phong-vang' },
           ].map(({ ten, so, BieuTuong, mau }) => (
-            <div key={ten} className="flex items-center gap-3 rounded-xl border border-slate-200/80 bg-white p-3">
+            <div key={ten} className="flex items-center gap-3 rounded-xl border border-slate-200/80 phong-toi:border-phong-vien bg-white phong-toi:bg-phong-mat p-3">
               <span className={`grid size-9 place-items-center rounded-lg ${mau}`}><BieuTuong size={17} /></span>
               <span>
-                <span className="block text-lg font-bold leading-5 text-slate-900">{so}</span>
-                <span className="mt-1 block text-xs font-medium text-slate-500">{ten}</span>
+                <span className="block text-lg font-bold leading-5 text-slate-900 phong-toi:text-phong-chu">{so}</span>
+                <span className="mt-1 block text-xs font-medium text-slate-500 phong-toi:text-phong-chu-phu">{ten}</span>
               </span>
             </div>
           ))}
@@ -154,16 +153,16 @@ export default function DiemDanhThuKy({ cuocHopId, token, readOnly = false }) {
       )}
 
       {!loiTai && thanhVien === null && (
-        <p role="status" className="rounded-xl bg-slate-50 p-5 text-sm text-slate-600">Đang tải danh sách thành viên…</p>
+        <p role="status" className="rounded-xl bg-slate-50 phong-toi:bg-phong-mat-noi p-5 text-sm text-slate-600 phong-toi:text-phong-chu-phu">Đang tải danh sách thành viên…</p>
       )}
 
       {thanhVien?.length === 0 && (
-        <p className="rounded-xl bg-slate-50 p-5 text-sm text-slate-600">Chưa có thành viên trong danh sách tham dự.</p>
+        <p className="rounded-xl bg-slate-50 phong-toi:bg-phong-mat-noi p-5 text-sm text-slate-600 phong-toi:text-phong-chu-phu">Chưa có thành viên trong danh sách tham dự.</p>
       )}
 
       {thanhVien?.length > 0 && (
-        <div className="overflow-hidden rounded-xl border border-slate-200/80">
-          <ul className="divide-y divide-slate-100">
+        <div className="overflow-hidden rounded-xl border border-slate-200/80 phong-toi:border-phong-vien">
+          <ul className="divide-y divide-slate-100 phong-toi:divide-phong-vien">
             {thanhVien.map((muc) => {
               const mocDiemDanh = muc.thoiGianDiemDanh ? new Date(muc.thoiGianDiemDanh).getTime() : null
               const daDoiChieu = Boolean(muc.thoiGianDoiChieuDiemDanh)
@@ -177,14 +176,14 @@ export default function DiemDanhThuKy({ cuocHopId, token, readOnly = false }) {
                 && mocDiemDanh > mocBatDau
 
               return (
-                <li key={muc.nguoiDungId} className="flex flex-col gap-3 bg-white p-4 sm:flex-row sm:items-center sm:justify-between">
+                <li key={muc.nguoiDungId} className="flex flex-col gap-3 bg-white phong-toi:bg-phong-mat p-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex min-w-0 items-start gap-3">
-                    <span className="grid size-10 shrink-0 place-items-center rounded-full bg-emerald-100 text-sm font-bold text-emerald-900">
+                    <span className="grid size-10 shrink-0 place-items-center rounded-full bg-emerald-100 phong-toi:bg-phong-nhan-xanh text-sm font-bold text-emerald-900 phong-toi:text-phong-xanh">
                       {muc.hoTen?.trim()?.split(/\s+/).at(-1)?.[0]?.toLocaleUpperCase('vi') || '?'}
                     </span>
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-slate-900">{muc.hoTen}</p>
-                      <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
+                      <p className="truncate text-sm font-semibold text-slate-900 phong-toi:text-phong-chu">{muc.hoTen}</p>
+                      <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500 phong-toi:text-phong-chu-phu">
                         <span className="inline-flex items-center gap-1">
                           <Clock3 size={13} aria-hidden="true" />
                           {TEN_TRANG_THAI[muc.trangThaiThamDu] ?? muc.trangThaiThamDu}
@@ -193,10 +192,10 @@ export default function DiemDanhThuKy({ cuocHopId, token, readOnly = false }) {
                         <span>Thư ký đối chiếu · {daDoiChieu ? dinhDangGio(muc.thoiGianDoiChieuDiemDanh) : 'Chưa đối chiếu'}</span>
                         {!daDoiChieu && !muc.thoiGianTuDiemDanh && muc.thoiGianDiemDanh
                           && <span>Ghi nhận trước đó · {dinhDangGio(muc.thoiGianDiemDanh)}</span>}
-                        {lechDiemDanh && <span className="rounded-full bg-rose-50 px-2 py-0.5 font-semibold text-rose-800">Tự điểm danh, thư ký ghi vắng</span>}
+                        {lechDiemDanh && <span className="rounded-full bg-rose-50 phong-toi:bg-phong-nhan-do px-2 py-0.5 font-semibold text-rose-800 phong-toi:text-phong-do">Tự điểm danh, thư ký ghi vắng</span>}
                         {muc.thoiGianRoiCuocHop && <span>Rời họp {dinhDangGio(muc.thoiGianRoiCuocHop)}</span>}
-                        {denMuon && <span className="rounded-full bg-amber-50 px-2 py-0.5 font-semibold text-amber-800">Đến muộn</span>}
-                        {muc.thoiGianRoiCuocHop && <span className="rounded-full bg-orange-50 px-2 py-0.5 font-semibold text-orange-800">Rời sớm</span>}
+                        {denMuon && <span className="rounded-full bg-amber-50 phong-toi:bg-phong-nhan-vang px-2 py-0.5 font-semibold text-amber-800 phong-toi:text-phong-vang">Đến muộn</span>}
+                        {muc.thoiGianRoiCuocHop && <span className="rounded-full bg-orange-50 phong-toi:bg-phong-nhan-vang px-2 py-0.5 font-semibold text-orange-800 phong-toi:text-phong-vang">Rời sớm</span>}
                       </div>
                     </div>
                   </div>
@@ -206,25 +205,25 @@ export default function DiemDanhThuKy({ cuocHopId, token, readOnly = false }) {
                       {(!daDoiChieu || muc.trangThaiThamDu !== 'CO_MAT') && (
                         <button type="button" disabled={dangLuuId !== null}
                           onClick={() => xuLyDiemDanh(muc.nguoiDungId, true)}
-                          className="rounded-lg border border-emerald-200 px-3 py-2 text-xs font-semibold text-emerald-900 hover:bg-emerald-50 disabled:opacity-45">
+                          className="rounded-lg border border-emerald-200 phong-toi:border-phong-vien-xanh px-3 py-2 text-xs font-semibold text-emerald-900 phong-toi:text-phong-xanh hover:bg-emerald-50 phong-toi:hover:bg-phong-mat-noi disabled:opacity-45">
                           Xác nhận có mặt
                         </button>
                       )}
                       {(!daDoiChieu || muc.trangThaiThamDu !== 'VANG_MAT') && (
                         <button type="button" disabled={dangLuuId !== null}
                           onClick={() => xuLyDiemDanh(muc.nguoiDungId, false)}
-                          className="rounded-lg border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-800 hover:bg-rose-50 disabled:opacity-45">
+                          className="rounded-lg border border-rose-200 phong-toi:border-phong-vien-do px-3 py-2 text-xs font-semibold text-rose-800 phong-toi:text-phong-do hover:bg-rose-50 phong-toi:hover:bg-phong-nhan-do disabled:opacity-45">
                           Ghi vắng mặt
                         </button>
                       )}
                       {muc.trangThaiThamDu === 'CO_MAT' && (
                         <button type="button" disabled={dangLuuId !== null}
                           onClick={() => xuLyDiemDanh(muc.nguoiDungId)}
-                          className="rounded-lg border border-amber-200 px-3 py-2 text-xs font-semibold text-amber-800 hover:bg-amber-50 disabled:opacity-45">
+                          className="rounded-lg border border-amber-200 phong-toi:border-phong-vien-vang px-3 py-2 text-xs font-semibold text-amber-800 phong-toi:text-phong-vang hover:bg-amber-50 disabled:opacity-45">
                           Ghi nhận rời sớm
                         </button>
                       )}
-                      {dangLuuId === muc.nguoiDungId && <span role="status" className="text-xs text-slate-600">Đang lưu…</span>}
+                      {dangLuuId === muc.nguoiDungId && <span role="status" className="text-xs text-slate-600 phong-toi:text-phong-chu-phu">Đang lưu…</span>}
                     </div>
                   )}
                 </li>

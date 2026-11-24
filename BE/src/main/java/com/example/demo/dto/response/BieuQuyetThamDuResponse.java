@@ -8,6 +8,7 @@ public record BieuQuyetThamDuResponse(
         Integer bieuQuyetId,
         String tieuDeBieuQuyet,
         LocalDateTime thoiGianBatDau,
-        LocalDateTime thoiGianKetThuc
+        LocalDateTime thoiGianKetThuc,
+        Integer nghiQuyetId
 ) {
 }

@@ -92,7 +92,7 @@ export function NoiDungXemTruoc({ tep, cuocHopId, yeuCauId, token, layTep = layT
   if (dinhDang === 'pdf') return <TrangPdf {...thongTin} />
   if (dinhDang === 'xlsx') return <TrangExcel {...thongTin} />
   return (
-    <p className="p-4 text-sm text-slate-600">
+    <p className="p-4 text-sm text-slate-600 phong-toi:text-phong-chu-phu">
       {dinhDang === 'doc'
         ? 'Hãy tải tệp gốc để mở. Để xem trong hồ sơ, lưu tệp Word dạng .docx hoặc PDF rồi tải lên.'
         : dinhDang === 'xls'
@@ -130,8 +130,8 @@ function TrangPdf({ taiLieuId, cuocHopId, yeuCauId, token, tenTep, layTep }) {
   if (!ketQua) return <p role="status" className="p-4 text-sm">Đang chuẩn bị bản xem trước…</p>
   if (ketQua.loi) return (
     <div className="space-y-2 p-4 text-sm">
-      <p role="alert" className="text-red-800">{ketQua.loi}</p>
-      <button type="button" className="font-semibold text-blue-900 underline" onClick={() => {
+      <p role="alert" className="text-red-800 phong-toi:text-phong-do">{ketQua.loi}</p>
+      <button type="button" className="font-semibold text-blue-900 phong-toi:text-phong-xanh underline" onClick={() => {
         setKetQua(null)
         setLanThu((lan) => lan + 1)
       }}>Thử lại</button>
@@ -140,9 +140,9 @@ function TrangPdf({ taiLieuId, cuocHopId, yeuCauId, token, tenTep, layTep }) {
 
   return (
     <>
-      <div className="border-b border-slate-200 px-4 py-2 text-right text-sm">
+      <div className="border-b border-slate-200 phong-toi:border-phong-vien px-4 py-2 text-right text-sm">
         <a href={ketQua.url} target="_blank" rel="noopener noreferrer"
-          className="font-semibold text-blue-900 underline">Mở bản PDF trong tab mới</a>
+          className="font-semibold text-blue-900 phong-toi:text-phong-xanh underline">Mở bản PDF trong tab mới</a>
       </div>
       <iframe title={`Xem trước ${tenTep}`} src={`${ketQua.url}#view=FitH`}
         className="block h-[min(78vh,56rem)] min-h-96 w-full border-0" />

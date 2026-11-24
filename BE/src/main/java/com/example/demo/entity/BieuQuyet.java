@@ -52,11 +52,17 @@ public class BieuQuyet {
     @Column(name = "che_do_bieu_quyet", nullable = false, length = 20)
     private String cheDoBieuQuyet = "CONG_KHAI";
 
+    @Column(name = "phuong_thuc", nullable = false, length = 20)
+    private String phuongThuc = "TAN_THANH";
+
     @Column(name = "cho_phep_trang_thai", nullable = false)
     private Boolean choPhepTrangThai = true;
 
     @Column(name = "ty_le_tham_gia_toi_thieu", precision = 5, scale = 2)
     private BigDecimal tyLeThamGiaToiThieu;
+
+    @Column(name = "thoi_luong_phut")
+    private Integer thoiLuongPhut;
 
     @Column(name = "thoi_gian_bat_dau", nullable = false)
     private LocalDateTime thoiGianBatDau;

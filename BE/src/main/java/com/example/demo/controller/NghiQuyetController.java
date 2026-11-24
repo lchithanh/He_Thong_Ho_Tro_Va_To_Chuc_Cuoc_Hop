@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -57,9 +58,15 @@ public class NghiQuyetController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void sua(@PathVariable Integer cuocHopId, @PathVariable Integer id,
             @RequestParam(required = false) Integer nghiQuyetChaId, @RequestParam String tieuDe,
-            @RequestParam MultipartFile tep, Authentication auth) {
+            @RequestParam(required = false) MultipartFile tep, Authentication auth) {
         nghiQuyet.sua(cuocHopId, id, nguoiDung.layNguoiDungId(auth),
                 new NghiQuyetService.NoiDung(nghiQuyetChaId, tieuDe, null), tep);
+    }
+
+    @DeleteMapping(NGHI_QUYET + "/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void xoa(@PathVariable Integer cuocHopId, @PathVariable Integer id, Authentication auth) {
+        nghiQuyet.xoa(cuocHopId, id, nguoiDung.layNguoiDungId(auth));
     }
 
     @PostMapping(NGHI_QUYET + "/{id}/cong-bo")

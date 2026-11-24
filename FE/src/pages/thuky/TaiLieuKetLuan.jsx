@@ -108,14 +108,14 @@ export default function TaiLieuKetLuan({ cuocHopId, token, choPhepTaiLen, loai =
   }
 
   const banXem = tep && (
-    <section aria-label="Xem trước tệp đính kèm" className="min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-slate-100">
-      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-3">
+    <section aria-label="Xem trước tệp đính kèm" className="min-w-0 overflow-hidden rounded-xl border border-slate-200 phong-toi:border-phong-vien bg-slate-100 phong-toi:bg-phong-mat-noi">
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 phong-toi:border-phong-vien bg-white phong-toi:bg-phong-mat px-4 py-3">
         <div className="min-w-0">
-          <h4 className="text-sm font-bold text-slate-900">Xem trước tài liệu</h4>
-          <p className="mt-1 break-all text-xs text-slate-600">{tenTep(tep)}</p>
+          <h4 className="text-sm font-bold text-slate-900 phong-toi:text-phong-chu">Xem trước tài liệu</h4>
+          <p className="mt-1 break-all text-xs text-slate-600 phong-toi:text-phong-chu-phu">{tenTep(tep)}</p>
         </div>
         <button type="button" onClick={() => setTepIdDaChon(null)}
-          className="rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700">
+          className="rounded-md border border-slate-300 phong-toi:border-phong-vien px-3 py-2 text-sm font-semibold text-slate-700 phong-toi:text-phong-chu-phu">
           Đóng xem trước
         </button>
       </header>
@@ -124,7 +124,7 @@ export default function TaiLieuKetLuan({ cuocHopId, token, choPhepTaiLen, loai =
   )
 
   return (
-    <div className="space-y-3 border-t border-slate-200 pt-4">
+    <div className="space-y-3 border-t border-slate-200 phong-toi:border-phong-vien pt-4">
       <h4 className="font-semibold">{taiLieuVanBan.ten}</h4>
 
       {choPhepTaiLen && (
@@ -136,36 +136,36 @@ export default function TaiLieuKetLuan({ cuocHopId, token, choPhepTaiLen, loai =
               type="file"
               required
               disabled={dangTaiLen}
-              className="max-w-full rounded-lg border border-slate-300 p-2"
+              className="max-w-full rounded-lg border border-slate-300 p-2 phong-toi:truong-phong-hop"
             />
           </label>
 
           <button
             type="submit"
             disabled={dangTaiLen}
-            className="rounded-lg bg-emerald-800 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+            className="rounded-lg bg-emerald-800 phong-toi:bg-phong-nut px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
           >
             {dangTaiLen ? 'Đang tải lên…' : 'Tải lên'}
           </button>
         </form>
       )}
 
-      {loiThaoTac && <p role="alert" className="text-sm text-red-800">{loiThaoTac}</p>}
+      {loiThaoTac && <p role="alert" className="text-sm text-red-800 phong-toi:text-phong-do">{loiThaoTac}</p>}
 
       <KhongGianVanBan banXem={banXem}>
         {!coDanhSachCoSan && loiDanhSach ? (
-          <p role="alert" className="text-sm text-red-800">{loiDanhSach}</p>
+          <p role="alert" className="text-sm text-red-800 phong-toi:text-phong-do">{loiDanhSach}</p>
         ) : danhSach === null ? (
-          <p role="status" className="text-sm text-slate-600">Đang tải tài liệu…</p>
+          <p role="status" className="text-sm text-slate-600 phong-toi:text-phong-chu-phu">Đang tải tài liệu…</p>
         ) : danhSach.length === 0 ? (
-          <p className="text-sm text-slate-600">Chưa có tệp đính kèm.</p>
+          <p className="text-sm text-slate-600 phong-toi:text-phong-chu-phu">Chưa có tệp đính kèm.</p>
         ) : (
-          <ul className="divide-y divide-slate-200 text-sm">
+          <ul className="divide-y divide-slate-200 phong-toi:divide-phong-vien text-sm">
             {danhSach.map((taiLieu) => (
               <li key={taiLieu.taiLieuId} className="flex flex-wrap items-center justify-between gap-2 py-2">
                 <button type="button" aria-pressed={taiLieu.taiLieuId === tepIdDaChon}
                   onClick={() => setTepIdDaChon(taiLieu.taiLieuId)}
-                  className="rounded-md px-2 py-1 text-left font-medium text-emerald-800 hover:bg-emerald-50 aria-pressed:bg-emerald-100">
+                  className="rounded-md px-2 py-1 text-left font-medium text-emerald-800 phong-toi:text-phong-xanh hover:bg-emerald-50 phong-toi:hover:bg-phong-mat-noi aria-pressed:bg-emerald-100">
                   <span className="sr-only">Xem trước </span>
                   <span className="break-all">{tenTep(taiLieu)}</span>
                 </button>
@@ -173,7 +173,7 @@ export default function TaiLieuKetLuan({ cuocHopId, token, choPhepTaiLen, loai =
                 <button
                   type="button"
                   onClick={() => xuLyTaiXuong(taiLieu)}
-                  className="rounded-lg border border-slate-300 px-3 py-1.5 font-semibold text-emerald-800"
+                  className="rounded-lg border border-slate-300 phong-toi:border-phong-vien px-3 py-1.5 font-semibold text-emerald-800 phong-toi:text-phong-xanh"
                 >
                   Tải xuống
                 </button>

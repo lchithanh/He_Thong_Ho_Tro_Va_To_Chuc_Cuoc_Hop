@@ -11,7 +11,7 @@ import {
   trinhDuyetBienBan,
 } from '../../api/bienBanApi.js'
 
-const LOP_TRUONG = 'mt-1 w-full rounded-lg border border-slate-300 px-3 py-2'
+const LOP_TRUONG = 'mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 phong-toi:truong-phong-hop'
 
 const TEN_TRANG_THAI = {
   NHAP: 'Bản nháp',
@@ -151,9 +151,9 @@ const [yeuCauPheDuyetId, setYeuCauPheDuyetId] = useState(null)
 
 
   return (
-    <section className="space-y-4 border-t border-slate-200 pt-5">
+    <section className="khong-gian-toi mat-phong-toi space-y-4 rounded-2xl border border-slate-200 phong-toi:border-phong-vien p-4 sm:p-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="font-semibold">Biên bản cuộc họp</h3>
+        <h3 className="text-lg font-bold">Biên bản cuộc họp</h3>
         {!dangSua && <button type="button" className="rounded-md border px-3 py-1.5 text-sm font-semibold"
           disabled={dangLuu || dangTrinh} onClick={() => setLanTai((lan) => lan + 1)}>Làm mới trạng thái</button>}
       </div>
@@ -165,13 +165,13 @@ const [yeuCauPheDuyetId, setYeuCauPheDuyetId] = useState(null)
           trangThai={TEN_TRANG_THAI[bienBan?.trangThai] || 'Bản nháp'}
           ngayPhatHanh={bienBan?.ngayPhatHanh} />
       )}>
-      {loiTai && <p role="alert" className="text-sm text-red-800">{loiTai}</p>}
+      {loiTai && <p role="alert" className="text-sm text-red-800 phong-toi:text-phong-do">{loiTai}</p>}
       {bienBan === undefined ? (
-        !loiTai && <p role="status" className="text-sm text-slate-600">Đang tải biên bản…</p>
+        !loiTai && <p role="status" className="text-sm text-slate-600 phong-toi:text-phong-chu-phu">Đang tải biên bản…</p>
       ) : bienBan === null || (dangSua && coTheSua) ? (
         <form onSubmit={xuLyLuu} onChange={capNhatBanXemTruoc} className="space-y-4">
           {bienBan?.trangThai === 'BI_TRA_LAI' && bienBan.yKienPhanHoi && (
-            <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-950">
+            <p className="rounded-lg bg-amber-50 phong-toi:bg-phong-nhan-vang p-3 text-sm text-amber-950 phong-toi:text-phong-vang">
               Lý do trả lại: {bienBan.yKienPhanHoi}
             </p>
           )}
@@ -217,20 +217,20 @@ const [yeuCauPheDuyetId, setYeuCauPheDuyetId] = useState(null)
             </label>
           )}
 
-          {loiLuu && <p role="alert" className="text-sm text-red-800">{loiLuu}</p>}
+          {loiLuu && <p role="alert" className="text-sm text-red-800 phong-toi:text-phong-do">{loiLuu}</p>}
 
           <button
             type="submit"
             disabled={dangLuu}
-            className="rounded-lg bg-emerald-800 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+            className="rounded-lg bg-emerald-800 phong-toi:bg-phong-nut px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
           >
             {dangLuu ? 'Đang lưu…' : dangSua ? 'Lưu chỉnh sửa' : 'Lưu nháp biên bản'}
           </button>
         </form>
       ) : (
-        <div className="space-y-3 rounded-lg border border-slate-200 p-4">
+        <div className="space-y-3 rounded-lg border border-slate-200 phong-toi:border-phong-vien p-4">
           <div>
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-slate-600 phong-toi:text-phong-chu-phu">
               Biên bản #{bienBan.bienBanId} ·{' '}
               {TEN_TRANG_THAI[bienBan.trangThai] ?? bienBan.trangThai}
               {bienBan.trangThai === 'CHO_DUYET' && bienBan.tenNguoiDuyet
@@ -239,7 +239,7 @@ const [yeuCauPheDuyetId, setYeuCauPheDuyetId] = useState(null)
             </p>
           </div>
 
-          <dl className="grid gap-3 rounded-lg bg-slate-50 p-3 text-sm sm:grid-cols-2">
+          <dl className="grid gap-3 rounded-lg bg-slate-50 phong-toi:bg-phong-mat-noi p-3 text-sm sm:grid-cols-2">
             {[
               ['Người soạn', bienBan.tenNguoiSoan || (bienBan.nguoiSoanId == null ? 'Chưa có thông tin' : `Người dùng #${bienBan.nguoiSoanId}`)],
               ['Người duyệt', bienBan.tenNguoiDuyet || 'Chưa có quyết định duyệt'],
@@ -255,7 +255,7 @@ const [yeuCauPheDuyetId, setYeuCauPheDuyetId] = useState(null)
             choPhepTaiLen={coTheSua && !dangTrinh} phienLamMoi={lanTai}
             onTepChuaLuuThayDoi={setCoTepChuaLuu} />
           {bienBan.trangThai === 'BI_TRA_LAI' && bienBan.yKienPhanHoi && (
-            <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-950">
+            <p className="rounded-lg bg-amber-50 phong-toi:bg-phong-nhan-vang p-3 text-sm text-amber-950 phong-toi:text-phong-vang">
               Lý do trả lại: {bienBan.yKienPhanHoi}
             </p>
           )}
@@ -266,13 +266,13 @@ const [yeuCauPheDuyetId, setYeuCauPheDuyetId] = useState(null)
               type="button"
               disabled={coTepChuaLuu || dangTrinh}
               onClick={() => setDangSua(true)}
-              className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold"
+              className="rounded-lg border border-slate-300 phong-toi:border-phong-vien px-4 py-2 text-sm font-semibold"
             >
               Sửa biên bản
             </button>
             )}
                     {coTheSua && (
-            <form onSubmit={xuLyTrinh} className="space-y-3 border-t border-slate-200 pt-4">
+            <form onSubmit={xuLyTrinh} className="space-y-3 border-t border-slate-200 phong-toi:border-phong-vien pt-4">
                 <label className="block text-sm font-medium">
                 Ghi chú trình duyệt
                 <textarea
@@ -283,15 +283,15 @@ const [yeuCauPheDuyetId, setYeuCauPheDuyetId] = useState(null)
                 />
                 </label>
 
-                {loiTrinh && <p role="alert" className="text-sm text-red-800">{loiTrinh}</p>}
+                {loiTrinh && <p role="alert" className="text-sm text-red-800 phong-toi:text-phong-do">{loiTrinh}</p>}
                 {coTepChuaLuu && (
-                  <p role="status" className="text-sm text-slate-600">Hãy tải tệp đã chọn lên trước khi trình biên bản.</p>
+                  <p role="status" className="text-sm text-slate-600 phong-toi:text-phong-chu-phu">Hãy tải tệp đã chọn lên trước khi trình biên bản.</p>
                 )}
 
                 <button
                 type="submit"
                 disabled={dangTrinh || coTepChuaLuu}
-                className="rounded-lg bg-emerald-800 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                className="rounded-lg bg-emerald-800 phong-toi:bg-phong-nut px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
                 >
                 {dangTrinh ? 'Đang trình…' : 'Trình duyệt biên bản'}
                 </button>
@@ -299,7 +299,7 @@ const [yeuCauPheDuyetId, setYeuCauPheDuyetId] = useState(null)
             )}
 
             {yeuCauPheDuyetId !== null && (
-            <p role="status" className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">
+            <p role="status" className="rounded-lg bg-emerald-50 phong-toi:bg-phong-nhan-xanh p-3 text-sm text-emerald-800 phong-toi:text-phong-xanh">
                 Đã trình duyệt biên bản. Mã yêu cầu #{yeuCauPheDuyetId}.
             </p>
             )}
@@ -307,21 +307,21 @@ const [yeuCauPheDuyetId, setYeuCauPheDuyetId] = useState(null)
       )}
 
       {bienBan?.trangThai === 'DA_PHE_DUYET' && (
-        <p className="text-sm text-slate-600">Biên bản đang chờ chủ trì phát hành.</p>
+        <p className="text-sm text-slate-600 phong-toi:text-phong-chu-phu">Biên bản đang chờ chủ trì phát hành.</p>
       )}
 
       {bienBanId && (
-        <div className="space-y-2 border-t border-slate-200 pt-4">
+        <div className="space-y-2 border-t border-slate-200 phong-toi:border-phong-vien pt-4">
           <h4 className="font-semibold">Lịch sử phiên bản</h4>
 
           {loiPhienBan && (
-            <p role="alert" className="text-sm text-red-800">{loiPhienBan}</p>
+            <p role="alert" className="text-sm text-red-800 phong-toi:text-phong-do">{loiPhienBan}</p>
           )}
 
           {phienBan.map((muc) => (
             <details
               key={muc.phienBanId}
-              className="rounded-lg border border-slate-200 p-3 text-sm"
+              className="rounded-lg border border-slate-200 phong-toi:border-phong-vien p-3 text-sm"
             >
               <summary className="cursor-pointer font-medium">
                 Phiên bản {muc.soPhienBan}
