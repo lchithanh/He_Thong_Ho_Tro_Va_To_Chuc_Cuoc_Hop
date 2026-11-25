@@ -123,10 +123,14 @@ export default function ChiTietDeXuat({ cuocHopId, token, nguoiDung, onQuayLai, 
   }, [chiXem, buocThuKyLanhDao, cuocHopId, nguoiDung?.maVaiTro, token, phienDongBo])
 
   useEffect(() => {
-    if (!['CHO_TRUONG_PHONG', 'CHO_LANH_DAO'].includes(buocXuLy)) return
+    if (!['CHO_TRUONG_PHONG', 'CHO_LANH_DAO', 'CHO_VAN_PHONG_DUYET'].includes(buocXuLy)) return
 
     const controller = new AbortController()
-    const cap = buocXuLy === 'CHO_TRUONG_PHONG' ? 'TRUONG_PHONG' : 'LANH_DAO'
+    const cap = {
+      CHO_TRUONG_PHONG: 'TRUONG_PHONG',
+      CHO_LANH_DAO: 'LANH_DAO',
+      CHO_VAN_PHONG_DUYET: 'VAN_PHONG',
+    }[buocXuLy]
     layKeHoachChoToiDuyet(token, controller.signal)
       .then((danhSach) => {
         if (controller.signal.aborted) return
@@ -333,7 +337,7 @@ export default function ChiTietDeXuat({ cuocHopId, token, nguoiDung, onQuayLai, 
               </div>
 
               {yeuCauDuyet?.cuocHopId === chiTiet.cuocHopId
-                && ['CHO_TRUONG_PHONG', 'CHO_LANH_DAO'].includes(buocXuLy) && tabHienThi !== 'ke-hoach' && (
+                && ['CHO_TRUONG_PHONG', 'CHO_LANH_DAO', 'CHO_VAN_PHONG_DUYET'].includes(buocXuLy) && tabHienThi !== 'ke-hoach' && (
                 <div className="px-5 pt-4 sm:px-7">
                   <section className="rounded-xl border border-blue-100 bg-blue-50 p-4">
                     <TieuDeHoSo Icon={CalendarDays} cap="h2"
@@ -663,7 +667,7 @@ export default function ChiTietDeXuat({ cuocHopId, token, nguoiDung, onQuayLai, 
                         />
                       </div>
                     )}
-                    {loiTaiQuyenDuyet && ['CHO_TRUONG_PHONG', 'CHO_LANH_DAO'].includes(buocXuLy) && (
+                    {loiTaiQuyenDuyet && ['CHO_TRUONG_PHONG', 'CHO_LANH_DAO', 'CHO_VAN_PHONG_DUYET'].includes(buocXuLy) && (
                       <p role="alert" className="text-sm text-red-800">{loiTaiQuyenDuyet}</p>
                     )}
                     {!coTheTiepNhan && loiTiepNhan && <p role="alert" className="text-sm text-red-800">{loiTiepNhan}</p>}

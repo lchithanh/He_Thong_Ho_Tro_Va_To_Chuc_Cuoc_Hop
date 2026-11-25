@@ -11,7 +11,11 @@ export default function ChiTietKeHoachChoDuyet({ keHoach, token, onDong, onDaXuL
   const [mucBoSung, setMucBoSung] = useState(null)
   const tieuDe = useRef(null)
   const { cuocHopId, yeuCauPheDuyetId } = keHoach
-  const capTruongPhong = keHoach.capPheDuyet === 'TRUONG_PHONG'
+  const cap = {
+    TRUONG_PHONG: ['CHO_TRUONG_PHONG', 'trưởng phòng'],
+    VAN_PHONG: ['CHO_VAN_PHONG_DUYET', 'Văn phòng'],
+    LANH_DAO: ['CHO_LANH_DAO', 'lãnh đạo'],
+  }[keHoach.capPheDuyet]
 
   useEffect(() => { tieuDe.current?.focus() }, [])
 
@@ -27,9 +31,9 @@ export default function ChiTietKeHoachChoDuyet({ keHoach, token, onDong, onDaXuL
       <TienDoCuocHop
         chiTiet={{
           trangThai: 'DANG_CHUAN_BI',
-          buocXuLyHienTai: capTruongPhong ? 'CHO_TRUONG_PHONG' : 'CHO_LANH_DAO',
+          buocXuLyHienTai: cap?.[0],
         }}
-        viecTiepTheo={capTruongPhong ? 'Lần trình cấp trưởng phòng đang chờ bạn xử lý.' : 'Lần trình cấp lãnh đạo đang chờ bạn xử lý.'}
+        viecTiepTheo={cap ? `Kế hoạch đang chờ ${cap[1]} xử lý.` : 'Kế hoạch đang chờ bạn xử lý.'}
       />
       <HoSoDaTrinh
         yeuCauId={yeuCauPheDuyetId}

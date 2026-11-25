@@ -17,6 +17,7 @@ import TongQuanQuanTri from '../pages/quantri/TongQuanQuanTri.jsx'
 import DanhMucQuanTri from '../pages/quantri/DanhMucQuanTri.jsx'
 import PhanCongThuKy from '../pages/quantri/PhanCongThuKy.jsx'
 import { PhanHoi } from '../pages/quantri/uiQuanTri.jsx'
+import ThuKyVanPhong from '../pages/quantri/ThuKyVanPhong.jsx'
 import './quanTri.css'
 
 const NHOM_MENU = [
@@ -27,6 +28,7 @@ const NHOM_MENU = [
   { ten: 'Tổ chức', muc: [
     { id: 'users', ten: 'Tài khoản', BieuTuong: Users },
     { id: 'departments', ten: 'Phòng ban', BieuTuong: Building2 },
+    { id: 'thu-ky-van-phong', ten: 'Quyền Văn phòng', BieuTuong: ShieldCheck },
     { id: 'phan-cong', ten: 'Phân công thư ký', BieuTuong: UserRoundCog },
   ] },
   { ten: 'Cơ sở vật chất', muc: [
@@ -98,7 +100,8 @@ export default function KhongGianQuanTri({ nguoiDung, loi, onDangXuat }) {
               <ChiTietDeXuat key={hoSo} cuocHopId={hoSo} token={token} nguoiDung={nguoiDung}
                 chiXem tabBanDau="thong-tin" onQuayLai={() => setHoSo(null)} />
             ) : <TongQuanCuocHop token={token} nguoiDung={nguoiDung} onXemCuocHop={setHoSo} />
-              : muc === 'phan-cong' ? <PhanCongThuKy token={token} />
+              : muc === 'thu-ky-van-phong' ? <ThuKyVanPhong token={token} />
+                : muc === 'phan-cong' ? <PhanCongThuKy token={token} />
                 : <DanhMucQuanTri key={muc} token={token} loai={muc} nguoiDungId={nguoiDungId} phongHopLoc={phongHopLoc}
                   onXemThietBi={(phongHopId) => chonMuc('equipment', phongHopId)} />}
         </main>

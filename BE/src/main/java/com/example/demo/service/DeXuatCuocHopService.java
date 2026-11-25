@@ -157,6 +157,23 @@ public class DeXuatCuocHopService {
         return daLuu.getCuocHopId();
     }
 
+    Integer guiDeXuatTuNhom(TaoDeXuatCuocHopRequest request, NguoiDung nguoiGui,
+            PhongBan phongBan, NguoiDung chuTri, NguoiDung thuKy) {
+        kiemTraDuLieuDeXuat(request);
+        CuocHop hop = taoDeXuatNhap(request, nguoiGui, phongBan, chuTri);
+        luuNoiDungDeXuat(hop, request);
+        CuocHop daLuu = cuocHopRepository.save(hop);
+        ganThuKy(daLuu, thuKy);
+        if (!thuKy.getNguoiDungId().equals(nguoiGui.getNguoiDungId())
+                && !thuKy.getNguoiDungId().equals(chuTri.getNguoiDungId())) {
+            daLuu.setThuKyCuocHop(phanCongXuLyKeHoachService.chonThuKyCuocHop(daLuu, thuKy.getNguoiDungId()));
+        }
+        ThaoTacCuocHop.thucHien(() -> ThaoTacCuocHop.guiDeXuat(daLuu));
+        daLuu.getDeXuat().ghiNhanBuocXuLy(daLuu);
+        capNhatRealtime.baoBuocDeXuat(daLuu, nguoiGui.getNguoiDungId());
+        return daLuu.getCuocHopId();
+    }
+
     public void capNhatDeXuat(
             Integer cuocHopId,
             TaoDeXuatCuocHopRequest request,
@@ -556,7 +573,7 @@ public class DeXuatCuocHopService {
         return switch (cuocHop.getBuocXuLyHienTai() == null ? "" : cuocHop.getBuocXuLyHienTai()) {
             case "CHO_TIEP_NHAN", "CHO_XAC_NHAN_LICH_DU_KIEN", "LAP_KE_HOACH" ->
                     phanCongXuLyKeHoachService.layThuKyCuocHop(cuocHop);
-            case "CHO_TRUONG_PHONG", "CHO_LANH_DAO" ->
+            case "CHO_TRUONG_PHONG", "CHO_LANH_DAO", "CHO_VAN_PHONG_DUYET" ->
                     yeuCau == null ? null : yeuCau.getNguoiDuyet();
             case "CHO_GUI_CAP_TREN" ->
                     phanCongXuLyKeHoachService.layThuKyBanDau(cuocHop.getCuocHopId());

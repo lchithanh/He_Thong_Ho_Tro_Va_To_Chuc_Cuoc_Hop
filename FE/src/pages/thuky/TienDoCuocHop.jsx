@@ -18,6 +18,7 @@ const BUOC_THEO_GIAI_DOAN = {
   CHO_THU_KY_LANH_DAO: 2,
   THU_KY_LANH_DAO_XU_LY: 2,
   CHO_LANH_DAO: 2,
+  CHO_VAN_PHONG_DUYET: 2,
   THU_KY_TO_CHUC: 3,
   DANG_HOP: 3,
   SAU_CUOC_HOP: 4,
@@ -33,6 +34,7 @@ const NOI_DUNG_BUOC = {
   CHO_THU_KY_LANH_DAO: 'Hồ sơ đang chờ thư ký lãnh đạo tiếp nhận.',
   THU_KY_LANH_DAO_XU_LY: 'Thư ký lãnh đạo đang rà soát hồ sơ.',
   CHO_LANH_DAO: 'Hồ sơ đang chờ lãnh đạo phê duyệt.',
+  CHO_VAN_PHONG_DUYET: 'Hồ sơ đang chờ Văn phòng phê duyệt.',
   THU_KY_TO_CHUC: 'Kế hoạch đã duyệt; thư ký được giao đang tổ chức cuộc họp.',
   DANG_HOP: 'Cuộc họp đang diễn ra.',
   SAU_CUOC_HOP: 'Cuộc họp đã kết thúc; hồ sơ đang được hoàn thiện.',
@@ -47,6 +49,7 @@ const TEN_VAI_TRO_XU_LY = {
   CHO_THU_KY_LANH_DAO: 'Thư ký lãnh đạo được phân công',
   THU_KY_LANH_DAO_XU_LY: 'Thư ký lãnh đạo',
   CHO_LANH_DAO: 'Lãnh đạo được chọn',
+  CHO_VAN_PHONG_DUYET: 'Thư ký Văn phòng được chọn',
   THU_KY_TO_CHUC: 'Thư ký được giao tổ chức',
   SAU_CUOC_HOP: 'Thư ký được giao tổ chức',
 }

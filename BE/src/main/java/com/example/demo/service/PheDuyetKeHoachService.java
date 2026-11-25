@@ -91,10 +91,7 @@ public class PheDuyetKeHoachService {
                 .timTheoNguoiDuyet(LoaiYeuCau.KE_HOACH_CUOC_HOP, trangThai, nguoiDungId)
                 .stream()
                 .filter(yc -> trangThai != TrangThai.CHO_DUYET
-                        || (("TRUONG_PHONG".equals(yc.getCapPheDuyet())
-                                && "CHO_TRUONG_PHONG".equals(yc.getCuocHop().getBuocXuLyHienTai()))
-                        || ("LANH_DAO".equals(yc.getCapPheDuyet())
-                                && "CHO_LANH_DAO".equals(yc.getCuocHop().getBuocXuLyHienTai()))))
+                        || quyTrinhKeHoachService.dangChoDungCapDuyet(yc))
                 .filter(yc -> trangThai != TrangThai.DA_DUYET || !laDuyetCapTrungGian(yc))
                 .map(this::chuyenDanhSachResponse).toList();
     }

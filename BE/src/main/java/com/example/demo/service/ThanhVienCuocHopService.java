@@ -61,7 +61,7 @@ public class ThanhVienCuocHopService {
         YeuCauPheDuyet keHoachMoi = layKeHoachCoTheMoi(ch);
         List<NguoiDung> nguoiNhan = new ArrayList<>();
         for (Integer nguoiDuocMoiId : new java.util.LinkedHashSet<>(nguoiDuocMoiIds)) {
-            nguoiNhan.add(themThanhVienDuocMoi(ch, nguoiDuocMoiId));
+            nguoiNhan.add(themThanhVienDuocMoi(ch, keHoachMoi, nguoiDuocMoiId));
         }
         thongBaoEmail.moiHop(keHoachMoi, nguoiNhan, thuMoi);
     }
@@ -93,10 +93,16 @@ public class ThanhVienCuocHopService {
         return keHoach;
     }
 
-    private NguoiDung themThanhVienDuocMoi(CuocHop ch, Integer nguoiDuocMoiId) {
+    private NguoiDung themThanhVienDuocMoi(CuocHop ch, YeuCauPheDuyet keHoach, Integer nguoiDuocMoiId) {
         NguoiDung nd = nguoiDungRepository.findById(nguoiDuocMoiId)
                 .orElseThrow(() -> loi(HttpStatus.NOT_FOUND, "Không tìm thấy người được mời"));
         if (!NguoiDungHienTaiService.dangHoatDong(nd)) throw loi(HttpStatus.CONFLICT, "Tài khoản được mời không hoạt động");
+        if ("VAN_PHONG".equals(keHoach.getCapPheDuyet())
+                && (ch.getPhongBanChuTri() == null
+                    || !NguoiDungHienTaiService.thuocPhongBan(nd, ch.getPhongBanChuTri().getPhongBanId())
+                    || phanQuyenCuocHopService.coVaiTro(nguoiDuocMoiId, "LANH_DAO"))) {
+            throw loi(HttpStatus.CONFLICT, "Mời lãnh đạo hoặc người ngoài phòng chủ trì cần kế hoạch do lãnh đạo duyệt");
+        }
         ThanhVienCuocHopId id = taoId(ch.getCuocHopId(), nguoiDuocMoiId);
         if (thanhVienCuocHopRepository.existsById(id)) throw loi(HttpStatus.CONFLICT, "Người dùng đã có trong cuộc họp");
         ThanhVienCuocHop tv = new ThanhVienCuocHop();

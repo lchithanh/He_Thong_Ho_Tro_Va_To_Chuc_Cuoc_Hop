@@ -7,8 +7,8 @@ import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
 import { layKeHoachChoToiDuyet } from '../../api/cuocHopApi.js'
 import ChiTietKeHoachChoDuyet from './ChiTietKeHoachChoDuyet.jsx'
 
-const CAC_CAP = [['tat-ca', 'Tất cả'], ['TRUONG_PHONG', 'Cấp trưởng phòng'], ['LANH_DAO', 'Cấp lãnh đạo']]
-const TEN_CAP = { TRUONG_PHONG: 'Cấp trưởng phòng', LANH_DAO: 'Cấp lãnh đạo' }
+const CAC_CAP = [['tat-ca', 'Tất cả'], ['TRUONG_PHONG', 'Cấp trưởng phòng'], ['LANH_DAO', 'Cấp lãnh đạo'], ['VAN_PHONG', 'Văn phòng']]
+const TEN_CAP = { TRUONG_PHONG: 'Cấp trưởng phòng', LANH_DAO: 'Cấp lãnh đạo', VAN_PHONG: 'Văn phòng' }
 
 export default function KeHoachChoDuyet({ token, cuocHopCanDuyet, viecDaChon }) {
   const phienDongBo = useDongBoDuLieu()

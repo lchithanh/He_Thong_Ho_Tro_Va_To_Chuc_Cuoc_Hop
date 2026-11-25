@@ -286,7 +286,7 @@ final class ThaoTacCuocHop {
     static void trinhKeHoach(CuocHop cuocHop, String buocChoDuyet) {
         kiemTraDangLapKeHoach(cuocHop);
         if (buocChoDuyet == null || !java.util.Set.of(
-                "CHO_TRUONG_PHONG", "CHO_LANH_DAO", "CHO_THU_KY_LANH_DAO")
+                "CHO_TRUONG_PHONG", "CHO_LANH_DAO", "CHO_VAN_PHONG_DUYET", "CHO_THU_KY_LANH_DAO")
                 .contains(buocChoDuyet)) {
             throw new IllegalArgumentException("Bước trình kế hoạch không hợp lệ");
         }
@@ -326,7 +326,7 @@ final class ThaoTacCuocHop {
 
     static void traLaiKeHoach(CuocHop cuocHop) {
         kiemTraKeHoachChuaDienRa(cuocHop);
-        if (!java.util.Set.of("CHO_TRUONG_PHONG", "CHO_LANH_DAO",
+        if (!java.util.Set.of("CHO_TRUONG_PHONG", "CHO_LANH_DAO", "CHO_VAN_PHONG_DUYET",
                 "CHO_THU_KY_LANH_DAO", "THU_KY_LANH_DAO_XU_LY")
                 .contains(cuocHop.getBuocXuLyHienTai())) {
             throw new IllegalStateException("Kế hoạch không ở bước được phép trả lại");
@@ -373,7 +373,8 @@ final class ThaoTacCuocHop {
     private static void kiemTraDangChoNguoiDuyet(CuocHop cuocHop) {
         kiemTraKeHoachChuaDienRa(cuocHop);
         if (!"CHO_TRUONG_PHONG".equals(cuocHop.getBuocXuLyHienTai())
-                && !"CHO_LANH_DAO".equals(cuocHop.getBuocXuLyHienTai())) {
+                && !"CHO_LANH_DAO".equals(cuocHop.getBuocXuLyHienTai())
+                && !"CHO_VAN_PHONG_DUYET".equals(cuocHop.getBuocXuLyHienTai())) {
             throw new IllegalStateException("Kế hoạch chưa được trình đến người duyệt");
         }
     }

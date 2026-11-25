@@ -7,7 +7,7 @@ import Menu from 'lucide-react/dist/esm/icons/menu.mjs'
 import X from 'lucide-react/dist/esm/icons/x.mjs'
 
 const NHOM_DIEU_HUONG = [
-  { ten: 'Cuộc họp', ids: ['tong-quan', 'lich-hop', 'de-xuat-cua-toi', 'de-xuat', 'cuoc-hop-duoc-giao', 'loi-moi'] },
+  { ten: 'Cuộc họp', ids: ['tong-quan', 'lich-hop', 'nhom-lien-phong', 'de-xuat-cua-toi', 'de-xuat', 'cuoc-hop-duoc-giao', 'loi-moi'] },
   { ten: 'Xử lý hồ sơ', ids: ['ho-so-ra-soat', 'ho-so-chuyen-cap', 'phan-hoi-ke-hoach', 'ho-so-cho-duyet', 'van-ban-cho-phat-hanh'] },
   { ten: 'Biểu quyết và văn bản', ids: ['tao-bieu-quyet', 'tham-gia-bieu-quyet', 'van-ban-da-phat-hanh'] },
   { ten: 'Quản trị', ids: ['phong-ban', 'thiet-bi', 'phan-cong-thu-ky'] },

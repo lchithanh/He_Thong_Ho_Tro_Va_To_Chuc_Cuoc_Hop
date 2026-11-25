@@ -40,6 +40,10 @@ public class QuyTrinhKeHoachService {
     private final TaiLieuKeHoachService taiLieuKeHoachService;
     private final tools.jackson.databind.ObjectMapper objectMapper;
     private final ThongBaoService thongBaoService;
+    private final org.springframework.jdbc.core.simple.JdbcClient jdbc;
+    private final QuyenVanPhongService quyenVanPhong;
+
+    public record DuyetTheoNhom(Integer nguoiDuyetId, String capDuyet) {}
     
     public TrinhKeHoachResponse trinhKeHoachVaLayKetQua(
             Integer cuocHopId, TrinhKeHoachRequest request, Integer nguoiTrinhId) {
@@ -105,34 +109,56 @@ public class QuyTrinhKeHoachService {
         if (nguoiDeXuat == null) throw loi(HttpStatus.CONFLICT, "Thiếu người đề xuất");
         nguoiDungHienTaiService.layTaiKhoanHoatDong(nguoiDeXuat.getNguoiDungId());
         Integer nguoiDeXuatId = nguoiDeXuat.getNguoiDungId();
-        boolean doLanhDao = phanQuyenCuocHopService.coVaiTro(nguoiDeXuatId, "LANH_DAO");
-        if (!doLanhDao && !phanQuyenCuocHopService.laTruongPhong(nguoiDeXuatId)) {
-            throw loi(HttpStatus.CONFLICT, "Người đề xuất không còn là trưởng phòng hoặc lãnh đạo");
+        var theoNhom = jdbc.sql("""
+                SELECT nguoi_duyet_id, cap_duyet FROM nhom_lien_phong_de_xuat WHERE cuoc_hop_id = :id
+                """).param("id", cuocHopId).query(DuyetTheoNhom.class).optional().orElse(null);
+        NguoiDung nguoiDuyet = nguoiDeXuat;
+        String cap;
+        String buoc;
+        if (theoNhom != null) {
+            nguoiDuyet = nguoiDungHienTaiService.layTaiKhoanHoatDong(theoNhom.nguoiDuyetId());
+            cap = theoNhom.capDuyet();
+            buoc = "VAN_PHONG".equals(cap) ? "CHO_VAN_PHONG_DUYET" : "CHO_LANH_DAO";
+            if ("VAN_PHONG".equals(cap)
+                    && (!quyenVanPhong.duocDieuPhoi(theoNhom.nguoiDuyetId())
+                        || !ThaoTacCuocHop.laCuocHopNoiBo(ch) || coKhachNgoai(ch)
+                        || phanQuyenCuocHopService.coVaiTro(ch.getNguoiChuTri().getNguoiDungId(), "LANH_DAO"))) {
+                throw loi(HttpStatus.CONFLICT, "Điều kiện duyệt Văn phòng đã thay đổi. Cần kiểm tra lại phạm vi và người duyệt");
+            }
+            if ("LANH_DAO".equals(cap) && !phanQuyenCuocHopService.coVaiTro(theoNhom.nguoiDuyetId(), "LANH_DAO")) {
+                throw loi(HttpStatus.CONFLICT, "Người duyệt được chọn không còn vai trò lãnh đạo");
+            }
+        } else {
+            boolean doLanhDao = phanQuyenCuocHopService.coVaiTro(nguoiDeXuatId, "LANH_DAO");
+            if (!doLanhDao && !phanQuyenCuocHopService.laTruongPhong(nguoiDeXuatId)) {
+                throw loi(HttpStatus.CONFLICT, "Người đề xuất không còn là trưởng phòng hoặc lãnh đạo");
+            }
+            cap = doLanhDao ? CapPheDuyet.LANH_DAO.name() : CapPheDuyet.TRUONG_PHONG.name();
+            buoc = doLanhDao ? "CHO_LANH_DAO" : "CHO_TRUONG_PHONG";
+            boolean canTrinhCapTren;
+            try {
+                canTrinhCapTren = QuyTacDuyetKeHoach.canTrinhCapTren(
+                        doLanhDao, ch.getPhamViCuocHop(), coKhachNgoai(ch));
+            } catch (IllegalArgumentException ex) {
+                throw loi(HttpStatus.BAD_REQUEST, ex.getMessage());
+            }
+            if (doLanhDao && lanhDaoDuyetId != null && !lanhDaoDuyetId.equals(nguoiDeXuatId)) {
+                throw loi(HttpStatus.BAD_REQUEST, "Đề xuất của lãnh đạo chỉ do chính lãnh đạo đó duyệt");
+            }
+            if (!doLanhDao && !canTrinhCapTren) {
+                kiemTraTruongPhongNoiBo(ch, nguoiDeXuatId);
+            }
         }
-        CapPheDuyet cap = doLanhDao ? CapPheDuyet.LANH_DAO : CapPheDuyet.TRUONG_PHONG;
-        boolean canTrinhCapTren;
-        try {
-            canTrinhCapTren = QuyTacDuyetKeHoach.canTrinhCapTren(
-                    doLanhDao, ch.getPhamViCuocHop(), coKhachNgoai(ch));
-        } catch (IllegalArgumentException ex) {
-            throw loi(HttpStatus.BAD_REQUEST, ex.getMessage());
-        }
-        if (doLanhDao && lanhDaoDuyetId != null && !lanhDaoDuyetId.equals(nguoiDeXuatId)) {
-            throw loi(HttpStatus.BAD_REQUEST, "Đề xuất của lãnh đạo chỉ do chính lãnh đạo đó duyệt");
-        }
-        if (!doLanhDao && !canTrinhCapTren) {
-            kiemTraTruongPhongNoiBo(ch, nguoiDeXuatId);
-        }
-        if (Objects.equals(nguoiTrinhId, nguoiDeXuatId)) {
+        if (Objects.equals(nguoiTrinhId, nguoiDuyet.getNguoiDungId())) {
             throw loi(HttpStatus.CONFLICT, "Người trình và người phê duyệt phải khác nhau");
         }
         kiemTraDuLieuKeHoach(ch);
-        String buoc = doLanhDao ? "CHO_LANH_DAO" : "CHO_TRUONG_PHONG";
         YeuCauPheDuyet lanTrinhTruoc = phanCongXuLyKeHoachService
                 .layLanTrinhMoiNhat(cuocHopId);
+        NguoiDung nguoiDuyetDaChon = nguoiDuyet;
         YeuCauPheDuyet yc = ThaoTacCuocHop.thucHien(() ->
                 ThaoTacYeuCauPheDuyet.taoYeuCauKeHoach(ch, nguoiTrinh,
-                        nguoiDeXuat, null, cap.name(), ghiChuTrinh));
+                        nguoiDuyetDaChon, null, cap, ghiChuTrinh));
         yc.setYeuCauTruoc(lanTrinhTruoc);
         NguoiDung thuKyCuocHop = phanCongXuLyKeHoachService.layThuKyCuocHop(ch);
         if (thuKyCuocHop == null) throw loi(HttpStatus.BAD_REQUEST, "Chưa chọn thư ký cuộc họp");
@@ -146,7 +172,7 @@ public class QuyTrinhKeHoachService {
         lichSuPheDuyetService.ghiNhan(cuocHopId, null, null, nguoiTrinhId,
                 "KE_HOACH", "TRINH_DUYET", ghiChuTrinh, daLuu);
         thongBaoService.gui(ch, nguoiTrinhId, "KE_HOACH_CHO_DUYET",
-                "Có kế hoạch cuộc họp cần bạn xem xét", ch.getTieuDe(), nguoiDeXuat);
+                "Có kế hoạch cuộc họp cần bạn xem xét", ch.getTieuDe(), nguoiDuyet);
         return daLuu.getYeuCauPheDuyetId();
     }
 
@@ -501,11 +527,19 @@ public class QuyTrinhKeHoachService {
 
     private void kiemTraNguoiDuyet(YeuCauPheDuyet yc, Integer nguoiId) {
         kiemTraDanhTinhVaCapDuyet(yc, nguoiId);
-        String buoc = "TRUONG_PHONG".equals(yc.getCapPheDuyet())
-                ? "CHO_TRUONG_PHONG" : "CHO_LANH_DAO";
-        if (!buoc.equals(yc.getCuocHop().getBuocXuLyHienTai())) {
+        if (!dangChoDungCapDuyet(yc)) {
             throw loi(HttpStatus.CONFLICT, "Hồ sơ chưa được trình đến đúng bước phê duyệt");
         }
+    }
+
+    boolean dangChoDungCapDuyet(YeuCauPheDuyet yc) {
+        String buoc = switch (Objects.toString(yc.getCapPheDuyet(), "")) {
+            case "TRUONG_PHONG" -> "CHO_TRUONG_PHONG";
+            case "VAN_PHONG" -> "CHO_VAN_PHONG_DUYET";
+            case "LANH_DAO" -> "CHO_LANH_DAO";
+            default -> null;
+        };
+        return buoc != null && buoc.equals(yc.getCuocHop().getBuocXuLyHienTai());
     }
 
     private void kiemTraDanhTinhVaCapDuyet(YeuCauPheDuyet yc, Integer nguoiId) {
@@ -529,6 +563,15 @@ public class QuyTrinhKeHoachService {
         } else if ("LANH_DAO".equals(yc.getCapPheDuyet())) {
             if (!phanQuyenCuocHopService.coVaiTro(nguoiId, "LANH_DAO")) {
                 throw loi(HttpStatus.FORBIDDEN, "Người duyệt không còn vai trò lãnh đạo");
+            }
+        } else if ("VAN_PHONG".equals(yc.getCapPheDuyet())) {
+            if (!quyenVanPhong.duocDieuPhoi(nguoiId)) {
+                throw loi(HttpStatus.FORBIDDEN, "Người duyệt không còn quyền thư ký Văn phòng");
+            }
+            if (!ThaoTacCuocHop.laCuocHopNoiBo(ch) || coKhachNgoai(ch)
+                    || (ch.getNguoiChuTri() != null
+                        && phanQuyenCuocHopService.coVaiTro(ch.getNguoiChuTri().getNguoiDungId(), "LANH_DAO"))) {
+                throw loi(HttpStatus.CONFLICT, "Cuộc họp này cần lãnh đạo duyệt");
             }
         } else throw loi(HttpStatus.CONFLICT, "Yêu cầu cũ chưa có cấp duyệt, cần rà soát chuyển đổi");
     }

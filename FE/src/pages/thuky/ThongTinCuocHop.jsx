@@ -14,6 +14,7 @@ const TEN_BUOC = {
   CHO_THU_KY_LANH_DAO: 'Chờ thư ký lãnh đạo tiếp nhận lần trình',
   THU_KY_LANH_DAO_XU_LY: 'Thư ký lãnh đạo đang rà soát',
   CHO_LANH_DAO: 'Chờ lãnh đạo duyệt',
+  CHO_VAN_PHONG_DUYET: 'Chờ Văn phòng duyệt',
   THU_KY_TO_CHUC: 'Thư ký tổ chức cuộc họp',
   SAU_CUOC_HOP: 'Xử lý sau cuộc họp',
 }
