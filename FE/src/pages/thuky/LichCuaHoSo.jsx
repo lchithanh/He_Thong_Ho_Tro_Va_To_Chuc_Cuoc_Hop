@@ -1,5 +1,5 @@
 import { ChiTietLich } from './LichHopThuKy.jsx'
-import { LOP_NUT_PHU } from '../../components/GiaoDienPhongHop.js'
+import { LOP_NUT_PHU } from '../../components/giaoDienPhongHop.js'
 import { useEffect, useState } from 'react'
 import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
 import { doiLichHop } from '../../api/nghiepVuCuocHopApi.js'

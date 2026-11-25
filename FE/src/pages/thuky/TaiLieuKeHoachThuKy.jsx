@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import Paperclip from 'lucide-react/dist/esm/icons/paperclip.mjs'
 import Send from 'lucide-react/dist/esm/icons/send.mjs'
 import { TieuDeHoSo } from '../../components/GiaoDienPhongHop.jsx'
-import { LOP_NUT_CHINH, LOP_NUT_PHU } from '../../components/GiaoDienPhongHop.js'
+import { LOP_NUT_CHINH, LOP_NUT_PHU } from '../../components/giaoDienPhongHop.js'
 import XemTruocTepKeHoach from './XemTruocTepKeHoach.jsx'
 import {
   layChiTietDeXuat,

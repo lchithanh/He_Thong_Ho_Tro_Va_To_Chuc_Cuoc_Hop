@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import CalendarDays from 'lucide-react/dist/esm/icons/calendar-days.mjs'
 import { TieuDeHoSo } from '../../components/GiaoDienPhongHop.jsx'
-import { LOP_NUT_CHINH, LOP_NUT_PHU, LOP_THE } from '../../components/GiaoDienPhongHop.js'
+import { LOP_NUT_CHINH, LOP_NUT_PHU, LOP_THE } from '../../components/giaoDienPhongHop.js'
 import { layLoiMoiDoiLich, phanHoiDoiLich } from '../../api/nghiepVuCuocHopApi.js'
 import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
 import { dinhDangNgayGio } from '../../utils/thoiGianCuocHop.js'

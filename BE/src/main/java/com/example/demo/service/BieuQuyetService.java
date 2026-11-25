@@ -779,6 +779,16 @@ public class BieuQuyetService {
         return nghiQuyetService.docTep(cuocHopId, bieuQuyet.getTaiLieuNghiQuyetId());
     }
 
+    record TongHopDaDong(String tieuDe, KetQuaBieuQuyetResponse ketQua) {}
+
+    // Chỉ dùng khi bên gọi đã kiểm tra quyền soạn biên bản.
+    List<TongHopDaDong> layTongHopDaDong(Integer cuocHopId) {
+        return bieuQuyetRepository.findByCuocHop_CuocHopIdOrderByBieuQuyetIdDesc(cuocHopId).stream()
+                .filter(bieuQuyet -> "DA_DONG".equals(bieuQuyet.getTrangThai()))
+                .map(bieuQuyet -> new TongHopDaDong(bieuQuyet.getTieuDe(), taoKetQuaBieuQuyet(bieuQuyet, false)))
+                .toList();
+    }
+
     private KetQuaBieuQuyetResponse taoKetQuaBieuQuyet(BieuQuyet bieuQuyet, boolean xemLyDo) {
         Integer bieuQuyetId = bieuQuyet.getBieuQuyetId();
         Map<Integer, Long> soPhieuTheoLuaChon = new HashMap<>();

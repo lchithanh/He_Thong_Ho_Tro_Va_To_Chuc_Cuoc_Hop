@@ -34,7 +34,7 @@ import NghiQuyetCuocHop from '../thamdu/NghiQuyetCuocHop.jsx'
 import LichSuKeHoach from './LichSuKeHoach.jsx'
 import CalendarDays from 'lucide-react/dist/esm/icons/calendar-days.mjs'
 import { TieuDeHoSo } from '../../components/GiaoDienPhongHop.jsx'
-import { LOP_NUT_CHINH, LOP_NUT_PHU } from '../../components/GiaoDienPhongHop.js'
+import { LOP_NUT_CHINH, LOP_NUT_PHU } from '../../components/giaoDienPhongHop.js'
 import { FormDeXuatLich } from './LichHopThuKy.jsx'
 import TiepNhanDeXuatAction from './thaoTacKeHoach/TiepNhanDeXuatAction.jsx'
 const TABS = [

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import FileClock from 'lucide-react/dist/esm/icons/file-clock.mjs'
 import { LocHoSo, NhanHoSo, TieuDeHoSo } from '../../components/GiaoDienPhongHop.jsx'
-import { khopTuKhoa, LOP_NUT_PHU, LOP_THE } from '../../components/GiaoDienPhongHop.js'
+import { khopTuKhoa, LOP_NUT_PHU, LOP_THE } from '../../components/giaoDienPhongHop.js'
 import { dinhDangNgayGio } from '../../utils/thoiGianCuocHop.js'
 import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
 import { layKeHoachChoToiDuyet } from '../../api/cuocHopApi.js'

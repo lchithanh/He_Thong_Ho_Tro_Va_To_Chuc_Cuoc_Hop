@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import FileText from 'lucide-react/dist/esm/icons/file-text.mjs'
 import { TieuDeHoSo } from '../../components/GiaoDienPhongHop.jsx'
-import { LOP_NUT_CHINH } from '../../components/GiaoDienPhongHop.js'
+import { LOP_NUT_CHINH } from '../../components/giaoDienPhongHop.js'
 import { capNhatKeHoach } from '../../api/cuocHopApi.js'
 
 const LOP_TRUONG = 'mt-1 w-full rounded-lg border border-slate-300 px-3 py-2'

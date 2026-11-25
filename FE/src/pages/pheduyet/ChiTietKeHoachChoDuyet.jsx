@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import ArrowLeft from 'lucide-react/dist/esm/icons/arrow-left.mjs'
-import { LOP_NUT_PHU } from '../../components/GiaoDienPhongHop.js'
+import { LOP_NUT_PHU } from '../../components/giaoDienPhongHop.js'
 import LichCuaHoSo from '../thuky/LichCuaHoSo.jsx'
 import HoSoDaTrinh from '../thuky/HoSoDaTrinh.jsx'
 import TienDoCuocHop from '../thuky/TienDoCuocHop.jsx'

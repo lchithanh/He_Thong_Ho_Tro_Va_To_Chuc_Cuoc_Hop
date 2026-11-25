@@ -10,6 +10,7 @@ import {
   taoBienBanCuocHop,
   trinhDuyetBienBan,
 } from '../../api/bienBanApi.js'
+import { layGhiChuChoBienBan } from '../../api/ghiChuCuocHopApi.js'
 
 const LOP_TRUONG = 'mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 phong-toi:truong-phong-hop'
 
@@ -28,6 +29,8 @@ export default function BienBanThuKy({ cuocHopId, tieuDeCuocHop, token, tenChuTr
   const [loiTai, setLoiTai] = useState('')
   const [loiLuu, setLoiLuu] = useState('')
   const [dangLuu, setDangLuu] = useState(false)
+  const [dangNhapGhiChu, setDangNhapGhiChu] = useState(false)
+  const [thongBaoGhiChu, setThongBaoGhiChu] = useState('')
   const [dangSua, setDangSua] = useState(false)
   const [phienBan, setPhienBan] = useState([])
   const [loiPhienBan, setLoiPhienBan] = useState('')
@@ -77,14 +80,38 @@ const [yeuCauPheDuyetId, setYeuCauPheDuyetId] = useState(null)
     return () => controller.abort()
   }, [bienBanId, token, lanLuu, phienDongBo])
 
-  function capNhatBanXemTruoc(event) {
-    const duLieu = new FormData(event.currentTarget)
+  function capNhatBanXemTruoc(form) {
+    const duLieu = new FormData(form)
     setBanNhapXemTruoc({ tieuDe: duLieu.get('tieuDe'), noiDung: duLieu.get('noiDungChinhThuc') })
+  }
+
+  async function nhapGhiChu(event) {
+    const form = event.currentTarget.form
+    setDangNhapGhiChu(true)
+    setLoiLuu('')
+    setThongBaoGhiChu('')
+    try {
+      const duLieu = await layGhiChuChoBienBan(cuocHopId, token)
+      if (!form.isConnected) return
+      for (const tenTruong of ['noiDungGoc', 'noiDungChinhThuc']) {
+        const truong = form.elements.namedItem(tenTruong)
+        const hienTai = truong.value.trimEnd()
+        if (!hienTai.includes(duLieu[tenTruong])) {
+          truong.value = [hienTai, duLieu[tenTruong]].filter(Boolean).join('\n\n')
+        }
+      }
+      capNhatBanXemTruoc(form)
+      setThongBaoGhiChu('Đã đưa ghi chú và kết quả vào biểu mẫu. Kiểm tra nội dung rồi lưu biên bản.')
+    } catch (loi) {
+      setLoiLuu(loi.message)
+    } finally {
+      setDangNhapGhiChu(false)
+    }
   }
 
   async function xuLyLuu(event) {
     event.preventDefault()
-    if (dangLuu) return
+    if (dangLuu || dangNhapGhiChu) return
 
     const form = new FormData(event.currentTarget)
     const tieuDe = form.get('tieuDe').trim()
@@ -114,6 +141,7 @@ const [yeuCauPheDuyetId, setYeuCauPheDuyetId] = useState(null)
 
       setBienBan(bienBanMoi)
       setBanNhapXemTruoc(null)
+      setThongBaoGhiChu('')
       setDangSua(false)
       setLanLuu((hienTai) => hienTai + 1)
     } catch (loi) {
@@ -169,7 +197,7 @@ const [yeuCauPheDuyetId, setYeuCauPheDuyetId] = useState(null)
       {bienBan === undefined ? (
         !loiTai && <p role="status" className="text-sm text-slate-600 phong-toi:text-phong-chu-phu">Đang tải biên bản…</p>
       ) : bienBan === null || (dangSua && coTheSua) ? (
-        <form onSubmit={xuLyLuu} onChange={capNhatBanXemTruoc} className="space-y-4">
+        <form onSubmit={xuLyLuu} onChange={(event) => capNhatBanXemTruoc(event.currentTarget)} className="space-y-4">
           {bienBan?.trangThai === 'BI_TRA_LAI' && bienBan.yKienPhanHoi && (
             <p className="rounded-lg bg-amber-50 phong-toi:bg-phong-nhan-vang p-3 text-sm text-amber-950 phong-toi:text-phong-vang">
               Lý do trả lại: {bienBan.yKienPhanHoi}
@@ -188,6 +216,14 @@ const [yeuCauPheDuyetId, setYeuCauPheDuyetId] = useState(null)
               className={LOP_TRUONG}
             />
           </label>
+
+          <div className="space-y-2">
+            <button type="button" onClick={nhapGhiChu} disabled={dangNhapGhiChu || dangLuu}
+              className="rounded-lg border border-slate-300 phong-toi:border-phong-vien px-4 py-2 text-sm font-semibold disabled:opacity-60">
+              {dangNhapGhiChu ? 'Đang lấy ghi chú…' : 'Đưa ghi chú vào bản nháp'}
+            </button>
+            {thongBaoGhiChu && <p role="status" className="text-sm text-emerald-800 phong-toi:text-phong-luc">{thongBaoGhiChu}</p>}
+          </div>
 
           <label className="block text-sm font-medium">
             Ghi chú gốc
@@ -221,7 +257,7 @@ const [yeuCauPheDuyetId, setYeuCauPheDuyetId] = useState(null)
 
           <button
             type="submit"
-            disabled={dangLuu}
+            disabled={dangLuu || dangNhapGhiChu}
             className="rounded-lg bg-emerald-800 phong-toi:bg-phong-nut px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
           >
             {dangLuu ? 'Đang lưu…' : dangSua ? 'Lưu chỉnh sửa' : 'Lưu nháp biên bản'}

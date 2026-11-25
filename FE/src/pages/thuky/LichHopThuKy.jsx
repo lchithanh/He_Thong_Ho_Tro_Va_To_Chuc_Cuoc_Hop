@@ -18,7 +18,7 @@ import LichCuocHop from '../../lichhop/LichCuocHop.jsx'
 import { maNgay } from '../../lichhop/lichHopHienThi.js'
 import ThanhVienCuocHopThuKy from './ThanhVienCuocHopThuKy.jsx'
 import { dinhDangNgayGio } from '../../utils/thoiGianCuocHop.js'
-import { LOP_NUT_CHINH, LOP_NUT_PHU } from '../../components/GiaoDienPhongHop.js'
+import { LOP_NUT_CHINH, LOP_NUT_PHU } from '../../components/giaoDienPhongHop.js'
 
 const LOP_TRUONG = 'mt-1 w-full rounded-lg border border-slate-300 px-3 py-2'
 

@@ -1,6 +1,6 @@
 import Inbox from 'lucide-react/dist/esm/icons/inbox.mjs'
 import { TieuDeHoSo } from '../../../components/GiaoDienPhongHop.jsx'
-import { LOP_NUT_CHINH } from '../../../components/GiaoDienPhongHop.js'
+import { LOP_NUT_CHINH } from '../../components/giaoDienPhongHop.js'
 
 export default function TiepNhanDeXuatAction({ onClick, disabled }) {
   return (

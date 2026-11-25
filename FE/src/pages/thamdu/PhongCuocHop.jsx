@@ -4,6 +4,7 @@ import Award from 'lucide-react/dist/esm/icons/award.mjs'
 import Building2 from 'lucide-react/dist/esm/icons/building-2.mjs'
 import CalendarDays from 'lucide-react/dist/esm/icons/calendar-days.mjs'
 import FileSignature from 'lucide-react/dist/esm/icons/file-signature.mjs'
+import NotebookPen from 'lucide-react/dist/esm/icons/notebook-pen.mjs'
 import MapPin from 'lucide-react/dist/esm/icons/map-pin.mjs'
 import Square from 'lucide-react/dist/esm/icons/square.mjs'
 import Users from 'lucide-react/dist/esm/icons/users.mjs'
@@ -14,6 +15,7 @@ import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
 import { dinhDangNgayGio } from '../../utils/thoiGianCuocHop.js'
 import TaoBieuQuyet from '../pheduyet/TaoBieuQuyet.jsx'
 import DiemDanhThuKy from '../thuky/DiemDanhThuKy.jsx'
+import GhiChuCuocHop from '../thuky/GhiChuCuocHop.jsx'
 import BauChonCuocHop from './BauChonCuocHop.jsx'
 import NghiQuyetCuocHop from './NghiQuyetCuocHop.jsx'
 import BieuQuyetThamDu from './BieuQuyetThamDu.jsx'
@@ -32,6 +34,7 @@ const MAU_DIEM_DANH = {
 const TEN_HINH_THUC = { TRUC_TIEP: 'Trực tiếp', TRUC_TUYEN: 'Trực tuyến' }
 const CAC_MUC = [
   { id: 'noi-dung', ten: 'Nội dung', Icon: CalendarDays },
+  { id: 'ghi-chu', ten: 'Ghi chú', Icon: NotebookPen },
   { id: 'diem-danh', ten: 'Điểm danh', tacVuChuTri: 'Xem điểm danh', Icon: Users },
   { id: 'bieu-quyet', ten: 'Biểu quyết', tacVuChuTri: 'Quản lý biểu quyết', Icon: Vote },
   { id: 'bau-chon', ten: 'Bầu chọn', tacVuChuTri: 'Quản lý bầu chọn', Icon: Award },
@@ -208,6 +211,7 @@ export default function PhongCuocHop({ cuocHopId, nguoiDung, onQuayLai, onDaKetT
 
   const cacMuc = hop ? CAC_MUC.filter(({ id }) => {
     if (chiXemHoSo) return id === 'tai-lieu'
+    if (id === 'ghi-chu') return laThuKy && dangHop
     if (id === 'diem-danh') return laNguoiDieuHanh
     if (id === 'bieu-quyet' || id === 'bau-chon') return laChuTri || coMat
     if (id === 'nghi-quyet') return laNguoiDieuHanh || coMat
@@ -361,6 +365,12 @@ export default function PhongCuocHop({ cuocHopId, nguoiDung, onQuayLai, onDaKetT
                   {mucHienTai.id === 'tai-lieu' && (
                     <HoSoTaiLieuPhongHop cuocHopId={cuocHopId} token={token}
                       onQuanLyHoSo={laNguoiDieuHanh && onMoHoSo ? () => onMoHoSo(cuocHopId, laThuKy) : undefined} />
+                  )}
+                  {laThuKy && dangHop && !chiXemHoSo && (
+                    <div hidden={mucHienTai.id !== 'ghi-chu'}>
+                      <GhiChuCuocHop key={cuocHopId} cuocHopId={cuocHopId} token={token}
+                        kichHoat={mucHienTai.id === 'ghi-chu'} />
+                    </div>
                   )}
                   {mucHienTai.id === 'diem-danh' && <DiemDanhThuKy cuocHopId={cuocHopId} token={token} readOnly={!laThuKy || !dangHop} />}
                   {mucHienTai.id === 'bau-chon' && <BauChonCuocHop cuocHopId={cuocHopId} token={token} hienTieuDe={false} />}
