@@ -27,6 +27,7 @@ public class GhiChuCuocHopService {
     private final BienBanCuocHopRepository bienBanRepository;
     private final ThanhVienCuocHopRepository thanhVienRepository;
     private final BieuQuyetService bieuQuyetService;
+    private final CapNhatHoSoRealtime realtime;
 
     public record GhiChu(Integer ghiChuId, String chuDe, String nguoiPhatBieu,
             String yKienChinh, String noiDungChot, int phienBan) {}
@@ -74,6 +75,7 @@ public class GhiChuCuocHopService {
             lenh.param("id", ghiChuId).param("phienBan", request.phienBan());
         }
         kiemTraDaCapNhat(lenh.update());
+        realtime.baoNguoiPhuTrach(hop, nguoiDungId);
         return danhSach(cuocHopId);
     }
 
@@ -86,6 +88,7 @@ public class GhiChuCuocHopService {
                 WHERE cuoc_hop_id = :hop AND ghi_chu_id = :id AND phien_ban = :phienBan
                 """).param("hop", cuocHopId).param("id", ghiChuId).param("phienBan", phienBan).update();
         kiemTraDaCapNhat(soDong);
+        realtime.baoNguoiPhuTrach(hop, nguoiDungId);
         return danhSach(cuocHopId);
     }
 

@@ -23,10 +23,12 @@ const MUC_BAN_GIAO = { id: 'cuoc-hop-duoc-giao', ten: 'Cuộc họp được gia
 
 const MUC_CHUYEN_CAP = { id: 'ho-so-chuyen-cap', ten: 'Hồ sơ chờ chuyển cấp', Trang: DanhSachDeXuatThuKy, BieuTuong: FileClock }
 
+const MUC_DE_XUAT_DUOC_GIAO = { id: 'de-xuat', ten: 'Đề xuất được giao', Trang: DanhSachDeXuatThuKy, BieuTuong: FileText }
+
 const MUC_THU_KY = [
   { id: 'ho-so-ra-soat', ten: 'Hồ sơ chờ rà soát', Trang: DanhSachDeXuatThuKy, BieuTuong: FileClock },
   { id: 'phan-hoi-ke-hoach', ten: 'Phản hồi kế hoạch', Trang: DanhSachDeXuatThuKy, BieuTuong: Mail },
-  { id: 'de-xuat', ten: 'Đề xuất cuộc họp', Trang: DanhSachDeXuatThuKy, BieuTuong: FileText },
+  { ...MUC_DE_XUAT_DUOC_GIAO, ten: 'Đề xuất cuộc họp' },
 ]
 
 const MUC_VAN_BAN_CHU_TRI = [
@@ -51,13 +53,13 @@ export function layMenuKhongGianLamViec(maVaiTro, laQuanLy) {
     return [
       MUC_LICH_HOP, MUC_NHOM,
       { id: 'de-xuat-cua-toi', ten: 'Đề xuất của tôi', Trang: DeXuatCuaToi, BieuTuong: FileText },
-      ...(maVaiTro === 'CAN_BO' ? [MUC_BAN_GIAO] : []),
+      ...(maVaiTro === 'CAN_BO' ? [MUC_BAN_GIAO, MUC_DE_XUAT_DUOC_GIAO] : []),
       MUC_CHUYEN_CAP, ...MUC_VAN_BAN_CHU_TRI,
       ...MUC_THAM_DU,
     ]
   } else if (maVaiTro === 'CAN_BO') {
     return [
-      MUC_LICH_HOP, MUC_NHOM, MUC_BAN_GIAO,
+      MUC_LICH_HOP, MUC_NHOM, MUC_BAN_GIAO, MUC_DE_XUAT_DUOC_GIAO,
       MUC_CHUYEN_CAP, ...MUC_VAN_BAN_CHU_TRI, MUC_TAO_BIEU_QUYET,
       ...MUC_THAM_DU,
     ]

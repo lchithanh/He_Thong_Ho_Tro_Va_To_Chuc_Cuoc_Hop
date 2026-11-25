@@ -47,6 +47,7 @@ public class DeXuatCuocHopService {
     private final LichSuPheDuyetRepository lichSuPheDuyetRepository;
     private final ThongTinThuMoiDaDuyet thongTinThuMoiDaDuyet;
     private final TaiLieuCuocHopService taiLieuCuocHopService;
+    private final NhomThamDuCuocHopService nhomThamDu;
 
     public record PhongBanChuTriLuaChon(Integer phongBanId, String tenPhongBan) {}
 
@@ -139,6 +140,7 @@ public class DeXuatCuocHopService {
         );
         luuNoiDungDeXuat(cuocHop, request);
         CuocHop daLuu = cuocHopRepository.save(cuocHop);
+        ganNhomThamDuNeuChon(request, daLuu, laLanhDao);
         for (MultipartFile file : taiLieu) {
             taiLieuCuocHopService.luuTepDeXuat(daLuu, nguoiDeXuat, file);
         }
@@ -164,10 +166,7 @@ public class DeXuatCuocHopService {
         luuNoiDungDeXuat(hop, request);
         CuocHop daLuu = cuocHopRepository.save(hop);
         ganThuKy(daLuu, thuKy);
-        if (!thuKy.getNguoiDungId().equals(nguoiGui.getNguoiDungId())
-                && !thuKy.getNguoiDungId().equals(chuTri.getNguoiDungId())) {
-            daLuu.setThuKyCuocHop(phanCongXuLyKeHoachService.chonThuKyCuocHop(daLuu, thuKy.getNguoiDungId()));
-        }
+        daLuu.setThuKyCuocHop(thuKy);
         ThaoTacCuocHop.thucHien(() -> ThaoTacCuocHop.guiDeXuat(daLuu));
         daLuu.getDeXuat().ghiNhanBuocXuLy(daLuu);
         capNhatRealtime.baoBuocDeXuat(daLuu, nguoiGui.getNguoiDungId());
@@ -252,6 +251,7 @@ public class DeXuatCuocHopService {
         }
         luuNoiDungDeXuat(cuocHop, request);
         cuocHopRepository.save(cuocHop);
+        ganNhomThamDuNeuChon(request, cuocHop, laLanhDao);
         capNhatRealtime.baoCho(nguoiDangNhapId);
     }
 
@@ -402,6 +402,14 @@ public class DeXuatCuocHopService {
                         "Không tìm thấy cuộc họp"
                 ))
                 .getTrangThai();
+    }
+
+    private void ganNhomThamDuNeuChon(TaoDeXuatCuocHopRequest request, CuocHop hop, boolean lanhDao) {
+        if (request.getNhomThamDuId() == null) return;
+        if (!lanhDao) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Chỉ lãnh đạo được chỉ định nhóm tham dự ở luồng đề xuất này");
+        }
+        nhomThamDu.chonNhom(hop.getCuocHopId(), request.getNhomThamDuId());
     }
 
     private void kiemTraDuLieuDeXuat(

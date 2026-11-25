@@ -1,3 +1,4 @@
+import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
 import { useEffect, useState } from 'react'
 import { layGhiChuCuocHop, luuGhiChuCuocHop, xoaGhiChuCuocHop } from '../../api/ghiChuCuocHopApi.js'
 
@@ -5,6 +6,7 @@ const LOP_TRUONG = 'mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 pho
 const LOP_NUT = 'rounded-lg border border-slate-300 phong-toi:border-phong-vien px-3 py-2 text-sm font-semibold disabled:opacity-60'
 
 export default function GhiChuCuocHop({ cuocHopId, token, kichHoat }) {
+  const phienDongBo = useDongBoDuLieu()
   const [danhSach, setDanhSach] = useState(null)
   const [dangSua, setDangSua] = useState(null)
   const [dangXuLy, setDangXuLy] = useState(false)
@@ -27,7 +29,7 @@ export default function GhiChuCuocHop({ cuocHopId, token, kichHoat }) {
         if (!controller.signal.aborted) setLoiTai(loi.message)
       })
     return () => controller.abort()
-  }, [cuocHopId, token, kichHoat, lanTai, dangXuLy])
+  }, [cuocHopId, token, kichHoat, lanTai, dangXuLy, phienDongBo])
 
   function chonGhiChu(muc) {
     setDangSua(muc)

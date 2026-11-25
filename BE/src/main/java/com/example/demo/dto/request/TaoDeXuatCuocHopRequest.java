@@ -30,6 +30,7 @@ public class TaoDeXuatCuocHopRequest {
     private Integer nguoiChuTriId;
     private Integer thuKyId;
     private Integer thuKyCuocHopId;
+    private Integer nhomThamDuId;
 
     private boolean guiNgay = false;
     private boolean coKhachMoiBenNgoai;

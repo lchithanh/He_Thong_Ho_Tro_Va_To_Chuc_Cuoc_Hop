@@ -1,3 +1,4 @@
+import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
 import { dinhDangNgayGio } from '../../utils/thoiGianCuocHop.js'
 import { useEffect, useState } from 'react'
 import TepThuMoiFields from './TepThuMoiFields.jsx'
@@ -14,6 +15,7 @@ const TRANG_THAI = {
 const O_NHAP = 'mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm'
 
 export default function KhachNgoaiCuocHop({ cuocHopId, token, laThuKy, choPhepMoi, trucTuyen, thongTinCuocHop }) {
+  const phienDongBo = useDongBoDuLieu()
   const [danhSach, setDanhSach] = useState(null)
   const [loiDanhSach, setLoiDanhSach] = useState('')
   const [loiGui, setLoiGui] = useState('')
@@ -29,7 +31,7 @@ export default function KhachNgoaiCuocHop({ cuocHopId, token, laThuKy, choPhepMo
         if (!controller.signal.aborted) setLoiDanhSach(loi.message)
       })
     return () => controller.abort()
-  }, [cuocHopId, token])
+  }, [cuocHopId, token, phienDongBo])
 
   function docThongTinKhach(duLieu) {
     return Object.fromEntries(['hoTen', 'email', 'donViCongTac', 'chucVu', 'truSo', 'duongDanHop']

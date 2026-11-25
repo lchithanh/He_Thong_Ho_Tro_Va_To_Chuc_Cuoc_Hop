@@ -1,3 +1,4 @@
+import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
 import { useEffect, useState } from 'react'
 import { guiKeHoachLenCapTren, layLuaChonKeHoach, xuLyYeuCauKeHoach } from '../../api/cuocHopApi.js'
 
@@ -7,6 +8,7 @@ export default function ChuyenKeHoachCapTren({
   token,
   onDaGui,
 }) {
+  const phienDongBo = useDongBoDuLieu()
   const [luaChon, setLuaChon] = useState(null)
   const [lanhDaoId, setLanhDaoId] = useState('')
   const [ghiChu, setGhiChu] = useState('')
@@ -25,7 +27,7 @@ export default function ChuyenKeHoachCapTren({
         if (!controller.signal.aborted) setLoi(error.message)
       })
     return () => controller.abort()
-  }, [cuocHopId, token])
+  }, [cuocHopId, token, phienDongBo])
 
   async function gui(event) {
     event.preventDefault()

@@ -143,6 +143,7 @@ export default function KhongGianLamViec({ nguoiDung, loi, onDangXuat }) {
           key={mucDangChon}
           viecDaChon={viecDaChon}
           onMoPhongHop={moPhongHop}
+          onMoMuc={chonMuc}
           onXemCuocHop={laQuanLy ? xemHoSo : undefined}
           token={token}
           nguoiDung={nguoiDung}

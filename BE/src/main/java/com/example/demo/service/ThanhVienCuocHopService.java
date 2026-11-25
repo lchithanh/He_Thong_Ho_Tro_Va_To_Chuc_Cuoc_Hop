@@ -43,6 +43,7 @@ public class ThanhVienCuocHopService {
     private final CapNhatHoSoRealtime capNhatRealtime;
     private final ThongBaoService thongBaoService;
     private final ThongBaoEmailCuocHop thongBaoEmail;
+    private final NhomThamDuCuocHopService nhomThamDu;
 
     @Transactional
     public void moiThanhVien(Integer cuocHopId, Integer nguoiDuocMoiId, Integer thuKyId, NoiDungThuMoi thuMoi) {
@@ -64,6 +65,7 @@ public class ThanhVienCuocHopService {
             nguoiNhan.add(themThanhVienDuocMoi(ch, keHoachMoi, nguoiDuocMoiId));
         }
         thongBaoEmail.moiHop(keHoachMoi, nguoiNhan, thuMoi);
+        capNhatRealtime.baoCuocHop(ch, thuKyId);
     }
 
     @Transactional
@@ -160,18 +162,26 @@ public class ThanhVienCuocHopService {
                 .map(thanhVien -> thanhVien.getId().getNguoiDungId())
                 .collect(Collectors.toSet());
 
+        Set<Integer> idsNhom = nhomThamDu.layThanhVienDaChon(cuocHopId);
+        var keHoach = layKeHoachMoiNhat(cuocHopId);
+        boolean vanPhongDuyet = keHoach != null && "VAN_PHONG".equals(keHoach.getCapPheDuyet());
         return nguoiDungRepository.findAll()
                 .stream()
                 .filter(NguoiDungHienTaiService::dangHoatDong)
                 .filter(nguoiDung -> !idsDaThamGia.contains(nguoiDung.getNguoiDungId()))
+                .filter(nguoiDung -> !vanPhongDuyet || (cuocHop.getPhongBanChuTri() != null
+                        && NguoiDungHienTaiService.thuocPhongBan(nguoiDung, cuocHop.getPhongBanChuTri().getPhongBanId())
+                        && !phanQuyenCuocHopService.coVaiTro(nguoiDung.getNguoiDungId(), "LANH_DAO")))
                 .map(nguoiDung -> new NguoiCoTheMoiResponse(
                         nguoiDung.getNguoiDungId(),
                         nguoiDung.getHoTen(),
                         nguoiDung.getPhongBan() == null
                                 ? null
                                 : nguoiDung.getPhongBan().getTenPhongBan(),
-                        nguoiDung.getChucVu()))
-                .sorted(Comparator.comparing(NguoiCoTheMoiResponse::hoTen))
+                        nguoiDung.getChucVu(),
+                        idsNhom.contains(nguoiDung.getNguoiDungId())))
+                .sorted(Comparator.comparing(NguoiCoTheMoiResponse::thuocNhomThamDu).reversed()
+                        .thenComparing(NguoiCoTheMoiResponse::hoTen))
                 .toList();
     }
     

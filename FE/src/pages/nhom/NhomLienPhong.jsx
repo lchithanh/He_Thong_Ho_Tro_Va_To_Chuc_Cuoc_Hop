@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { goiNhomLienPhong } from '../../api/nhomLienPhongApi.js'
+import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
 import KeHoachChoDuyet from '../pheduyet/KeHoachChoDuyet.jsx'
 
 const TRANG_THAI = {
@@ -19,9 +20,9 @@ function Truong({ ten, children }) {
   return <label className="block space-y-1 text-sm font-medium"><span>{ten}</span>{children}</label>
 }
 
-function ChonNguoi({ ten, name, danhSach, batBuoc = true }) {
+function ChonNguoi({ ten, name, danhSach, batBuoc = true, macDinh = '' }) {
   return <Truong ten={ten}>
-    <select name={name} required={batBuoc} className={TRUONG} defaultValue="">
+    <select name={name} required={batBuoc} className={TRUONG} defaultValue={macDinh}>
       <option value="">{batBuoc ? 'Chọn người' : 'Không chọn'}</option>
       {danhSach.map((muc) => <option value={muc.nguoiDungId} key={muc.nguoiDungId}>{muc.hoTen}</option>)}
     </select>
@@ -78,16 +79,20 @@ function DeXuatNhom({ chiTiet, dangGui, gui, nguoiGui }) {
   const [phamVi, setPhamVi] = useState('NOI_BO')
   const [coKhachNgoai, setCoKhachNgoai] = useState(false)
   const [coLanhDaoCapCao, setCoLanhDaoCapCao] = useState(false)
-  const capDuyet = phamVi !== 'NOI_BO' || coKhachNgoai || coLanhDaoCapCao || chiTiet.nhom.capNhom === 'CAP_CAO'
+  const capDuyet = phamVi !== 'NOI_BO' || coKhachNgoai || coLanhDaoCapCao
     ? 'LANH_DAO' : 'VAN_PHONG'
-  const [thuKyId, setThuKyId] = useState('')
+  const thuKyId = chiTiet.nhom.thuKyNhomId
+  const tenThuKy = chiTiet.thanhVien.find((muc) => muc.nguoiDungId === thuKyId)?.hoTen
   const danhSachDuyet = chiTiet.nguoiDuyet.filter((muc) =>
-    muc.capDuyet === capDuyet && muc.nguoiDungId !== Number(thuKyId) && muc.nguoiDungId !== nguoiGui)
+    muc.capDuyet === capDuyet && muc.nguoiDungId !== thuKyId && muc.nguoiDungId !== nguoiGui)
+  const macDinh = capDuyet === 'LANH_DAO'
+    ? danhSachDuyet.find((muc) => muc.nguoiDungId === chiTiet.nhom.nguoiLapId)?.nguoiDungId ?? ''
+    : ''
   return <Phieu tieuDe="Gửi đề xuất họp từ nhóm" nut="Gửi đề xuất" dangGui={dangGui}
     onGui={(f) => gui('/de-xuat', 'POST', {
       tieuDe: f.get('tieuDe'), mucTieu: f.get('mucTieu'), noiDung: f.get('noiDung'), loaiHinh: f.get('loaiHinh'),
       phamVi, coKhachNgoai, coLanhDaoCapCao,
-      thuKyLapKeHoachId: Number(thuKyId), nguoiDuyetId: Number(f.get('nguoiDuyetId')),
+      nguoiDuyetId: Number(f.get('nguoiDuyetId')),
     })}>
     <Truong ten="Tiêu đề"><input name="tieuDe" required maxLength={255} className={TRUONG} /></Truong>
     <Truong ten="Mục tiêu"><input name="mucTieu" required maxLength={3000} className={TRUONG} /></Truong>
@@ -106,14 +111,13 @@ function DeXuatNhom({ chiTiet, dangGui, gui, nguoiGui }) {
     <label className="flex gap-2 text-sm"><input type="checkbox" checked={coKhachNgoai}
       onChange={(e) => setCoKhachNgoai(e.target.checked)} /> Có khách mời bên ngoài</label>
     <label className="flex gap-2 text-sm"><input type="checkbox" checked={coLanhDaoCapCao}
-      onChange={(e) => setCoLanhDaoCapCao(e.target.checked)} /> Có lãnh đạo cấp cao tham gia</label>
+      onChange={(e) => setCoLanhDaoCapCao(e.target.checked)} /> Có lãnh đạo tham gia</label>
     <div className="grid gap-3 sm:grid-cols-2">
-      <Truong ten="Thư ký lập kế hoạch"><select required value={thuKyId} onChange={(e) => setThuKyId(e.target.value)} className={TRUONG}>
-        <option value="">Chọn thư ký</option>
-        {chiTiet.thuKyLapKeHoach.map((muc) => <option key={muc.nguoiDungId} value={muc.nguoiDungId}>{muc.hoTen}</option>)}
-      </select></Truong>
-      <ChonNguoi key={capDuyet + thuKyId} ten={`Người duyệt · ${TEN_CAP_DUYET[capDuyet]}`}
-        name="nguoiDuyetId" danhSach={danhSachDuyet} />
+      <Truong ten="Thư ký tiếp nhận và tổ chức">
+        <input className={TRUONG} value={tenThuKy || 'Thư ký nhóm'} readOnly />
+      </Truong>
+      <ChonNguoi key={capDuyet + thuKyId + String(macDinh)} ten={`Người duyệt · ${TEN_CAP_DUYET[capDuyet]}`}
+        name="nguoiDuyetId" danhSach={danhSachDuyet} macDinh={macDinh} />
     </div>
     {danhSachDuyet.length === 0 && <p className="text-sm text-slate-700">Chưa có người duyệt phù hợp với lựa chọn hiện tại.</p>}
   </Phieu>
@@ -222,7 +226,8 @@ function ChiTietNhom({ chiTiet, quyen, dangGui, gui, id }) {
   </div>
 }
 
-export default function NhomLienPhong({ token, nguoiDung }) {
+export default function NhomLienPhong({ token, nguoiDung, onMoMuc }) {
+  const phienDongBo = useDongBoDuLieu()
   const [trang, setTrang] = useState(null)
   const [chiTiet, setChiTiet] = useState(null)
   const [nhomId, setNhomId] = useState(null)
@@ -244,10 +249,13 @@ export default function NhomLienPhong({ token, nguoiDung }) {
       setChiTiet(chiTietMoi)
       setLoi('')
     }).catch((error) => {
-      if (!controller.signal.aborted) setLoi(error.message)
+      if (!controller.signal.aborted) {
+        if (error.status === 403 || error.status === 404) setChiTiet(null)
+        setLoi(error.message)
+      }
     })
     return () => controller.abort()
-  }, [nhomId, token, lanTai])
+  }, [nhomId, token, lanTai, phienDongBo])
 
   function chonNhom(id) {
     setChiTiet(null)
@@ -265,7 +273,7 @@ export default function NhomLienPhong({ token, nguoiDung }) {
       const goc = muc === 'tao' ? '' : `/${nhomId}`
       const ketQua = await goiNhomLienPhong(goc + duongDan, token, { method, duLieu })
       if (ketQua?.nhomId) chonNhom(ketQua.nhomId)
-      setThongBao(ketQua?.cuocHopId ? 'Đã gửi đề xuất tới thư ký lập kế hoạch.' : 'Đã cập nhật nhóm.')
+      setThongBao(ketQua?.cuocHopId ? 'Đã gửi đề xuất tới thư ký nhóm.' : 'Đã cập nhật nhóm.')
       setLanTai((lan) => lan + 1)
     } catch (error) {
       setLoi(error.message)
@@ -281,6 +289,9 @@ export default function NhomLienPhong({ token, nguoiDung }) {
         {muc !== 'nhom' && <button className={NUT} onClick={() => chonNhom(null)}>Danh sách nhóm</button>}
         {trang?.quyen && (trang.quyen.vanPhong || trang.quyen.lanhDao || trang.quyen.phongTruongPhong != null) &&
           <button className={NUT} onClick={() => { chonNhom(null); setMuc('tao') }}>Lập nhóm</button>}
+        {trang?.quyen.lanhDao && <button className={NUT} onClick={() => onMoMuc('de-xuat-cua-toi')}>
+          Đề xuất họp
+        </button>}
         {trang?.quyen.vanPhong && <button className={NUT} onClick={() => { chonNhom(null); setMuc('duyet') }}>Kế hoạch chờ duyệt</button>}
         <button className={NUT} onClick={() => setLanTai((lan) => lan + 1)}>Làm mới</button>
       </div>

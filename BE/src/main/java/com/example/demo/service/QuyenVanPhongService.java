@@ -16,6 +16,7 @@ public class QuyenVanPhongService {
     private final JdbcClient jdbc;
     private final NguoiDungHienTaiService nguoiDungHienTaiService;
     private final PhanQuyenCuocHopService phanQuyenCuocHopService;
+    private final CapNhatHoSoRealtime realtime;
 
     public record TaiKhoan(Integer nguoiDungId, String hoTen, String email, String tenPhongBan, boolean vanPhong) {}
 
@@ -52,6 +53,7 @@ public class QuyenVanPhongService {
         }
         if (!capQuyen) {
             jdbc.sql("DELETE FROM thu_ky_van_phong WHERE nguoi_dung_id = :id").param("id", nguoiDungId).update();
+            realtime.baoDanhMucNhomThayDoi();
             return;
         }
         nguoiDungHienTaiService.layTaiKhoanHoatDong(nguoiDungId);
@@ -62,5 +64,6 @@ public class QuyenVanPhongService {
                 INSERT INTO thu_ky_van_phong (nguoi_dung_id, nguoi_cap_id) VALUES (:id, :admin)
                 ON DUPLICATE KEY UPDATE nguoi_cap_id = :admin
                 """).param("id", nguoiDungId).param("admin", adminId).update();
+        realtime.baoDanhMucNhomThayDoi();
     }
 }

@@ -130,6 +130,10 @@ public class CapNhatHoSoRealtime {
         baoCho(layIdDangKetNoi(), false);
     }
 
+    public void baoDanhMucNhomThayDoi() {
+        baoCho(layIdDangKetNoi(), false);
+    }
+
     private List<Integer> layIdDangKetNoi() {
         return nguoiDungDangKetNoi.getUsers().stream()
                 .map(nguoiDung -> Integer.valueOf(nguoiDung.getName()))

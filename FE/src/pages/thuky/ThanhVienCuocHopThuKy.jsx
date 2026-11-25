@@ -112,6 +112,7 @@ export default function ThanhVienCuocHopThuKy({
     return () => controller.abort()
   }, [cuocHopId, token, lanTai, choPhepMoi, lichHopIdKeHoachDaDuyet, thongTinCuocHop, phienDongBo])
 
+  const nguoiTrongNhom = nguoiCoTheMoi?.filter((nguoi) => nguoi.thuocNhomThamDu) ?? []
   const nguoiChon = (nguoiCoTheMoi ?? []).filter((nguoi) => nguoiChonIds.includes(nguoi.nguoiDungId))
   const ketQuaTim = nguoiCoTheMoi?.filter((nguoi) =>
     [nguoi.hoTen, nguoi.chucVu, nguoi.tenPhongBan].filter(Boolean).join(' ')
@@ -240,6 +241,13 @@ export default function ThanhVienCuocHopThuKy({
             </legend>
             {nguoiCoTheMoi === null ? <p role="status" className="text-sm">Đang tải người dùng…</p>
               : !ketQuaTim.length && <p className="text-sm">Không có người phù hợp.</p>}
+            {nguoiTrongNhom.length > 0 && <button type="button" className="rounded-lg border border-emerald-200 px-3 py-2 text-sm font-semibold text-emerald-900"
+              onClick={() => {
+                setXacNhanMoi(false)
+                setNguoiChonIds((hienTai) => [...new Set([...hienTai, ...nguoiTrongNhom.map((nguoi) => nguoi.nguoiDungId)])])
+              }}>
+              Chọn thành viên nhóm ({nguoiTrongNhom.length})
+            </button>}
             <div className="max-h-80 space-y-2 overflow-y-auto pr-1">
               {ketQuaTim?.map((nguoi) => (
                 <label
@@ -253,7 +261,9 @@ export default function ThanhVienCuocHopThuKy({
                   <input type="checkbox" className="mt-1 size-4 accent-emerald-800" checked={nguoiChonIds.includes(nguoi.nguoiDungId)}
                     onChange={(event) => chonNguoi(nguoi.nguoiDungId, event.target.checked)} />
                   <span className="min-w-0 flex-1">
-                    <span className="block font-semibold text-slate-900">{nguoi.hoTen}</span>
+                    <span className="block font-semibold text-slate-900">{nguoi.hoTen}
+                      {nguoi.thuocNhomThamDu && <span className="ml-2 rounded bg-emerald-50 px-2 py-0.5 text-xs text-emerald-900">Thành viên nhóm</span>}
+                    </span>
                     <span className="mt-1 grid gap-x-3 gap-y-1 text-xs text-slate-600 sm:grid-cols-2">
                       <span><strong>Phòng ban:</strong> {nguoi.tenPhongBan || 'Chưa phân công'}</span>
                       <span><strong>Chức vụ:</strong> {nguoi.chucVu || 'Chưa cập nhật'}</span>

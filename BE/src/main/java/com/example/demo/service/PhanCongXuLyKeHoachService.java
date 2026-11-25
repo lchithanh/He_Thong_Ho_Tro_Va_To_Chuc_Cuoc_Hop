@@ -35,6 +35,7 @@ public class PhanCongXuLyKeHoachService {
     private final NguoiDungVaiTroRepository nguoiDungVaiTroRepository;
     private final BienBanCuocHopRepository bienBanCuocHopRepository;
     private final KetLuanCuocHopRepository ketLuanCuocHopRepository;
+    private final NhomThamDuCuocHopService nhomThamDu;
 
     public boolean laNguoiCoTheLamThuKy(NguoiDung nguoiDung) {
         if (nguoiDung == null || !NguoiDungHienTaiService.dangHoatDong(nguoiDung)) {
@@ -47,6 +48,18 @@ public class PhanCongXuLyKeHoachService {
     }
 
     public NguoiDung chonThuKyCuocHop(CuocHop cuocHop, Integer nguoiDungId) {
+        NguoiDung thuKyCoDinh = layThuKyCoDinhCuaNhom(cuocHop);
+        if (thuKyCoDinh != null) {
+            Integer idCoDinh = thuKyCoDinh.getNguoiDungId();
+            if (nguoiDungId != null && !idCoDinh.equals(nguoiDungId)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cuộc họp từ nhóm do thư ký nhóm được giao hồ sơ tổ chức");
+            }
+            NguoiDung thuKy = nguoiDungHienTaiService.layTaiKhoanHoatDong(idCoDinh);
+            if (!laNguoiCoTheLamThuKy(thuKy) || ThaoTacCuocHop.laNguoiChuTri(cuocHop, idCoDinh)) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "Thư ký nhóm không còn phù hợp để tổ chức cuộc họp");
+            }
+            return thuKy;
+        }
         if (nguoiDungId == null) {
             return null;
         }
@@ -60,6 +73,11 @@ public class PhanCongXuLyKeHoachService {
         }
 
         return nguoiDung;
+    }
+
+    NguoiDung layThuKyCoDinhCuaNhom(CuocHop cuocHop) {
+        return nhomThamDu.laDeXuatTuNhom(cuocHop.getCuocHopId())
+                ? layThuKyBanDau(cuocHop.getCuocHopId()) : null;
     }
 
     public NguoiDung layThuKyCuocHop(CuocHop cuocHop) {

@@ -37,6 +37,7 @@ public class NhomLienPhongService {
     private final DeXuatCuocHopService deXuatService;
     private final PhanCongXuLyKeHoachService phanCong;
     private final ObjectMapper objectMapper;
+    private final CapNhatHoSoRealtime realtime;
 
     public record Nhom(Integer nhomId, String tenNhom, String mucDich, Integer phongBanChuTriId,
             Integer nguoiLapId, String capNhom, String trangThai, Integer truongNhomId, Integer thuKyNhomId) {}
@@ -52,7 +53,7 @@ public class NhomLienPhongService {
     }
     public record TrangNhom(Quyen quyen, List<Nhom> danhSach, List<Phong> phongBanTao) {}
     public record ChiTiet(Nhom nhom, List<Phong> phongBan, List<NhanSu> thanhVien, List<NhanSu> nguonNhanSu,
-            List<DoiNguoi> doiNguoi, List<DeXuat> deXuat, List<NguoiDuyet> nguoiDuyet, List<NhanSu> thuKyLapKeHoach,
+            List<DoiNguoi> doiNguoi, List<DeXuat> deXuat, List<NguoiDuyet> nguoiDuyet,
             boolean duocKichHoat, boolean duocDong, boolean duocGui) {}
 
     public record TaoNhom(String tenNhom, String mucDich, String capNhom, Integer phongBanChuTriId, List<Integer> phongBanIds) {}
@@ -62,7 +63,7 @@ public class NhomLienPhongService {
     public record XuLyThayNguoi(boolean dongY, String yKien) {}
     public record GuiDeXuat(String tieuDe, String mucTieu, String noiDung, String loaiHinh, String phamVi,
             boolean coKhachNgoai, boolean coLanhDaoCapCao, Integer nguoiChuTriId,
-            Integer thuKyLapKeHoachId, Integer nguoiDuyetId) {}
+            Integer nguoiDuyetId) {}
 
     @Transactional(readOnly = true)
     public TrangNhom danhSach(Integer id) {
@@ -107,6 +108,7 @@ public class NhomLienPhongService {
             jdbc.sql("INSERT INTO nhom_lien_phong_phong_ban (nhom_id, phong_ban_id) VALUES (:nhom, :phong)")
                     .param("nhom", nhomId).param("phong", phong).update();
         }
+        realtime.baoDanhMucNhomThayDoi();
         return nhomId;
     }
 
@@ -129,7 +131,6 @@ public class NhomLienPhongService {
                 """).param("id", nhomId).param("vanPhong", q.vanPhong())
                 .param("phong", q.phongTruongPhong(), java.sql.Types.INTEGER).query(NhanSu.class).list() : List.of();
         boolean gui = duocGui(n, q, id);
-        List<NhanSu> thuKy = gui ? taiKhoanTheoVaiTro("THU_KY") : List.of();
         List<NguoiDuyet> nguoiDuyet = gui ? jdbc.sql("""
                 SELECT nd.nguoi_dung_id, nd.ho_ten,
                     CASE WHEN vt.ma_vai_tro = 'LANH_DAO' THEN 'LANH_DAO' ELSE 'VAN_PHONG' END AS cap_duyet
@@ -152,7 +153,7 @@ public class NhomLienPhongService {
                 JOIN nguoi_dung nd ON nd.nguoi_dung_id = dx.nguoi_duyet_id
                 WHERE dx.nhom_id = :id ORDER BY ch.cuoc_hop_id DESC
                 """).param("id", nhomId).query(DeXuat.class).list();
-        return new ChiTiet(n, pb, tv, nguon, doiNguoi, deXuat, nguoiDuyet, thuKy,
+        return new ChiTiet(n, pb, tv, nguon, doiNguoi, deXuat, nguoiDuyet,
                 CHO_KICH_HOAT.equals(n.trangThai()) && duocKichHoat(n, q),
                 !DA_DONG.equals(n.trangThai()) && duocDong(n, q, id), gui);
     }
@@ -182,6 +183,7 @@ public class NhomLienPhongService {
             jdbc.sql("UPDATE nhom_lien_phong SET trang_thai = :tt WHERE nhom_id = :id")
                     .param("tt", CHO_KICH_HOAT).param("id", nhomId).update();
         }
+        realtime.baoDanhMucNhomThayDoi();
     }
 
     public void kichHoat(Integer nhomId, GanVaiTro request, Integer id) {
@@ -194,6 +196,7 @@ public class NhomLienPhongService {
                 UPDATE nhom_lien_phong SET trang_thai = 'HOAT_DONG',
                     nguoi_kich_hoat_id = :id, ngay_kich_hoat = CURRENT_TIMESTAMP WHERE nhom_id = :nhom
                 """).param("id", id).param("nhom", nhomId).update();
+        realtime.baoDanhMucNhomThayDoi();
     }
 
     public void doiNguoi(Integer nhomId, ThayNguoi request, Integer id) {
@@ -217,6 +220,7 @@ public class NhomLienPhongService {
                 .param("cu", request.nguoiCuId(), java.sql.Types.INTEGER).param("moi", request.nguoiMoiId(), java.sql.Types.INTEGER)
                 .param("id", id).param("lyDo", lyDo).param("tt", q.vanPhong() ? "DA_CAP_NHAT" : "CHO_XU_LY")
                 .param("xuLy", q.vanPhong() ? id : null, java.sql.Types.INTEGER).update();
+        realtime.baoDanhMucNhomThayDoi();
     }
 
     public void xuLyDoiNguoi(Integer nhomId, Integer doiId, XuLyThayNguoi request, Integer id) {
@@ -240,6 +244,7 @@ public class NhomLienPhongService {
                     ngay_xu_ly = CURRENT_TIMESTAMP, y_kien_xu_ly = :yKien WHERE doi_nguoi_id = :doi
                 """).param("tt", request.dongY() ? "DA_CAP_NHAT" : "TU_CHOI")
                 .param("id", id).param("yKien", yKien, java.sql.Types.VARCHAR).param("doi", doiId).update();
+        realtime.baoDanhMucNhomThayDoi();
     }
 
     public void dong(Integer nhomId, String lyDo, Integer id) {
@@ -255,6 +260,7 @@ public class NhomLienPhongService {
                     ngay_xu_ly = CURRENT_TIMESTAMP, y_kien_xu_ly = 'Nhóm đã đóng'
                 WHERE nhom_id = :nhom AND trang_thai = 'CHO_XU_LY'
                 """).param("id", id).param("nhom", nhomId).update();
+        realtime.baoDanhMucNhomThayDoi();
     }
 
     public Integer guiDeXuat(Integer nhomId, GuiDeXuat request, Integer id) {
@@ -277,12 +283,16 @@ public class NhomLienPhongService {
                 : chuTriThuocNhom || chuTriLanhDao, "Chủ trì không phù hợp với phạm vi cuộc họp");
         boolean coKhachNgoai = request.coKhachNgoai() || "BEN_NGOAI".equals(request.phamVi());
         boolean canLanhDao = !"NOI_BO".equals(request.phamVi()) || coKhachNgoai
-                || request.coLanhDaoCapCao() || chuTriLanhDao || "CAP_CAO".equals(n.capNhom());
-        var nguoiDuyet = timTaiKhoan(request.nguoiDuyetId());
-        var thuKy = timTaiKhoan(request.thuKyLapKeHoachId());
+                || request.coLanhDaoCapCao() || chuTriLanhDao;
+        Integer nguoiDuyetId = request.nguoiDuyetId();
+        if (nguoiDuyetId == null && canLanhDao && phanQuyen.coVaiTro(n.nguoiLapId(), "LANH_DAO")) {
+            nguoiDuyetId = n.nguoiLapId();
+        }
+        var nguoiDuyet = timTaiKhoan(nguoiDuyetId);
+        var thuKy = timTaiKhoan(n.thuKyNhomId());
         Integer duyetId = nguoiDuyet.getNguoiDungId();
-        hopLe(phanQuyen.coVaiTro(thuKy.getNguoiDungId(), "THU_KY"),
-                "Chọn tài khoản thư ký lập kế hoạch");
+        hopLe(phanCong.laNguoiCoTheLamThuKy(thuKy) && !thuKy.getNguoiDungId().equals(chuTri),
+                "Thư ký nhóm phải đang hoạt động và khác chủ trì cuộc họp");
         hopLe(!duyetId.equals(id) && !duyetId.equals(thuKy.getNguoiDungId()),
                 "Người duyệt phải khác người gửi và thư ký lập kế hoạch");
         hopLe(canLanhDao ? phanQuyen.coVaiTro(duyetId, "LANH_DAO") : quyenVanPhong.duocDieuPhoi(duyetId),
@@ -303,6 +313,7 @@ public class NhomLienPhongService {
                 """).param("hop", hopId).param("nhom", nhomId).param("id", id)
                 .param("tv", objectMapper.writeValueAsString(thanhVien)).param("duyet", duyetId)
                 .param("cap", canLanhDao ? "LANH_DAO" : "VAN_PHONG").update();
+        realtime.baoDanhMucNhomThayDoi();
         return hopId;
     }
 
@@ -328,15 +339,6 @@ public class NhomLienPhongService {
                 """).param("id", nhomId).query(NhanSu.class).list();
     }
 
-    private List<NhanSu> taiKhoanTheoVaiTro(String ma) {
-        return jdbc.sql("""
-                SELECT nd.nguoi_dung_id, nd.ho_ten, nd.phong_ban_id
-                FROM nguoi_dung nd JOIN nguoi_dung_vai_tro nvt ON nvt.nguoi_dung_id = nd.nguoi_dung_id
-                JOIN vai_tro vt ON vt.vai_tro_id = nvt.vai_tro_id
-                WHERE nd.trang_thai = 'HOAT_DONG' AND vt.ma_vai_tro = :ma ORDER BY nd.ho_ten
-                """).param("ma", ma).query(NhanSu.class).list();
-    }
-
     private Quyen quyen(Integer id) {
         var nguoiDung = timTaiKhoan(id);
         return new Quyen(quyenVanPhong.duocDieuPhoi(id), phanQuyen.coVaiTro(id, "LANH_DAO"),
@@ -353,8 +355,8 @@ public class NhomLienPhongService {
     }
 
     private boolean duocGui(Nhom n, Quyen q, Integer id) {
-        return HOAT_DONG.equals(n.trangThai()) && (q.vanPhong() || q.lanhDao()
-                || id.equals(n.thuKyNhomId()) || (q.phongTruongPhong() != null && id.equals(n.truongNhomId())));
+        return HOAT_DONG.equals(n.trangThai()) && !q.lanhDao()
+                && (id.equals(n.thuKyNhomId()) || id.equals(n.truongNhomId()));
     }
 
     private NguoiDung timTaiKhoan(Integer id) {

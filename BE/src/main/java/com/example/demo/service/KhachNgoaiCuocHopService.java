@@ -161,6 +161,7 @@ public class KhachNgoaiCuocHopService {
         lienKet.ghiNhan(loiMoi, maMoi, capNhat ? "Cập nhật thư mời" : "Phát hành thư mời");
         luuNoiDungThuMoi(loiMoi, thongTin.chuDe(request.thuMoi()), request.thuMoi(), tep);
         guiThuMoi(khachMoi, thongTin, diaDiemHop, request, maMoi.duongDan(), tep);
+        capNhatRealtime.baoNguoiPhuTrach(cuocHop);
         return chuyenResponse(loiMoi);
     }
 

@@ -12,6 +12,7 @@ export default function FormKeHoachThuKy({
   onDaLuu,
   luaChonChuTri,
   luaChonThuKy,
+  thuKyNhomCoDinh,
   laBanCapNhat = false,
   lyDoKhoa,
 }) {
@@ -107,16 +108,24 @@ export default function FormKeHoachThuKy({
           </select>
         </label>
 
-        <label className="block text-sm font-medium">
-          Thư ký cuộc họp
-          <select key={luaChonThuKy ? 'da-tai' : 'dang-tai'} name="thuKyCuocHopId"
-            defaultValue={chiTiet.thuKyCuocHopId ?? ''} disabled={!luaChonThuKy} className={LOP_TRUONG}>
-            <option value="">Thư ký lập hồ sơ (mặc định)</option>
-            {luaChonThuKy?.map((nguoi) => (
-              <option key={nguoi.nguoiDungId} value={nguoi.nguoiDungId}>{nguoi.hoTen}{nguoi.tenPhongBan ? ` · ${nguoi.tenPhongBan}` : ''}</option>
-            ))}
-          </select>
-        </label>
+        {thuKyNhomCoDinh ? (
+          <label className="block text-sm font-medium">
+            Thư ký nhóm phụ trách tổ chức
+            <input className={LOP_TRUONG} value={luaChonThuKy?.[0]?.hoTen ?? ''} readOnly />
+            <input type="hidden" name="thuKyCuocHopId" value={luaChonThuKy?.[0]?.nguoiDungId ?? ''} />
+          </label>
+        ) : (
+          <label className="block text-sm font-medium">
+            Thư ký cuộc họp
+            <select key={luaChonThuKy ? 'da-tai' : 'dang-tai'} name="thuKyCuocHopId"
+              defaultValue={chiTiet.thuKyCuocHopId ?? ''} disabled={!luaChonThuKy} className={LOP_TRUONG}>
+              <option value="">Thư ký lập hồ sơ (mặc định)</option>
+              {luaChonThuKy?.map((nguoi) => (
+                <option key={nguoi.nguoiDungId} value={nguoi.nguoiDungId}>{nguoi.hoTen}{nguoi.tenPhongBan ? ` · ${nguoi.tenPhongBan}` : ''}</option>
+              ))}
+            </select>
+          </label>
+        )}
         <label className="block text-sm font-medium">
           Có khách mời bên ngoài
           <select

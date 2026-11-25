@@ -590,6 +590,7 @@ export default function ChiTietDeXuat({ cuocHopId, token, nguoiDung, onQuayLai, 
                         <FormKeHoachThuKy
                           luaChonChuTri={luaChonKeHoach?.nguoiChuTri}
                           luaChonThuKy={luaChonKeHoach?.thuKyCuocHop}
+                          thuKyNhomCoDinh={luaChonKeHoach?.thuKyNhomCoDinh}
                           chiTiet={chiTiet}
                           token={token}
                           laBanCapNhat={moFormCapNhatKeHoach}

@@ -9,6 +9,7 @@ import Send from 'lucide-react/dist/esm/icons/send.mjs'
 import Paperclip from 'lucide-react/dist/esm/icons/paperclip.mjs'
 import { TieuDeHoSo } from '../../components/GiaoDienPhongHop.jsx'
 import { LOP_NUT_CHINH, LOP_NUT_PHU } from '../../components/giaoDienPhongHop.js'
+import { goiNhomLienPhong } from '../../api/nhomLienPhongApi.js'
 import DanhSachDeXuatCuaToi from './DanhSachDeXuatCuaToi.jsx'
 import { TEN_PHAM_VI } from '../thuky/hienThiDeXuat.js'
 import { LOP_KHOI, LOP_TRUONG } from '../../components/lopBieuMau.js'
@@ -48,6 +49,22 @@ export default function DeXuatCuaToi({ token, nguoiDung, onXemCuocHop }) {
   const [loiTaiPhongBan, setLoiTaiPhongBan] = useState('')
   const [lanTaiPhongBan, setLanTaiPhongBan] = useState(0)
   const lanhDao = nguoiDung.maVaiTro === 'LANH_DAO'
+  const [nhomThamDu, setNhomThamDu] = useState(null)
+  const [loiNhomThamDu, setLoiNhomThamDu] = useState('')
+  useEffect(() => {
+    if (!lanhDao || !moForm) return undefined
+    const controller = new AbortController()
+    goiNhomLienPhong('', token, { signal: controller.signal })
+      .then((duLieu) => {
+        if (controller.signal.aborted) return
+        setNhomThamDu(duLieu.danhSach.filter((nhom) => nhom.trangThai === 'HOAT_DONG'))
+        setLoiNhomThamDu('')
+      })
+      .catch((loi) => {
+        if (!controller.signal.aborted) setLoiNhomThamDu(loi.message)
+      })
+    return () => controller.abort()
+  }, [lanhDao, moForm, token, phienDongBo])
   const coThuKy = Boolean(nguoiDung.tenThuKyMacDinh)
   const noiBo = phamVi === 'NOI_BO'
   const chuaCoPhongBan = noiBo && (lanhDao ? !danhSachPhongBan?.length : !nguoiDung.phongBanId)
@@ -173,6 +190,7 @@ export default function DeXuatCuaToi({ token, nguoiDung, onXemCuocHop }) {
           : null,
         coKhachMoiBenNgoai: phamVi === 'BEN_NGOAI' || duLieu.has('coKhachMoiBenNgoai'),
         thuKyCuocHopId: Number(duLieu.get('thuKyCuocHopId')) || null,
+        nhomThamDuId: lanhDao ? Number(duLieu.get('nhomThamDuId')) || null : null,
         guiNgay,
       }, token, tepDeXuat)
       form.reset()
@@ -217,6 +235,17 @@ export default function DeXuatCuaToi({ token, nguoiDung, onXemCuocHop }) {
               <dd className="mt-1 wrap-anywhere font-semibold">{nguoiDung.tenThuKyMacDinh || 'Chưa được phân công'}</dd>
             </div>
           </dl>
+          {lanhDao && <div className="space-y-1">
+            <label className="block text-sm font-semibold">Nhóm tham gia
+              <select name="nhomThamDuId" defaultValue="" className={LOP_TRUONG} disabled={!nhomThamDu || Boolean(loiNhomThamDu)}>
+                <option value="">Không chỉ định nhóm</option>
+                {nhomThamDu?.map((nhom) => <option key={nhom.nhomId} value={nhom.nhomId}>{nhom.tenNhom}</option>)}
+              </select>
+            </label>
+            {loiNhomThamDu
+              ? <p role="alert" className="text-sm text-rose-800">Chưa tải được nhóm tham gia. {loiNhomThamDu}</p>
+              : <p className="text-sm text-slate-600">Thư ký nhận đề xuất sẽ dùng danh sách nhóm để gửi lời mời sau khi lịch được duyệt.</p>}
+          </div>}
           <label className="block text-sm font-semibold">Tiêu đề
             <input className={LOP_TRUONG} name="tieuDe" required maxLength={255} />
           </label>

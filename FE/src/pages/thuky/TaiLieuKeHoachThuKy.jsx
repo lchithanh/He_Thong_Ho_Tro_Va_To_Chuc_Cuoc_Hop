@@ -1,3 +1,4 @@
+import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
 import { useEffect, useState } from 'react'
 import Paperclip from 'lucide-react/dist/esm/icons/paperclip.mjs'
 import Send from 'lucide-react/dist/esm/icons/send.mjs'
@@ -26,6 +27,7 @@ export default function TaiLieuKeHoachThuKy({
   choPhepThaoTac = true,
   choDoiLich = false,
 }) {
+  const phienDongBo = useDongBoDuLieu()
   const [danhSach, setDanhSach] = useState(null)
   const [lanTai, setLanTai] = useState(0)
   const [dangTaiLen, setDangTaiLen] = useState(false)
@@ -66,7 +68,7 @@ export default function TaiLieuKeHoachThuKy({
         if (!controller.signal.aborted) setDangTaiLich(false)
       })
     return () => controller.abort()
-  }, [cuocHopId, token, lanTaiLich, lichMoiTaoId])
+  }, [cuocHopId, token, lanTaiLich, lichMoiTaoId, phienDongBo])
 
   const lichDangChon = lichCoTheTrinh?.find((lich) => String(lich.lichHopId) === lichHopIdDangChon)
   const dangDoiLich = lichHopIdKeHoachDaDuyet != null && lichDangChon != null
@@ -102,7 +104,7 @@ export default function TaiLieuKeHoachThuKy({
 
     taiDanhSach()
     return () => controller.abort()
-  }, [cuocHopId, token, lanTai])
+  }, [cuocHopId, token, lanTai, phienDongBo])
 
   async function xuLyTaiLen(event) {
     event.preventDefault()

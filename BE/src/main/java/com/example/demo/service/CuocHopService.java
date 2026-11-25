@@ -36,7 +36,7 @@ public class CuocHopService {
             List<NguoiCoTheMoiResponse> nguoiChuTri,
             List<NguoiCoTheMoiResponse> lanhDaoDuyet,
             boolean canChonLanhDao,
-            List<NguoiCoTheMoiResponse> thuKyCuocHop) {}
+            List<NguoiCoTheMoiResponse> thuKyCuocHop, boolean thuKyNhomCoDinh) {}
 
     @Transactional(readOnly = true)
     public LuaChonKeHoach layLuaChonKeHoach(Integer cuocHopId, Integer nguoiDungId) {
@@ -60,10 +60,14 @@ public class CuocHopService {
                 .filter(nd -> phanQuyenCuocHopService.coVaiTro(nd.getNguoiDungId(), "LANH_DAO"))
                 .map(this::chuyenLuaChonNguoiDung)
                 .toList();
+        var thuKyNhom = phanCongXuLyKeHoachService.layThuKyCoDinhCuaNhom(ch);
+        if (thuKyNhom != null) {
+            return new LuaChonKeHoach(chuTri, List.of(), false, List.of(chuyenLuaChonNguoiDung(thuKyNhom)), true);
+        }
         return new LuaChonKeHoach(chuTri, lanhDao, canChonLanhDao, hoatDong.stream()
                 .filter(phanCongXuLyKeHoachService::laNguoiCoTheLamThuKy)
                 .filter(nd -> !ThaoTacCuocHop.laNguoiDeXuat(ch, nd.getNguoiDungId()))
-                .map(this::chuyenLuaChonNguoiDung).toList());
+                .map(this::chuyenLuaChonNguoiDung).toList(), false);
     }
 
     @Transactional(readOnly = true)

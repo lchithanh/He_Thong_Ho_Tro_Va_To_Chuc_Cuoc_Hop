@@ -1,3 +1,4 @@
+import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
 import { useEffect, useState } from 'react'
 import RefreshCw from 'lucide-react/dist/esm/icons/refresh-cw.mjs'
 import ShieldCheck from 'lucide-react/dist/esm/icons/shield-check.mjs'
@@ -14,6 +15,7 @@ const BO_LOC = [
 ]
 
 export default function ThuKyVanPhong({ token }) {
+  const phienDongBo = useDongBoDuLieu()
   const [danhSach, setDanhSach] = useState(null)
   const [tuKhoa, setTuKhoa] = useState('')
   const [loc, setLoc] = useState('tat-ca')
@@ -40,7 +42,7 @@ export default function ThuKyVanPhong({ token }) {
         if (!controller.signal.aborted) setDangTai(false)
       })
     return () => controller.abort()
-  }, [token, lanTai])
+  }, [token, lanTai, phienDongBo])
 
   const tong = danhSach?.length ?? 0
   const daCap = danhSach?.filter((nguoi) => nguoi.vanPhong).length ?? 0
