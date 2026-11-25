@@ -307,21 +307,12 @@ public List<LichSuKeHoachResponse> layLichSuPheDuyetKeHoach(
                 yc.getYeuCauTruoc() == null ? null
                         : yc.getYeuCauTruoc().getYeuCauPheDuyetId(),
                 yc.getCapPheDuyet(),
-                yc.getTrangThai() == TrangThai.CHO_DUYET
-                        && "TRUONG_PHONG".equals(yc.getCapPheDuyet())
-                        && QuyTacDuyetKeHoach.canTrinhCapTren(
-                                phanQuyenCuocHopService.coVaiTro(
-                                        yc.getCuocHop().getNguoiDeXuat().getNguoiDungId(), "LANH_DAO"),
-                                yc.getCuocHop().getPhamViCuocHop(),
-                                        Boolean.TRUE.equals(yc.getCuocHop().getCoKhachMoiBenNgoai())
-                                                || khachMoiCuocHopRepository
-                                                        .existsByCuocHop_CuocHopIdAndTrangThaiMoiNot(
-                                                                yc.getCuocHop().getCuocHopId(), "DA_HUY")),
+                yc.getTrangThai() == TrangThai.CHO_DUYET && laDuyetCapTrungGian(yc),
                 yc.getThoiGianTrinh());
     }
 
     private boolean laDuyetCapTrungGian(YeuCauPheDuyet yc) {
-        return "TRUONG_PHONG".equals(yc.getCapPheDuyet())
+        return "TRUONG_NHOM".equals(yc.getCapPheDuyet()) || ("TRUONG_PHONG".equals(yc.getCapPheDuyet())
                 && QuyTacDuyetKeHoach.canTrinhCapTren(
                         phanQuyenCuocHopService.coVaiTro(
                                 yc.getCuocHop().getNguoiDeXuat().getNguoiDungId(), "LANH_DAO"),
@@ -329,7 +320,7 @@ public List<LichSuKeHoachResponse> layLichSuPheDuyetKeHoach(
                         Boolean.TRUE.equals(yc.getCuocHop().getCoKhachMoiBenNgoai())
                                 || khachMoiCuocHopRepository
                                         .existsByCuocHop_CuocHopIdAndTrangThaiMoiNot(
-                                                yc.getCuocHop().getCuocHopId(), "DA_HUY"));
+                                                yc.getCuocHop().getCuocHopId(), "DA_HUY")));
     }
 
     private YeuCauPheDuyet layYeuCauKeHoach(Integer id) {

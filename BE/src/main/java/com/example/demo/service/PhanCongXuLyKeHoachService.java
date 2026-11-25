@@ -1,5 +1,6 @@
 package com.example.demo.service;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
@@ -168,9 +169,10 @@ public class PhanCongXuLyKeHoachService {
         if (!"DANG_CHUAN_BI".equals(cuocHop.getTrangThai())
                 || !"CHO_GUI_CAP_TREN".equals(cuocHop.getBuocXuLyHienTai())
                 || lanMoiNhat == null || lanMoiNhat.getTrangThai() != TrangThai.DA_DUYET
-                || !"TRUONG_PHONG".equals(lanMoiNhat.getCapPheDuyet())
+                || !List.of("TRUONG_PHONG", "TRUONG_NHOM").contains(lanMoiNhat.getCapPheDuyet())
                 || !laThuKyBanDau(cuocHop.getCuocHopId(), nguoiDungId)
-                || nguoiDungVaiTroRepository.findByNguoiDungIdAndVaiTro_MaVaiTro(nguoiDungId, "THU_KY").isEmpty()) {
+                || ("TRUONG_PHONG".equals(lanMoiNhat.getCapPheDuyet())
+                    && nguoiDungVaiTroRepository.findByNguoiDungIdAndVaiTro_MaVaiTro(nguoiDungId, "THU_KY").isEmpty())) {
             return null;
         }
         return lanMoiNhat.getYeuCauPheDuyetId();

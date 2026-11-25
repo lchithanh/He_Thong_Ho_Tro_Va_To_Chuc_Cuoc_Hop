@@ -10,6 +10,7 @@ import { TEN_PHAM_VI } from './hienThiDeXuat.js'
 const TEN_BUOC = {
   LAP_KE_HOACH: 'Thư ký lập kế hoạch',
   CHO_TRUONG_PHONG: 'Chờ trưởng phòng duyệt',
+  CHO_TRUONG_NHOM: 'Chờ trưởng nhóm duyệt',
   CHO_GUI_CAP_TREN: 'Thư ký ban đầu chọn lãnh đạo và chuyển hồ sơ',
   CHO_THU_KY_LANH_DAO: 'Chờ thư ký lãnh đạo tiếp nhận lần trình',
   THU_KY_LANH_DAO_XU_LY: 'Thư ký lãnh đạo đang rà soát',

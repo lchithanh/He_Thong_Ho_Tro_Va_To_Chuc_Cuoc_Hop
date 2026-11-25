@@ -143,7 +143,7 @@ export default function DanhSachDeXuatThuKy({ token, nguoiDung, onLapLich, onMoP
             className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4">
             <div>
               <h2 className="font-semibold">{muc.tieuDe}</h2>
-              <p className="mt-1 text-sm text-slate-600">Lần trình #{muc.yeuCauChoGuiCapTrenId} · Trưởng phòng đã đồng ý</p>
+              <p className="mt-1 text-sm text-slate-600">Lần trình #{muc.yeuCauChoGuiCapTrenId} · Đã qua duyệt cấp đầu</p>
               <p className="text-sm text-slate-600">Đồng ý chuyển cấp · {dinhDangNgayGio(muc.thoiGianDongYChuyenCap)}</p>
             </div>
             <button type="button" className="rounded-lg border px-3 py-2 text-sm font-semibold text-emerald-800"

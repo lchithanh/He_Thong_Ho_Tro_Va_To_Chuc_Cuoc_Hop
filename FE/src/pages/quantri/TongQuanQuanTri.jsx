@@ -25,7 +25,7 @@ const LOAI_CO_SO = [
 ]
 
 const TAC_VU = [
-  { id: 'thu-ky-van-phong', ten: 'Quyền Văn phòng', moTa: 'Cấp hoặc thu hồi quyền điều phối nhóm.', BieuTuong: ShieldCheck, mau: 'xanh' },
+  { id: 'thu-ky-van-phong', ten: 'Quyền Văn phòng', moTa: 'Cấp hoặc thu hồi quyền duyệt kế hoạch họp nội bộ.', BieuTuong: ShieldCheck, mau: 'xanh' },
   { id: 'phan-cong', ten: 'Phân công thư ký', moTa: 'Gán thư ký mặc định cho lãnh đạo và trưởng phòng.', BieuTuong: UserRoundCog, mau: 'lam' },
 ]
 

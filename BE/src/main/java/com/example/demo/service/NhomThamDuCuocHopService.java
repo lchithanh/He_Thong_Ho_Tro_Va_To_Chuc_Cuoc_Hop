@@ -23,6 +23,22 @@ public class NhomThamDuCuocHopService {
                 """).param("id", cuocHopId).query(Boolean.class).single();
     }
 
+    record TuyenDuyet(String capDuyet, Integer nguoiLapNhomId) {}
+
+    TuyenDuyet layTuyenDuyet(Integer cuocHopId) {
+        return jdbc.sql("""
+                SELECT dx.cap_duyet, n.nguoi_lap_id AS nguoi_lap_nhom_id
+                FROM nhom_lien_phong_de_xuat dx JOIN nhom_lien_phong n ON n.nhom_id = dx.nhom_id
+                WHERE dx.cuoc_hop_id = :id
+                """).param("id", cuocHopId).query(TuyenDuyet.class).optional().orElse(null);
+    }
+
+    void ganNguoiDuyetCuoi(Integer cuocHopId, Integer nguoiDuyetId, String cap) {
+        jdbc.sql("""
+                UPDATE nhom_lien_phong_de_xuat SET nguoi_duyet_id = :nguoi, cap_duyet = :cap WHERE cuoc_hop_id = :id
+                """).param("nguoi", nguoiDuyetId).param("cap", cap).param("id", cuocHopId).update();
+    }
+
     void chonNhom(Integer cuocHopId, Integer nhomId) {
         boolean dangHoatDong = jdbc.sql("""
                 SELECT trang_thai FROM nhom_lien_phong WHERE nhom_id = :id FOR UPDATE

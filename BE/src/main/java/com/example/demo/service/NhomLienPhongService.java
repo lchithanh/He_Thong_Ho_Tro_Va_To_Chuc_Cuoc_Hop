@@ -43,17 +43,16 @@ public class NhomLienPhongService {
             Integer nguoiLapId, String capNhom, String trangThai, Integer truongNhomId, Integer thuKyNhomId) {}
     public record Phong(Integer phongBanId, String tenPhongBan, Integer nguoiCuId, LocalDateTime ngayCu) {}
     public record NhanSu(Integer nguoiDungId, String hoTen, Integer phongBanId) {}
-    public record NguoiDuyet(Integer nguoiDungId, String hoTen, String capDuyet) {}
     public record DoiNguoi(Integer doiNguoiId, Integer phongBanId, Integer nguoiCuId, Integer nguoiMoiId,
             Integer nguoiYeuCauId, String lyDo, String trangThai) {}
     public record DeXuat(Integer cuocHopId, String tieuDe, String trangThai, String capDuyet, String tenNguoiDuyet,
             Integer nguoiGuiId) {}
     public record Quyen(boolean vanPhong, boolean lanhDao, Integer phongTruongPhong) {
-        public boolean duocTao() { return vanPhong || lanhDao || phongTruongPhong != null; }
+        public boolean duocTao() { return lanhDao || phongTruongPhong != null; }
     }
     public record TrangNhom(Quyen quyen, List<Nhom> danhSach, List<Phong> phongBanTao) {}
     public record ChiTiet(Nhom nhom, List<Phong> phongBan, List<NhanSu> thanhVien, List<NhanSu> nguonNhanSu,
-            List<DoiNguoi> doiNguoi, List<DeXuat> deXuat, List<NguoiDuyet> nguoiDuyet,
+            List<DoiNguoi> doiNguoi, List<DeXuat> deXuat, boolean coLanhDaoLapNhom,
             boolean duocKichHoat, boolean duocDong, boolean duocGui) {}
 
     public record TaoNhom(String tenNhom, String mucDich, String capNhom, Integer phongBanChuTriId, List<Integer> phongBanIds) {}
@@ -62,8 +61,7 @@ public class NhomLienPhongService {
     public record ThayNguoi(Integer phongBanId, Integer nguoiCuId, Integer nguoiMoiId, String lyDo) {}
     public record XuLyThayNguoi(boolean dongY, String yKien) {}
     public record GuiDeXuat(String tieuDe, String mucTieu, String noiDung, String loaiHinh, String phamVi,
-            boolean coKhachNgoai, boolean coLanhDaoCapCao, Integer nguoiChuTriId,
-            Integer nguoiDuyetId) {}
+            boolean coKhachNgoai, boolean coLanhDaoCapCao) {}
 
     @Transactional(readOnly = true)
     public TrangNhom danhSach(Integer id) {
@@ -74,7 +72,7 @@ public class NhomLienPhongService {
                   OR EXISTS (SELECT 1 FROM nhom_lien_phong_phong_ban p WHERE p.nhom_id = n.nhom_id AND p.phong_ban_id = :phong)
                   OR EXISTS (SELECT 1 FROM nhom_lien_phong_thanh_vien t WHERE t.nhom_id = n.nhom_id AND t.nguoi_dung_id = :id)
                 ORDER BY n.nhom_id DESC
-                """).param("toanQuyen", quyen.vanPhong() || quyen.lanhDao()).param("id", id)
+                """).param("toanQuyen", quyen.lanhDao()).param("id", id)
                 .param("phong", quyen.phongTruongPhong(), java.sql.Types.INTEGER).query(Nhom.class).list();
         List<Phong> phongBan = quyen.duocTao() ? jdbc.sql("""
                 SELECT phong_ban_id, ten_phong_ban, NULL AS nguoi_cu_id, NULL AS ngay_cu
@@ -91,7 +89,7 @@ public class NhomLienPhongService {
         hopLe(phongIds != null && phongIds.size() >= 2 && phongIds.size() <= 50
                 && phongIds.stream().allMatch(Objects::nonNull) && new HashSet<>(phongIds).size() == phongIds.size()
                 && chuTri != null && phongIds.contains(chuTri), "Chọn phòng chủ trì và ít nhất một phòng khác");
-        choPhep(quyen.vanPhong() || quyen.lanhDao() || Objects.equals(chuTri, quyen.phongTruongPhong()),
+        choPhep(quyen.lanhDao() || Objects.equals(chuTri, quyen.phongTruongPhong()),
                 "Trưởng phòng chỉ được lập nhóm do phòng mình chủ trì");
         hopLe("THUONG".equals(request.capNhom()) || "CAP_CAO".equals(request.capNhom()), "Cấp nhóm không hợp lệ");
         long soPhong = phongBanRepository.findAllById(phongIds).stream()
@@ -118,30 +116,19 @@ public class NhomLienPhongService {
         var q = quyen(id);
         var tv = thanhVien(nhomId);
         var pb = phongBan(nhomId);
-        choPhep(q.lanhDao() || q.vanPhong() || n.nguoiLapId().equals(id)
+        choPhep(q.lanhDao() || n.nguoiLapId().equals(id)
                 || tv.stream().anyMatch(v -> v.nguoiDungId().equals(id))
                 || pb.stream().anyMatch(p -> p.phongBanId().equals(q.phongTruongPhong())),
                 "Bạn không có quyền xem nhóm này");
-        List<NhanSu> nguon = q.vanPhong() || q.phongTruongPhong() != null ? jdbc.sql("""
+        List<NhanSu> nguon = q.phongTruongPhong() != null ? jdbc.sql("""
                 SELECT nd.nguoi_dung_id, nd.ho_ten, nd.phong_ban_id
                 FROM nguoi_dung nd JOIN nhom_lien_phong_phong_ban pb ON pb.phong_ban_id = nd.phong_ban_id
                 WHERE pb.nhom_id = :id AND nd.trang_thai = 'HOAT_DONG'
-                  AND (:vanPhong OR pb.phong_ban_id = :phong)
+                  AND pb.phong_ban_id = :phong
                 ORDER BY nd.ho_ten
-                """).param("id", nhomId).param("vanPhong", q.vanPhong())
+                """).param("id", nhomId)
                 .param("phong", q.phongTruongPhong(), java.sql.Types.INTEGER).query(NhanSu.class).list() : List.of();
         boolean gui = duocGui(n, q, id);
-        List<NguoiDuyet> nguoiDuyet = gui ? jdbc.sql("""
-                SELECT nd.nguoi_dung_id, nd.ho_ten,
-                    CASE WHEN vt.ma_vai_tro = 'LANH_DAO' THEN 'LANH_DAO' ELSE 'VAN_PHONG' END AS cap_duyet
-                FROM nguoi_dung nd
-                JOIN nguoi_dung_vai_tro ndvt ON ndvt.nguoi_dung_id = nd.nguoi_dung_id
-                JOIN vai_tro vt ON vt.vai_tro_id = ndvt.vai_tro_id
-                LEFT JOIN thu_ky_van_phong vp ON vp.nguoi_dung_id = nd.nguoi_dung_id
-                WHERE nd.trang_thai = 'HOAT_DONG' AND
-                    (vt.ma_vai_tro = 'LANH_DAO' OR (vt.ma_vai_tro = 'THU_KY' AND vp.nguoi_dung_id IS NOT NULL))
-                ORDER BY nd.ho_ten
-                """).query(NguoiDuyet.class).list() : List.of();
         List<DoiNguoi> doiNguoi = jdbc.sql("""
                 SELECT doi_nguoi_id, phong_ban_id, nguoi_cu_id, nguoi_moi_id, nguoi_yeu_cau_id, ly_do, trang_thai
                 FROM nhom_lien_phong_doi_nguoi WHERE nhom_id = :id ORDER BY doi_nguoi_id DESC
@@ -150,11 +137,11 @@ public class NhomLienPhongService {
                 SELECT ch.cuoc_hop_id, ch.tieu_de, ch.trang_thai, dx.cap_duyet,
                     nd.ho_ten AS ten_nguoi_duyet, dx.nguoi_gui_id
                 FROM nhom_lien_phong_de_xuat dx JOIN cuoc_hop ch ON ch.cuoc_hop_id = dx.cuoc_hop_id
-                JOIN nguoi_dung nd ON nd.nguoi_dung_id = dx.nguoi_duyet_id
+                LEFT JOIN nguoi_dung nd ON nd.nguoi_dung_id = dx.nguoi_duyet_id
                 WHERE dx.nhom_id = :id ORDER BY ch.cuoc_hop_id DESC
                 """).param("id", nhomId).query(DeXuat.class).list();
-        return new ChiTiet(n, pb, tv, nguon, doiNguoi, deXuat, nguoiDuyet,
-                CHO_KICH_HOAT.equals(n.trangThai()) && duocKichHoat(n, q),
+        return new ChiTiet(n, pb, tv, nguon, doiNguoi, deXuat, phanQuyen.coVaiTro(n.nguoiLapId(), "LANH_DAO"),
+                CHO_KICH_HOAT.equals(n.trangThai()) && q.lanhDao(),
                 !DA_DONG.equals(n.trangThai()) && duocDong(n, q, id), gui);
     }
 
@@ -188,7 +175,7 @@ public class NhomLienPhongService {
 
     public void kichHoat(Integer nhomId, GanVaiTro request, Integer id) {
         var n = tim(nhomId, true);
-        choPhep(duocKichHoat(n, quyen(id)), "Bạn không có quyền kích hoạt cấp nhóm này");
+        choPhep(quyen(id).lanhDao(), "Bạn không có quyền kích hoạt cấp nhóm này");
         phaiOTrangThai(n, CHO_KICH_HOAT);
         doiChieuNhanSu(nhomId);
         ganVaiTro(nhomId, request.truongNhomId(), request.thuKyNhomId());
@@ -204,28 +191,25 @@ public class NhomLienPhongService {
         phaiOTrangThai(n, HOAT_DONG);
         var q = quyen(id);
         hopLe(request.phongBanId() != null, "Chọn phòng ban cần đổi người");
-        choPhep(q.vanPhong() || request.phongBanId().equals(q.phongTruongPhong()),
-                "Chỉ Văn phòng hoặc trưởng phòng liên quan được đổi người");
+        choPhep(request.phongBanId().equals(q.phongTruongPhong()),
+                "Chỉ trưởng phòng liên quan được đề xuất đổi người của phòng mình");
         String lyDo = vanBan(request.lyDo(), 500);
         kiemTraThayNguoi(n, request.phongBanId(), request.nguoiCuId(), request.nguoiMoiId());
-        if (q.vanPhong()) {
-            capNhatThanhVien(n, request.phongBanId(), request.nguoiCuId(), request.nguoiMoiId());
-        }
         jdbc.sql("""
                 INSERT INTO nhom_lien_phong_doi_nguoi
-                    (nhom_id, phong_ban_id, nguoi_cu_id, nguoi_moi_id, nguoi_yeu_cau_id, ly_do, trang_thai, nguoi_xu_ly_id, ngay_xu_ly)
-                VALUES (:nhom, :phong, :cu, :moi, :id, :lyDo, :tt, :xuLy,
-                    CASE WHEN :tt = 'DA_CAP_NHAT' THEN CURRENT_TIMESTAMP ELSE NULL END)
+                    (nhom_id, phong_ban_id, nguoi_cu_id, nguoi_moi_id, nguoi_yeu_cau_id, ly_do)
+                VALUES (:nhom, :phong, :cu, :moi, :id, :lyDo)
                 """).param("nhom", nhomId).param("phong", request.phongBanId())
-                .param("cu", request.nguoiCuId(), java.sql.Types.INTEGER).param("moi", request.nguoiMoiId(), java.sql.Types.INTEGER)
-                .param("id", id).param("lyDo", lyDo).param("tt", q.vanPhong() ? "DA_CAP_NHAT" : "CHO_XU_LY")
-                .param("xuLy", q.vanPhong() ? id : null, java.sql.Types.INTEGER).update();
+                .param("cu", request.nguoiCuId(), java.sql.Types.INTEGER)
+                .param("moi", request.nguoiMoiId(), java.sql.Types.INTEGER)
+                .param("id", id).param("lyDo", lyDo).update();
         realtime.baoDanhMucNhomThayDoi();
     }
 
     public void xuLyDoiNguoi(Integer nhomId, Integer doiId, XuLyThayNguoi request, Integer id) {
         var n = tim(nhomId, true);
-        choPhep(quyen(id).vanPhong(), "Chỉ thư ký Văn phòng được xử lý yêu cầu đổi người");
+        timTaiKhoan(id);
+        choPhep(id.equals(n.truongNhomId()), "Chỉ trưởng nhóm được xử lý yêu cầu đổi người");
         phaiOTrangThai(n, HOAT_DONG);
         var doi = jdbc.sql("""
                 SELECT doi_nguoi_id, phong_ban_id, nguoi_cu_id, nguoi_moi_id, nguoi_yeu_cau_id, ly_do, trang_thai
@@ -273,30 +257,21 @@ public class NhomLienPhongService {
                 .stream().anyMatch(p -> p.equals(request.phamVi())), "Chọn phạm vi cuộc họp");
         var phong = phongBanRepository.findById(n.phongBanChuTriId()).orElseThrow();
         xungDot(HOAT_DONG.equals(phong.getTrangThai()), "Phòng chủ trì không còn hoạt động");
-        Integer chuTriMacDinh = "NOI_BO".equals(request.phamVi()) ? phong.getTruongPhongId() : n.truongNhomId();
-        Integer chuTri = request.nguoiChuTriId() == null ? chuTriMacDinh : request.nguoiChuTriId();
+        Integer chuTri = n.truongNhomId();
         var taiKhoanChuTri = timTaiKhoan(chuTri);
-        boolean chuTriThuocNhom = thanhVien.stream().anyMatch(tv -> tv.nguoiDungId().equals(chuTri));
-        boolean chuTriLanhDao = phanQuyen.coVaiTro(chuTri, "LANH_DAO");
-        hopLe("NOI_BO".equals(request.phamVi())
-                ? phanQuyen.laTruongPhongCuaPhongBan(chuTri, phong.getPhongBanId())
-                : chuTriThuocNhom || chuTriLanhDao, "Chủ trì không phù hợp với phạm vi cuộc họp");
+        var thuKy = timTaiKhoan(n.thuKyNhomId());
+        hopLe(phanCong.laNguoiCoTheLamThuKy(thuKy) && !thuKy.getNguoiDungId().equals(chuTri),
+                "Thư ký nhóm phải đang hoạt động và khác trưởng nhóm");
         boolean coKhachNgoai = request.coKhachNgoai() || "BEN_NGOAI".equals(request.phamVi());
         boolean canLanhDao = !"NOI_BO".equals(request.phamVi()) || coKhachNgoai
-                || request.coLanhDaoCapCao() || chuTriLanhDao;
-        Integer nguoiDuyetId = request.nguoiDuyetId();
-        if (nguoiDuyetId == null && canLanhDao && phanQuyen.coVaiTro(n.nguoiLapId(), "LANH_DAO")) {
-            nguoiDuyetId = n.nguoiLapId();
+                || request.coLanhDaoCapCao() || phanQuyen.coVaiTro(chuTri, "LANH_DAO");
+        Integer duyetId = null;
+        if (canLanhDao) {
+            var nguoiLap = timTaiKhoan(n.nguoiLapId());
+            xungDot(phanQuyen.coVaiTro(nguoiLap.getNguoiDungId(), "LANH_DAO"),
+                    "Cuộc họp này cần lãnh đạo đã thành lập nhóm duyệt. Nhóm hiện chưa có lãnh đạo thành lập");
+            duyetId = nguoiLap.getNguoiDungId();
         }
-        var nguoiDuyet = timTaiKhoan(nguoiDuyetId);
-        var thuKy = timTaiKhoan(n.thuKyNhomId());
-        Integer duyetId = nguoiDuyet.getNguoiDungId();
-        hopLe(phanCong.laNguoiCoTheLamThuKy(thuKy) && !thuKy.getNguoiDungId().equals(chuTri),
-                "Thư ký nhóm phải đang hoạt động và khác chủ trì cuộc họp");
-        hopLe(!duyetId.equals(id) && !duyetId.equals(thuKy.getNguoiDungId()),
-                "Người duyệt phải khác người gửi và thư ký lập kế hoạch");
-        hopLe(canLanhDao ? phanQuyen.coVaiTro(duyetId, "LANH_DAO") : quyenVanPhong.duocDieuPhoi(duyetId),
-                canLanhDao ? "Đề xuất này cần lãnh đạo duyệt" : "Đề xuất này cần thư ký Văn phòng duyệt");
 
         var duLieu = new TaoDeXuatCuocHopRequest();
         duLieu.setTieuDe(vanBan(request.tieuDe(), 255));
@@ -311,7 +286,7 @@ public class NhomLienPhongService {
                     thanh_vien_khi_gui, nguoi_duyet_id, cap_duyet)
                 VALUES (:hop, :nhom, :id, :tv, :duyet, :cap)
                 """).param("hop", hopId).param("nhom", nhomId).param("id", id)
-                .param("tv", objectMapper.writeValueAsString(thanhVien)).param("duyet", duyetId)
+                .param("tv", objectMapper.writeValueAsString(thanhVien)).param("duyet", duyetId, java.sql.Types.INTEGER)
                 .param("cap", canLanhDao ? "LANH_DAO" : "VAN_PHONG").update();
         realtime.baoDanhMucNhomThayDoi();
         return hopId;
@@ -346,12 +321,8 @@ public class NhomLienPhongService {
                         ? nguoiDung.getPhongBan().getPhongBanId() : null);
     }
 
-    private boolean duocKichHoat(Nhom n, Quyen q) {
-        return "CAP_CAO".equals(n.capNhom()) ? q.lanhDao() : q.vanPhong();
-    }
-
     private boolean duocDong(Nhom n, Quyen q, Integer id) {
-        return q.vanPhong() || q.lanhDao() || (q.phongTruongPhong() != null && n.nguoiLapId().equals(id));
+        return q.lanhDao() || (q.phongTruongPhong() != null && n.nguoiLapId().equals(id));
     }
 
     private boolean duocGui(Nhom n, Quyen q, Integer id) {

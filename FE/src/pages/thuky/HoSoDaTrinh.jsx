@@ -21,7 +21,7 @@ const TEN_TRANG_THAI = {
 }
 
 const MAU_TRANG_THAI = { CHO_DUYET: 'vang', DA_DUYET: 'luc', TRA_LAI: 'vang', TU_CHOI: 'do', DA_HUY: 'do' }
-const TEN_CAP = { TRUONG_PHONG: 'Trưởng phòng', LANH_DAO: 'Lãnh đạo', VAN_PHONG: 'Văn phòng' }
+const TEN_CAP = { TRUONG_PHONG: 'Trưởng phòng', TRUONG_NHOM: 'Trưởng nhóm', LANH_DAO: 'Lãnh đạo', VAN_PHONG: 'Văn phòng' }
 
 function NhomHoSo({ Icon, ten, cacMuc }) {
   return (

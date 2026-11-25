@@ -13,6 +13,7 @@ export default function ChiTietKeHoachChoDuyet({ keHoach, token, onDong, onDaXuL
   const { cuocHopId, yeuCauPheDuyetId } = keHoach
   const cap = {
     TRUONG_PHONG: ['CHO_TRUONG_PHONG', 'trưởng phòng'],
+    TRUONG_NHOM: ['CHO_TRUONG_NHOM', 'trưởng nhóm'],
     VAN_PHONG: ['CHO_VAN_PHONG_DUYET', 'Văn phòng'],
     LANH_DAO: ['CHO_LANH_DAO', 'lãnh đạo'],
   }[keHoach.capPheDuyet]

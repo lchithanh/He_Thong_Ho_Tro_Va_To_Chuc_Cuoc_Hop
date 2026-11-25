@@ -88,7 +88,7 @@ export default function ThuKyVanPhong({ token }) {
   return (
     <section className="adm-page">
       <TieuDeTrang ten="Quyền Văn phòng"
-        moTa="Quản lý thư ký được điều phối nhóm liên phòng và duyệt kế hoạch họp thường khi được giao.">
+        moTa="Quản lý thư ký được giao duyệt cuối kế hoạch họp nội bộ của nhóm.">
         <button type="button" className="adm-btn adm-secondary" onClick={taiLai} disabled={dangTai || dangLuu}>
           <RefreshCw size={16} aria-hidden="true" /> {dangTai ? 'Đang tải…' : 'Làm mới'}
         </button>
@@ -151,8 +151,8 @@ export default function ThuKyVanPhong({ token }) {
           <div className="adm-permission-impact" data-thu-hoi={!capQuyen}>
             {capQuyen ? <ShieldCheck size={20} aria-hidden="true" /> : <ShieldOff size={20} aria-hidden="true" />}
             <p>{capQuyen
-              ? 'Tài khoản có thể điều phối nhóm liên phòng và duyệt kế hoạch họp thường được giao.'
-              : 'Tài khoản sẽ mất quyền điều phối nhóm và quyền xử lý các kế hoạch đang chờ tài khoản này duyệt với tư cách Văn phòng.'}</p>
+              ? 'Tài khoản có thể duyệt cuối kế hoạch họp nội bộ được giao sau khi trưởng nhóm đã duyệt.'
+              : 'Tài khoản sẽ mất quyền xử lý các kế hoạch đang chờ tài khoản này duyệt với tư cách Văn phòng.'}</p>
           </div>
           <PhanHoi loi={loiLuu} />
           <div className="adm-form-actions">

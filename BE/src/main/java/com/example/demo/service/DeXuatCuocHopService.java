@@ -581,7 +581,7 @@ public class DeXuatCuocHopService {
         return switch (cuocHop.getBuocXuLyHienTai() == null ? "" : cuocHop.getBuocXuLyHienTai()) {
             case "CHO_TIEP_NHAN", "CHO_XAC_NHAN_LICH_DU_KIEN", "LAP_KE_HOACH" ->
                     phanCongXuLyKeHoachService.layThuKyCuocHop(cuocHop);
-            case "CHO_TRUONG_PHONG", "CHO_LANH_DAO", "CHO_VAN_PHONG_DUYET" ->
+            case "CHO_TRUONG_PHONG", "CHO_TRUONG_NHOM", "CHO_LANH_DAO", "CHO_VAN_PHONG_DUYET" ->
                     yeuCau == null ? null : yeuCau.getNguoiDuyet();
             case "CHO_GUI_CAP_TREN" ->
                     phanCongXuLyKeHoachService.layThuKyBanDau(cuocHop.getCuocHopId());

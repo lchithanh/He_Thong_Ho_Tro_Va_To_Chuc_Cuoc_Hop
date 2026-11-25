@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { goiNhomLienPhong } from '../../api/nhomLienPhongApi.js'
 import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
+import FileText from 'lucide-react/dist/esm/icons/file-text.mjs'
+import { HopThoaiHoSo } from '../../components/GiaoDienPhongHop.jsx'
 import KeHoachChoDuyet from '../pheduyet/KeHoachChoDuyet.jsx'
 
 const TRANG_THAI = {
@@ -29,23 +31,40 @@ function ChonNguoi({ ten, name, danhSach, batBuoc = true, macDinh = '' }) {
   </Truong>
 }
 
-function Phieu({ tieuDe, nut, dangGui, onGui, children }) {
-  return <form className={KHUNG} onSubmit={(event) => {
-    event.preventDefault()
-    onGui(new FormData(event.currentTarget))
-  }}>
-    <h3 className="font-semibold">{tieuDe}</h3>
-    <fieldset className="min-w-0 space-y-3" disabled={dangGui}>
-      {children}
-      <button type="submit" className={XAC_NHAN}>{nut}</button>
-    </fieldset>
-  </form>
+function Phieu({ tieuDe, nut, dangGui, onGui, moNgay = false, onDong, children }) {
+  const [dangMo, setDangMo] = useState(moNgay)
+  const [loi, setLoi] = useState('')
+  function dong() {
+    setDangMo(false)
+    onDong?.()
+  }
+  return <>
+    {!moNgay && <button className={NUT} type="button" onClick={() => setDangMo(true)}>{tieuDe}</button>}
+    {dangMo && <HopThoaiHoSo tieuDe={tieuDe} Icon={FileText} dangLuu={dangGui} onDong={dong}>
+      <form onSubmit={async (event) => {
+        event.preventDefault()
+        const f = new FormData(event.currentTarget, event.nativeEvent.submitter)
+        setLoi('')
+        try {
+          if (await onGui(f)) dong()
+        } catch (error) {
+          setLoi(error.message)
+        }
+      }}>
+        <fieldset className="min-w-0 space-y-3" disabled={dangGui}>
+          {loi && <p role="alert" className="text-sm text-rose-800">{loi}</p>}
+          {children}
+          {nut && <button type="submit" className={XAC_NHAN}>{nut}</button>}
+        </fieldset>
+      </form>
+    </HopThoaiHoSo>}
+  </>
 }
 
-function TaoNhom({ duLieu, dangGui, gui }) {
+function TaoNhom({ duLieu, dangGui, gui, onDong }) {
   const { quyen, phongBanTao } = duLieu
-  const [phongChuTri, setPhongChuTri] = useState(quyen.vanPhong || quyen.lanhDao ? '' : String(quyen.phongTruongPhong))
-  return <Phieu tieuDe={quyen.lanhDao ? 'Chỉ đạo lập nhóm' : 'Tạo yêu cầu lập nhóm'} nut="Gửi yêu cầu"
+  const [phongChuTri, setPhongChuTri] = useState(quyen.lanhDao ? '' : String(quyen.phongTruongPhong))
+  return <Phieu tieuDe={quyen.lanhDao ? 'Chỉ đạo lập nhóm' : 'Tạo yêu cầu lập nhóm'} nut="Gửi yêu cầu" moNgay onDong={onDong}
     dangGui={dangGui} onGui={(form) => gui('', 'POST', {
       tenNhom: form.get('tenNhom'), mucDich: form.get('mucDich'), capNhom: form.get('capNhom'),
       phongBanChuTriId: Number(phongChuTri), phongBanIds: [Number(phongChuTri), ...form.getAll('phong').map(Number)],
@@ -55,7 +74,7 @@ function TaoNhom({ duLieu, dangGui, gui }) {
     <div className="grid gap-3 sm:grid-cols-2">
       <Truong ten="Phòng chủ trì">
         <select value={phongChuTri} onChange={(e) => setPhongChuTri(e.target.value)} required className={TRUONG}
-          disabled={!quyen.vanPhong && !quyen.lanhDao}>
+          disabled={!quyen.lanhDao}>
           <option value="">Chọn phòng</option>
           {phongBanTao.map((p) => <option key={p.phongBanId} value={p.phongBanId}>{p.tenPhongBan}</option>)}
         </select>
@@ -75,24 +94,18 @@ function TaoNhom({ duLieu, dangGui, gui }) {
   </Phieu>
 }
 
-function DeXuatNhom({ chiTiet, dangGui, gui, nguoiGui }) {
+function DeXuatNhom({ chiTiet, dangGui, gui }) {
   const [phamVi, setPhamVi] = useState('NOI_BO')
   const [coKhachNgoai, setCoKhachNgoai] = useState(false)
   const [coLanhDaoCapCao, setCoLanhDaoCapCao] = useState(false)
   const capDuyet = phamVi !== 'NOI_BO' || coKhachNgoai || coLanhDaoCapCao
     ? 'LANH_DAO' : 'VAN_PHONG'
-  const thuKyId = chiTiet.nhom.thuKyNhomId
-  const tenThuKy = chiTiet.thanhVien.find((muc) => muc.nguoiDungId === thuKyId)?.hoTen
-  const danhSachDuyet = chiTiet.nguoiDuyet.filter((muc) =>
-    muc.capDuyet === capDuyet && muc.nguoiDungId !== thuKyId && muc.nguoiDungId !== nguoiGui)
-  const macDinh = capDuyet === 'LANH_DAO'
-    ? danhSachDuyet.find((muc) => muc.nguoiDungId === chiTiet.nhom.nguoiLapId)?.nguoiDungId ?? ''
-    : ''
-  return <Phieu tieuDe="Gửi đề xuất họp từ nhóm" nut="Gửi đề xuất" dangGui={dangGui}
-    onGui={(f) => gui('/de-xuat', 'POST', {
+  const tenThuKy = chiTiet.thanhVien.find((muc) => muc.nguoiDungId === chiTiet.nhom.thuKyNhomId)?.hoTen
+  const thieuLanhDao = capDuyet === 'LANH_DAO' && !chiTiet.coLanhDaoLapNhom
+  return <Phieu tieuDe="Gửi đề xuất họp từ nhóm" nut={thieuLanhDao ? null : 'Gửi đề xuất'} dangGui={dangGui}
+    onGui={(f) => !thieuLanhDao && gui('/de-xuat', 'POST', {
       tieuDe: f.get('tieuDe'), mucTieu: f.get('mucTieu'), noiDung: f.get('noiDung'), loaiHinh: f.get('loaiHinh'),
       phamVi, coKhachNgoai, coLanhDaoCapCao,
-      nguoiDuyetId: Number(f.get('nguoiDuyetId')),
     })}>
     <Truong ten="Tiêu đề"><input name="tieuDe" required maxLength={255} className={TRUONG} /></Truong>
     <Truong ten="Mục tiêu"><input name="mucTieu" required maxLength={3000} className={TRUONG} /></Truong>
@@ -116,21 +129,20 @@ function DeXuatNhom({ chiTiet, dangGui, gui, nguoiGui }) {
       <Truong ten="Thư ký tiếp nhận và tổ chức">
         <input className={TRUONG} value={tenThuKy || 'Thư ký nhóm'} readOnly />
       </Truong>
-      <ChonNguoi key={capDuyet + thuKyId + String(macDinh)} ten={`Người duyệt · ${TEN_CAP_DUYET[capDuyet]}`}
-        name="nguoiDuyetId" danhSach={danhSachDuyet} macDinh={macDinh} />
+      <p className="self-center text-sm text-slate-700">Trưởng nhóm duyệt trước · Duyệt cuối: {TEN_CAP_DUYET[capDuyet]}</p>
     </div>
-    {danhSachDuyet.length === 0 && <p className="text-sm text-slate-700">Chưa có người duyệt phù hợp với lựa chọn hiện tại.</p>}
+    {thieuLanhDao && <p role="alert" className="text-sm text-amber-800">Phạm vi này cần lãnh đạo đã thành lập nhóm. Nhóm hiện chưa có lãnh đạo thành lập.</p>}
   </Phieu>
 }
 
 function DoiNguoi({ chiTiet, quyen, dangGui, gui }) {
-  const phongBan = chiTiet.phongBan.filter((p) => quyen.vanPhong || p.phongBanId === quyen.phongTruongPhong)
+  const phongBan = chiTiet.phongBan.filter((p) => p.phongBanId === quyen.phongTruongPhong)
   const [phongId, setPhongId] = useState(phongBan[0]?.phongBanId)
   if (!phongBan.length) return null
   const tvCu = chiTiet.thanhVien.filter((v) => v.phongBanId === phongId)
   const tvMoi = chiTiet.nguonNhanSu.filter((v) => v.phongBanId === phongId &&
     !chiTiet.thanhVien.some((tv) => tv.nguoiDungId === v.nguoiDungId))
-  return <Phieu tieuDe={quyen.vanPhong ? 'Cập nhật nhân sự' : 'Đề xuất đổi nhân sự'} nut={quyen.vanPhong ? 'Cập nhật' : 'Gửi đề xuất'}
+  return <Phieu tieuDe="Đề xuất thêm hoặc đổi người" nut="Gửi đề xuất"
     dangGui={dangGui} onGui={(f) => gui('/doi-nguoi', 'POST', {
       phongBanId: phongId, nguoiCuId: Number(f.get('cu')) || null, nguoiMoiId: Number(f.get('moi')) || null, lyDo: f.get('lyDo'),
     })}>
@@ -188,41 +200,36 @@ function ChiTietNhom({ chiTiet, quyen, dangGui, gui, id }) {
     </Phieu>}
 
     {nhom.trangThai === 'HOAT_DONG' && <DoiNguoi chiTiet={chiTiet} quyen={quyen} dangGui={dangGui} gui={gui} />}
-    {doiNguoi.length > 0 && <section className={KHUNG}>
-      <h3 className="font-semibold">Lịch sử đổi người</h3>
+    {doiNguoi.length > 0 && <details className={KHUNG}>
+      <summary className="cursor-pointer font-semibold">Yêu cầu đổi nhân sự ({doiNguoi.length})</summary>
       {doiNguoi.map((muc) => <article key={muc.doiNguoiId} className="space-y-2 border-t border-slate-100 pt-3 text-sm">
         <p className="font-medium">{[ten(muc.nguoiCuId), ten(muc.nguoiMoiId)].filter(Boolean).join(' → ')} · {TEN_DOI_NGUOI[muc.trangThai]}</p>
         <p>{muc.lyDo}</p>
-        {quyen.vanPhong && muc.trangThai === 'CHO_XU_LY' && <form className="flex flex-wrap gap-2" onSubmit={(e) => {
-          e.preventDefault()
-          const f = new FormData(e.currentTarget, e.nativeEvent.submitter)
-          gui(`/doi-nguoi/${muc.doiNguoiId}`, 'PUT', { dongY: f.get('quyetDinh') === 'dong-y', yKien: f.get('yKien') })
-        }}>
-          <input name="yKien" aria-label="Ý kiến xử lý" maxLength={500} placeholder="Nhập lý do nếu từ chối"
-            className={TRUONG + ' max-w-xs'} />
-          <button disabled={dangGui} className={NUT} type="submit" name="quyetDinh" value="dong-y">Đồng ý</button>
-          <button disabled={dangGui} className={NUT} type="submit" name="quyetDinh" value="tu-choi">Từ chối</button>
-        </form>}
+        {id === nhom.truongNhomId && muc.trangThai === 'CHO_XU_LY' && <Phieu tieuDe="Xử lý yêu cầu" dangGui={dangGui}
+          onGui={(f) => gui(`/doi-nguoi/${muc.doiNguoiId}`, 'PUT', { dongY: f.get('quyetDinh') === 'dong-y', yKien: f.get('yKien') })}>
+          <Truong ten="Ý kiến xử lý"><input name="yKien" maxLength={500} placeholder="Nhập lý do nếu từ chối" className={TRUONG} /></Truong>
+          <div className="flex gap-2">
+            <button className={XAC_NHAN} type="submit" name="quyetDinh" value="dong-y">Đồng ý</button>
+            <button className={NUT} type="submit" name="quyetDinh" value="tu-choi">Từ chối</button>
+          </div>
+        </Phieu>}
       </article>)}
-    </section>}
+    </details>}
 
-    {chiTiet.duocGui && <DeXuatNhom chiTiet={chiTiet} dangGui={dangGui} gui={gui} nguoiGui={id} />}
-    {deXuat.length > 0 && <section className={KHUNG}>
-      <h3 className="font-semibold">Đề xuất họp đã gửi</h3>
+    {chiTiet.duocGui && <DeXuatNhom chiTiet={chiTiet} dangGui={dangGui} gui={gui} />}
+    {deXuat.length > 0 && <details className={KHUNG}>
+      <summary className="cursor-pointer font-semibold">Đề xuất họp đã gửi ({deXuat.length})</summary>
       <ul className="space-y-2 text-sm">
         {deXuat.map((muc) => <li key={muc.cuocHopId}>
-          <strong>{muc.tieuDe}</strong> · {TEN_CAP_DUYET[muc.capDuyet]} · {muc.tenNguoiDuyet}
+          <strong>{muc.tieuDe}</strong> · {TEN_CAP_DUYET[muc.capDuyet]}{muc.tenNguoiDuyet && ` · ${muc.tenNguoiDuyet}`}
         </li>)}
       </ul>
-    </section>}
+    </details>}
 
-    {chiTiet.duocDong && <details className={KHUNG}>
-      <summary className="cursor-pointer font-semibold text-rose-800">Đóng nhóm</summary>
-      <Phieu tieuDe="Xác nhận đóng nhóm" nut="Đóng nhóm" dangGui={dangGui}
+    {chiTiet.duocDong && <Phieu tieuDe="Đóng nhóm" nut="Đóng nhóm" dangGui={dangGui}
         onGui={(f) => gui('/dong', 'POST', { lyDo: f.get('lyDo') })}>
         <Truong ten="Lý do đóng"><input name="lyDo" maxLength={500} required className={TRUONG} /></Truong>
-      </Phieu>
-    </details>}
+      </Phieu>}
   </div>
 }
 
@@ -275,8 +282,7 @@ export default function NhomLienPhong({ token, nguoiDung, onMoMuc }) {
       if (ketQua?.nhomId) chonNhom(ketQua.nhomId)
       setThongBao(ketQua?.cuocHopId ? 'Đã gửi đề xuất tới thư ký nhóm.' : 'Đã cập nhật nhóm.')
       setLanTai((lan) => lan + 1)
-    } catch (error) {
-      setLoi(error.message)
+      return true
     } finally {
       setDangGui(false)
     }
@@ -287,7 +293,7 @@ export default function NhomLienPhong({ token, nguoiDung, onMoMuc }) {
       <h1 className="text-xl font-bold">Nhóm liên phòng</h1>
       <div className="flex flex-wrap gap-2">
         {muc !== 'nhom' && <button className={NUT} onClick={() => chonNhom(null)}>Danh sách nhóm</button>}
-        {trang?.quyen && (trang.quyen.vanPhong || trang.quyen.lanhDao || trang.quyen.phongTruongPhong != null) &&
+        {trang?.quyen && (trang.quyen.lanhDao || trang.quyen.phongTruongPhong != null) &&
           <button className={NUT} onClick={() => { chonNhom(null); setMuc('tao') }}>Lập nhóm</button>}
         {trang?.quyen.lanhDao && <button className={NUT} onClick={() => onMoMuc('de-xuat-cua-toi')}>
           Đề xuất họp
@@ -299,7 +305,7 @@ export default function NhomLienPhong({ token, nguoiDung, onMoMuc }) {
     {loi && <p role="alert" className="rounded-lg bg-rose-50 p-3 text-sm text-rose-800">{loi}</p>}
     {thongBao && <p role="status" className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-900">{thongBao}</p>}
     {!trang && !loi && <p role="status">Đang tải nhóm…</p>}
-    {muc === 'tao' && trang && <TaoNhom duLieu={trang} gui={gui} dangGui={dangGui} />}
+    {muc === 'tao' && trang && <TaoNhom duLieu={trang} gui={gui} dangGui={dangGui} onDong={() => setMuc('nhom')} />}
     {muc === 'duyet' && trang?.quyen.vanPhong && <KeHoachChoDuyet token={token} />}
     {muc === 'nhom' && trang && <div className="grid items-start gap-4 lg:grid-cols-[minmax(14rem,1fr)_minmax(0,3fr)]">
       <section className={KHUNG}>

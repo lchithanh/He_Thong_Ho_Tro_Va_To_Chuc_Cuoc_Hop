@@ -31,12 +31,14 @@ public class CuocHopService {
 
     private final PhanCongXuLyKeHoachService phanCongXuLyKeHoachService;
     private final KhachMoiCuocHopRepository khachMoiCuocHopRepository;
+    private final NhomThamDuCuocHopService nhomThamDu;
+    private final QuyenVanPhongService quyenVanPhong;
 
     public record LuaChonKeHoach(
             List<NguoiCoTheMoiResponse> nguoiChuTri,
             List<NguoiCoTheMoiResponse> lanhDaoDuyet,
             boolean canChonLanhDao,
-            List<NguoiCoTheMoiResponse> thuKyCuocHop, boolean thuKyNhomCoDinh) {}
+            List<NguoiCoTheMoiResponse> thuKyCuocHop, boolean thuKyNhomCoDinh, String capDuyetCuoiNhom) {}
 
     @Transactional(readOnly = true)
     public LuaChonKeHoach layLuaChonKeHoach(Integer cuocHopId, Integer nguoiDungId) {
@@ -62,12 +64,23 @@ public class CuocHopService {
                 .toList();
         var thuKyNhom = phanCongXuLyKeHoachService.layThuKyCoDinhCuaNhom(ch);
         if (thuKyNhom != null) {
-            return new LuaChonKeHoach(chuTri, List.of(), false, List.of(chuyenLuaChonNguoiDung(thuKyNhom)), true);
+            var tuyen = nhomThamDu.layTuyenDuyet(cuocHopId);
+            boolean canLanhDao = "LANH_DAO".equals(tuyen.capDuyet()) || !noiBo
+                    || Boolean.TRUE.equals(ch.getCoKhachMoiBenNgoai())
+                    || khachMoiCuocHopRepository.existsByCuocHop_CuocHopIdAndTrangThaiMoiNot(cuocHopId, "DA_HUY");
+            List<NguoiCoTheMoiResponse> duyetCuoi = canLanhDao
+                    ? lanhDao.stream().filter(nd -> nd.nguoiDungId().equals(tuyen.nguoiLapNhomId())).toList()
+                    : quyenVanPhong.danhSach().stream().filter(QuyenVanPhongService.TaiKhoan::vanPhong)
+                        .filter(nd -> !nd.nguoiDungId().equals(nguoiDungId))
+                        .map(nd -> new NguoiCoTheMoiResponse(nd.nguoiDungId(), nd.hoTen(), nd.tenPhongBan(), null))
+                        .toList();
+            return new LuaChonKeHoach(List.of(chuyenLuaChonNguoiDung(ch.getNguoiChuTri())), duyetCuoi, false,
+                    List.of(chuyenLuaChonNguoiDung(thuKyNhom)), true, canLanhDao ? "LANH_DAO" : "VAN_PHONG");
         }
         return new LuaChonKeHoach(chuTri, lanhDao, canChonLanhDao, hoatDong.stream()
                 .filter(phanCongXuLyKeHoachService::laNguoiCoTheLamThuKy)
                 .filter(nd -> !ThaoTacCuocHop.laNguoiDeXuat(ch, nd.getNguoiDungId()))
-                .map(this::chuyenLuaChonNguoiDung).toList(), false);
+                .map(this::chuyenLuaChonNguoiDung).toList(), false, null);
     }
 
     @Transactional(readOnly = true)
@@ -117,8 +130,15 @@ public class CuocHopService {
                 .contains(ch.getPhamViCuocHop())) {
             throw loi(HttpStatus.BAD_REQUEST, "Phạm vi cuộc họp không hợp lệ");
         }
+        boolean laDeXuatNhom = nhomThamDu.laDeXuatTuNhom(cuocHopId);
         NguoiDung nguoiChuTri = null;
-        if (request.getNguoiChuTriId() != null) {
+        if (laDeXuatNhom) {
+            nguoiChuTri = ch.getNguoiChuTri();
+            if (nguoiChuTri == null || !NguoiDungHienTaiService.dangHoatDong(nguoiChuTri)
+                    || (request.getNguoiChuTriId() != null && !request.getNguoiChuTriId().equals(nguoiChuTri.getNguoiDungId()))) {
+                throw loi(HttpStatus.CONFLICT, "Kế hoạch nhóm phải do trưởng nhóm đã được giao chủ trì");
+            }
+        } else if (request.getNguoiChuTriId() != null) {
             nguoiChuTri = nguoiDungRepository.findById(request.getNguoiChuTriId())
                     .orElseThrow(() -> loi(HttpStatus.BAD_REQUEST, "Không tìm thấy người chủ trì"));
             if (!NguoiDungHienTaiService.dangHoatDong(nguoiChuTri)) throw loi(HttpStatus.BAD_REQUEST, "Người chủ trì không hoạt động");
