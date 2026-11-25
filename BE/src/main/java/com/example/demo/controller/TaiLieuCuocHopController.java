@@ -20,6 +20,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.DeleteMapping;
 
+import com.example.demo.dto.response.TaiLieuDeXuatResponse;
 import com.example.demo.service.TaiLieuCuocHopService;
 
 import com.example.demo.service.NguoiDungHienTaiService;
@@ -62,7 +63,7 @@ public class TaiLieuCuocHopController {
     }
 
     @GetMapping("/{cuocHopId}/tai-lieu-de-xuat")
-    public ResponseEntity<List<Map<String, Object>>> layDanhSachDeXuat(
+    public ResponseEntity<List<TaiLieuDeXuatResponse>> layDanhSachDeXuat(
             @PathVariable("cuocHopId") Integer cuocHopId,
             Authentication authentication) {
 

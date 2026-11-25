@@ -80,7 +80,7 @@ function NhanTrangThai({ ma, ten }) {
   )
 }
 
-function TheTepHoSo({ tep, token, trangThai }) {
+export function TheTepHoSo({ tep, token, trangThai }) {
   const dinhDang = layDinhDang(tep.ten, tep.dinhDang)
   const { ten, mau } = DINH_DANG[dinhDang] ?? { ten: 'Tệp', mau: LOP_CHUA_CHON }
   const Icon = ten === 'Excel' ? FileSpreadsheet : FileText

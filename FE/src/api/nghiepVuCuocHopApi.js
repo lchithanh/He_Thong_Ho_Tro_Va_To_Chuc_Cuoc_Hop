@@ -17,9 +17,9 @@ export function xemLoiMoiKhach(ma, signal) {
   return goi('/api/loi-moi-khach', { headers: { 'X-Ma-Loi-Moi': ma }, signal, cache: 'no-store' })
 }
 
-export function phanHoiLoiMoiKhach(ma, thamDu) {
+export function phanHoiLoiMoiKhach(ma, thamDu, lichHopId) {
   return goi('/api/loi-moi-khach/phan-hoi', {
-    method: 'POST', headers: { 'X-Ma-Loi-Moi': ma }, duLieu: { thamDu },
+    method: 'POST', headers: { 'X-Ma-Loi-Moi': ma }, duLieu: { thamDu, lichHopId },
   })
 }
 
@@ -29,4 +29,16 @@ export function doiLichHop(lichHopId, token, duLieu) {
 
 export function layCuocHopCoNghiQuyet(token, signal) {
   return goi('/api/cuoc-hop/nghi-quyet/cua-toi', { token, signal })
+}
+
+export function layLoiMoiDoiLich(token, signal) {
+  return goi('/api/lich-hop/doi-lich/cua-toi', { token, signal })
+}
+
+export function phanHoiDoiLich(lichHopId, dongY, token) {
+  return goi(`/api/lich-hop/${lichHopId}/doi-lich/phan-hoi`, { token, method: 'PUT', duLieu: { dongY } })
+}
+
+export function xemTienDoDoiLich(lichHopId, token, signal) {
+  return goi(`/api/lich-hop/${lichHopId}/doi-lich/phan-hoi`, { token, signal })
 }

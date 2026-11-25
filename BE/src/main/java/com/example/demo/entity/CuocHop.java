@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
@@ -14,6 +15,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 
 import lombok.Getter;
@@ -47,6 +49,18 @@ public class CuocHop {
 
     @Column(name = "noi_dung_du_kien", columnDefinition = "LONGTEXT")
     private String noiDungDuKien;
+
+    @OneToOne(fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+    @JoinColumn(name = "de_xuat_id", unique = true)
+    private DeXuatCuocHop deXuat;
+
+    public Integer getThoiLuongDuKienPhut() {
+        return deXuat == null ? null : deXuat.getThoiLuongDuKienPhut();
+    }
+
+    public ThongTinBoSungDeXuat getThongTinDeXuat() {
+        return deXuat == null ? null : deXuat.getThongTinBoSung();
+    }
 
     @Column(name = "loai_hinh", nullable = false, length = 20)
     private String loaiHinh;

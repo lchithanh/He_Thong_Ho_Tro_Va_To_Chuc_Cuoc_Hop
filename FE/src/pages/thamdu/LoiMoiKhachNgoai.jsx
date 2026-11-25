@@ -66,11 +66,11 @@ export default function LoiMoiKhachNgoai() {
     return () => clearInterval(hen)
   }, [dangGui])
 
-  async function phanHoi(thamDu) {
+  async function phanHoi(thamDu, lichHopId) {
     setDangGui(true)
     setLoi('')
     try {
-      setLoiMoi(await phanHoiLoiMoiKhach(ma, thamDu))
+      setLoiMoi(await phanHoiLoiMoiKhach(ma, thamDu, lichHopId))
     } catch (error) {
       setLoi(error.message)
     } finally {
@@ -122,6 +122,17 @@ export default function LoiMoiKhachNgoai() {
             </dl>
             {loiMoi.duongDanHop && <a href={loiMoi.duongDanHop} target="_blank" rel="noreferrer"
               className="font-semibold text-emerald-800 underline">Mở phòng họp trực tuyến</a>}
+            {loiMoi.lyDoDoiLich && <p className="whitespace-pre-wrap text-sm">Lý do dời lịch · {loiMoi.lyDoDoiLich}</p>}
+            {loiMoi.duocPhanHoiLichMoi && <div className="space-y-2 rounded-lg bg-blue-50 p-3">
+              <p role="status">{loiMoi.dongYLichMoi == null ? 'Bạn có thể tham dự theo lịch mới không?'
+                : loiMoi.dongYLichMoi ? 'Bạn đã đồng ý lịch mới.' : 'Bạn không đồng ý lịch mới.'}</p>
+              <div className="flex flex-wrap gap-2">
+                <button type="button" className={NUT + ' bg-emerald-800 text-white'} disabled={dangGui || loiMoi.dongYLichMoi === true}
+                  onClick={() => phanHoi(true, loiMoi.lichDoiId)}>Đồng ý lịch mới</button>
+                <button type="button" className={NUT} disabled={dangGui || loiMoi.dongYLichMoi === false}
+                  onClick={() => phanHoi(false, loiMoi.lichDoiId)}>Không đồng ý</button>
+              </div>
+            </div>}
             {loiMoi.duocPhanHoi && <div className="flex flex-wrap gap-2">
               <button className={NUT + ' bg-emerald-800 text-white'} type="button" disabled={dangGui}
                 onClick={() => phanHoi(true)}>Xác nhận tham dự</button>

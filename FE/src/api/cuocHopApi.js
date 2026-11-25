@@ -295,6 +295,11 @@ export async function ketThucCuocHop(cuocHopId, token) {
   )
 }
 
+export async function layPhongBanChuTriCoTheChon(token, signal) {
+  const response = await goiApi('/api/cuoc-hop/de-xuat/phong-ban-chu-tri', { token, signal })
+  return docPhanHoiJson(response, 'Không tải được danh sách phòng ban chủ trì.')
+}
+
 export async function layThuKyCoTheDeXuat(token, signal) {
   const response = await goiApi('/api/cuoc-hop/de-xuat/thu-ky-co-the-chon', { token, signal })
   return docPhanHoiJson(response, 'Không tải được danh sách thư ký cuộc họp.')

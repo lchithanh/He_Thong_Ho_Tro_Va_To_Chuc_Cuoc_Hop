@@ -64,7 +64,8 @@ public class KhachNgoaiCuocHopService {
     public record LoiMoiKhach(String hoTen, String tieuDe, String noiDung, String chuTri, String loaiHinh,
             String diaDiem, String duongDanHop, LocalDateTime batDau, LocalDateTime ketThuc,
             String trangThaiLich, String trangThaiMoi, boolean duocPhanHoi, String maCuocHop, String mucTieu,
-            LocalDateTime batDauDeXuat, LocalDateTime ketThucDeXuat, ThuMoiCongBo thuMoi, List<TaiLieuCongBo> taiLieu, List<LienKetLoiMoiKhachService.CapNhat> lichSu) {}
+            LocalDateTime batDauDeXuat, LocalDateTime ketThucDeXuat, Integer lichDoiId,
+            String lyDoDoiLich, Boolean dongYLichMoi, boolean duocPhanHoiLichMoi, ThuMoiCongBo thuMoi, List<TaiLieuCongBo> taiLieu, List<LienKetLoiMoiKhachService.CapNhat> lichSu) {}
     public record ThuMoiCongBo(String tieuDe, String noiDung, String tenTep, String kieuTep) {}
     public record TaiLieuCongBo(Integer taiLieuId, String tenTaiLieu, String dinhDang, String nhom) {}
     public record TepCongBo(String kieuTep, byte[] noiDung) {}
@@ -183,6 +184,27 @@ public class KhachNgoaiCuocHopService {
         return taoLoiMoiKhach(loiMoi);
     }
 
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public LoiMoiKhach phanHoiLichMoi(String ma, Integer lichHopId, boolean dongY) {
+        var loiMoi = timLoiMoi(ma);
+        cuocHopRepository.findByIdForUpdate(loiMoi.getCuocHop().getCuocHopId())
+                .orElseThrow(KhachNgoaiCuocHopService::khongTimThayLoiMoi);
+        entityManager.refresh(loiMoi);
+        var hienTai = taoLoiMoiKhach(loiMoi);
+        if (!hienTai.duocPhanHoiLichMoi() || !java.util.Objects.equals(lichHopId, hienTai.lichDoiId())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Lịch này đã ngừng nhận phản hồi");
+        }
+        jdbc.sql("""
+                UPDATE phan_hoi_doi_lich_khach SET dong_y = :dongY, thoi_gian_phan_hoi = CURRENT_TIMESTAMP
+                WHERE lich_hop_id = :lich AND khach_moi_cuoc_hop_id = :khach
+                """).param("dongY", dongY).param("lich", lichHopId)
+                .param("khach", loiMoi.getKhachMoiCuocHopId()).update();
+        capNhatRealtime.baoCuocHop(loiMoi.getCuocHop(), null);
+        return taoLoiMoiKhach(loiMoi);
+    }
+
+    private record PhanHoiLichMoi(Boolean dongY) {}
+
     private KhachMoiCuocHop timLoiMoi(String ma) {
         var loiMoi = lienKet.timTheoMa(ma)
                 .filter(muc -> !"DA_HUY".equals(muc.getTrangThaiMoi())
@@ -205,6 +227,11 @@ public class KhachNgoaiCuocHopService {
         var lichDeXuat = choDoi ? hop.getDanhSachLichHop().stream()
                 .filter(muc -> muc.isLaLichDoi() && ThaoTacLichHop.dangDeXuat(muc))
                 .max(Comparator.comparing(LichHop::getLichHopId)).orElse(null) : null;
+        var phanHoiLich = lichDeXuat == null ? null : jdbc.sql("""
+                SELECT dong_y FROM phan_hoi_doi_lich_khach
+                WHERE lich_hop_id = :lich AND khach_moi_cuoc_hop_id = :khach
+                """).param("lich", lichDeXuat.getLichHopId()).param("khach", loiMoi.getKhachMoiCuocHopId())
+                .query(PhanHoiLichMoi.class).optional().orElse(null);
         boolean lichHieuLuc = lich != null && !choDoi && !"DA_HUY".equals(hop.getTrangThai());
         var hoSo = keHoachDaDuyet(hop.getCuocHopId());
         var banChup = hoSo == null ? null : thongTinThuMoi.docBanChup(hoSo);
@@ -222,6 +249,12 @@ public class KhachNgoaiCuocHopService {
                 loiMoi.getTrangThaiMoi(), duocPhanHoi, hop.getMaCuocHop(), banChup == null ? null : banChup.mucTieu(),
                 lichDeXuat == null ? null : lichDeXuat.getThoiGianBatDau(),
                 lichDeXuat == null ? null : lichDeXuat.getThoiGianKetThuc(),
+                lichDeXuat == null ? null : lichDeXuat.getLichHopId(),
+                lichDeXuat == null ? null : lichDeXuat.getLyDoThayDoi(),
+                phanHoiLich == null ? null : phanHoiLich.dongY(),
+                phanHoiLich != null && lichDeXuat.getThoiGianBatDau().isAfter(LocalDateTime.now())
+                        && !"TU_CHOI".equals(loiMoi.getTrangThaiMoi()) && !"DA_HUY".equals(loiMoi.getTrangThaiMoi())
+                        && !"DA_HUY".equals(hop.getTrangThai()),
                 thuMoi(loiMoi), taiLieuCongBo(hop.getCuocHopId(), hoSo).stream().map(tl -> new TaiLieuCongBo(
                         tl.getTaiLieuId(), tl.getTenTaiLieu(), tl.getDinhDangFile(),
                         TAI_LIEU_BO_SUNG.equals(tl.getLoaiTaiLieu()) ? "Tài liệu bổ sung" : "Tệp hồ sơ cuộc họp")).toList(),

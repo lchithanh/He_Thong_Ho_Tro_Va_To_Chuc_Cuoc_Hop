@@ -1,8 +1,7 @@
 import { useState } from 'react'
 import TepHoSo from './TepHoSo.jsx'
 import { NhanHoSo } from './GiaoDienPhongHop.jsx'
-import { LOP_CHU_PHU, LOP_NOI, LOP_NUT_CHINH, LOP_TRUONG } from './giaoDienPhongHop.js'
-
+import { LOP_CHU_PHU, LOP_NOI, LOP_NUT_CHINH, LOP_TRUONG } from './GiaoDienPhongHop.js'
 const MAU_PHIEU = {
   'Đồng ý': 'text-emerald-800 phong-toi:text-phong-luc',
   'Không đồng ý': 'text-rose-800 phong-toi:text-phong-do',

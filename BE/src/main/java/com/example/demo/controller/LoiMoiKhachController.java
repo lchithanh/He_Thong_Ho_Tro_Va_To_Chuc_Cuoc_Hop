@@ -24,7 +24,7 @@ import lombok.RequiredArgsConstructor;
 public class LoiMoiKhachController {
     private final KhachNgoaiCuocHopService khachNgoai;
 
-    public record PhanHoi(Boolean thamDu) {}
+    public record PhanHoi(Boolean thamDu, Integer lichHopId) {}
 
     @GetMapping
     public ResponseEntity<LoiMoiKhach> xem(@RequestHeader(value = "X-Ma-Loi-Moi", required = false) String ma) {
@@ -54,6 +54,7 @@ public class LoiMoiKhachController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Chọn tham dự hoặc từ chối");
         }
         return ResponseEntity.ok().cacheControl(CacheControl.noStore())
-                .body(khachNgoai.phanHoi(ma, phanHoi.thamDu()));
+                .body(phanHoi.lichHopId() == null ? khachNgoai.phanHoi(ma, phanHoi.thamDu())
+                        : khachNgoai.phanHoiLichMoi(ma, phanHoi.lichHopId(), phanHoi.thamDu()));
     }
 }

@@ -58,6 +58,9 @@ public interface ThanhVienCuocHopRepository
     List<ThanhVienCuocHop> findById_NguoiDungIdAndVaiTroTaiCuocHopAndTrangThaiMoi(
             Integer nguoiDungId, String vaiTroTaiCuocHop, String trangThaiMoi);
     
+    List<ThanhVienCuocHop> findById_NguoiDungIdAndVaiTroTaiCuocHopAndTrangThaiMoiIn(
+            Integer nguoiDungId, String vaiTroTaiCuocHop, List<String> trangThaiMoi);
+
     @Query("""
             SELECT tv
             FROM ThanhVienCuocHop tv

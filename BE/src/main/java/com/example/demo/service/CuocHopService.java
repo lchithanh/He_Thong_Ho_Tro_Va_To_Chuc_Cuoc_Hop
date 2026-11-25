@@ -90,6 +90,10 @@ public class CuocHopService {
         if (!phanQuyenCuocHopService.laThuKyDuocPhanCong(cuocHopId, nguoiDangNhapId)) {
             throw loi(HttpStatus.FORBIDDEN, "Chỉ thư ký đang phụ trách được cập nhật kế hoạch");
         }
+        if (ThaoTacCuocHop.choXacNhanDoiLich(ch)) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT, "Xử lý lịch đang dời trước khi cập nhật kế hoạch");
+        }
         boolean moLaiKeHoach = ThaoTacCuocHop.coTheLapLich(ch);
         if (!ThaoTacCuocHop.dangLapKeHoach(ch) && !moLaiKeHoach) {
             throw loi(HttpStatus.CONFLICT, "Cuộc họp không còn ở bước lập kế hoạch");

@@ -76,7 +76,7 @@ public class QuyTrinhKeHoachService {
         List<TaiLieuCuocHop> taiLieuDaChon = taiLieuKeHoachService
                 .kiemTraTruocKhiTrinh(ch, nguoiTrinhId, taiLieuIds);
         LichHop lich = lichHopId == null ? null : lichHopRepository.findById(lichHopId).orElse(null);
-        if (lich != null && lich.isLaLichDoi() && ThaoTacLichHop.dangDeXuat(lich)) {
+        if (ThaoTacCuocHop.choXacNhanDoiLich(ch)) {
             throw loi(HttpStatus.CONFLICT, "Xử lý lịch đang dời trong mục Lịch họp");
         }
         var lanDaDuyet = phanCongXuLyKeHoachService.layLanDuyetCoLichDaXacNhan(cuocHopId);

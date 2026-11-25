@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
 import {
   batDauCuocHop,
@@ -32,6 +32,10 @@ import TienDoCuocHop from './TienDoCuocHop.jsx'
 import BauChonCuocHop from '../thamdu/BauChonCuocHop.jsx'
 import NghiQuyetCuocHop from '../thamdu/NghiQuyetCuocHop.jsx'
 import LichSuKeHoach from './LichSuKeHoach.jsx'
+import CalendarDays from 'lucide-react/dist/esm/icons/calendar-days.mjs'
+import { TieuDeHoSo } from '../../components/GiaoDienPhongHop.jsx'
+import { LOP_NUT_CHINH, LOP_NUT_PHU } from '../../components/GiaoDienPhongHop.js'
+import { FormDeXuatLich } from './LichHopThuKy.jsx'
 import TiepNhanDeXuatAction from './thaoTacKeHoach/TiepNhanDeXuatAction.jsx'
 const TABS = [
   { id: 'thong-tin', ten: 'Đề xuất' },
@@ -52,6 +56,10 @@ export default function ChiTietDeXuat({ cuocHopId, token, nguoiDung, onQuayLai, 
   const [loi, setLoi] = useState('')
   const [dangTiepNhan, setDangTiepNhan] = useState(false)
   const [loiTiepNhan, setLoiTiepNhan] = useState('')
+  const [choDoiLich, setChoDoiLich] = useState(null)
+  const [moLichTaiHoSo, setMoLichTaiHoSo] = useState(false)
+  const [lichMoiTao, setLichMoiTao] = useState(null)
+  const tieuDeFormLich = useRef(null)
   const [thongBaoTiepNhan, setThongBaoTiepNhan] = useState('')
   const [dangBatDau, setDangBatDau] = useState(false)
   const [loiBatDau, setLoiBatDau] = useState('')
@@ -149,6 +157,7 @@ export default function ChiTietDeXuat({ cuocHopId, token, nguoiDung, onQuayLai, 
       setChiTiet((hienTai) => ({ ...hienTai, ...thayDoi }))
       onDaTiepNhan?.(cuocHopId, thayDoi)
       setThongBaoTiepNhan(ketQua.message || 'Tiếp nhận đề xuất thành công.')
+      setTabHienTai('ke-hoach')
     } catch (loiKhiTiepNhan) {
       const thongBao = {
         401: 'Phiên đăng nhập không còn hợp lệ.',
@@ -217,7 +226,7 @@ export default function ChiTietDeXuat({ cuocHopId, token, nguoiDung, onQuayLai, 
   const laThuKy = chiTiet?.duocToChuc === true
   const coLichXacNhan = chiTiet?.coLichDaXacNhan === true
   const dangMoCapNhatKeHoach = moFormCapNhatKeHoach && laThuKy && dangToChuc
-  const hienFormKeHoach = dangLapKeHoach || dangMoCapNhatKeHoach
+  const hienFormKeHoach = !chiXem && (dangLapKeHoach || dangMoCapNhatKeHoach)
   const coKhachNgoai = chiTiet?.coKhachMoiBenNgoai
   useEffect(() => {
     if (chiXem || !hienFormKeHoach || tabHienTai !== 'ke-hoach') return
@@ -244,6 +253,18 @@ export default function ChiTietDeXuat({ cuocHopId, token, nguoiDung, onQuayLai, 
     && (dangToChuc || dangDienRa || daKetThuc),
   )
   const choTiepNhan = chiTiet?.trangThai === 'CHO_TIEP_NHAN'
+  const coTheTiepNhan = choTiepNhan && !chiXem && chiTiet.duocLapKeHoach
+  function moFormLich() {
+    if (moLichTaiHoSo) {
+      tieuDeFormLich.current?.focus()
+      return
+    }
+    setMoLichTaiHoSo(true)
+  }
+  useEffect(() => {
+    if (moLichTaiHoSo && tabHienTai === 'ke-hoach') tieuDeFormLich.current?.focus()
+  }, [moLichTaiHoSo, tabHienTai])
+
   const cacTab = TABS.filter(({ id }) => {
     if (id === 'loi-moi') return hienThanhVien
     if (id === 'ke-hoach') return true
@@ -283,9 +304,9 @@ export default function ChiTietDeXuat({ cuocHopId, token, nguoiDung, onQuayLai, 
                   <div className="min-w-0">
                     <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#bcccdc]">Hồ sơ cuộc họp</p>
                     <h1 className="mt-2 break-words text-2xl font-bold tracking-tight md:text-3xl">{chiTiet.tieuDe}</h1>
-                    <p className="mt-3 inline-block break-all rounded-md border border-[#486581] bg-[#243b53] px-2.5 py-1 font-mono text-xs text-[#d9e2ec]">
-                      {chiTiet.maCuocHop || `Mã cuộc họp #${cuocHopId}`}
-                    </p>
+                    {chiTiet.maCuocHop && <p className="mt-3 inline-block break-all rounded-md border border-[#486581] bg-[#243b53] px-2.5 py-1 font-mono text-xs text-[#d9e2ec]">
+                      {chiTiet.maCuocHop}
+                    </p>}
                     {(chiTiet.tenNguoiChuTri || chiTiet.tenThuKyCuocHop) && (
                       <dl className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm">
                         {chiTiet.tenNguoiChuTri && (
@@ -310,6 +331,28 @@ export default function ChiTietDeXuat({ cuocHopId, token, nguoiDung, onQuayLai, 
               <div className="px-5 pt-4 sm:px-7">
                 <TienDoCuocHop chiTiet={chiTiet} />
               </div>
+
+              {yeuCauDuyet?.cuocHopId === chiTiet.cuocHopId
+                && ['CHO_TRUONG_PHONG', 'CHO_LANH_DAO'].includes(buocXuLy) && tabHienThi !== 'ke-hoach' && (
+                <div className="px-5 pt-4 sm:px-7">
+                  <section className="rounded-xl border border-blue-100 bg-blue-50 p-4">
+                    <TieuDeHoSo Icon={CalendarDays} cap="h2"
+                      phu="Xem lịch, nội dung và tài liệu của lần trình đang chờ bạn."
+                      thaoTac={<button type="button" className={LOP_NUT_CHINH} onClick={() => setTabHienTai('ke-hoach')}>
+                        Mở hồ sơ để duyệt
+                      </button>}>
+                      Kế hoạch và lịch chờ bạn duyệt
+                    </TieuDeHoSo>
+                  </section>
+                </div>
+              )}
+
+              {coTheTiepNhan && (
+                <div className="px-5 pt-4 sm:px-7">
+                  <TiepNhanDeXuatAction onClick={xuLyTiepNhan} disabled={dangTiepNhan} />
+                  {loiTiepNhan && <p role="alert" className="mt-2 text-sm text-rose-800">{loiTiepNhan}</p>}
+                </div>
+              )}
 
               {dangDienRa && (laChuTri || laThuKy) && (
                 <div className="px-5 pt-4 sm:px-7">
@@ -401,10 +444,6 @@ export default function ChiTietDeXuat({ cuocHopId, token, nguoiDung, onQuayLai, 
                         lichHopIdKeHoachDaDuyet={chiTiet.lichHopIdKeHoachDaDuyet} />
                     )}
 
-                    {choTiepNhan && !chiXem && chiTiet.duocLapKeHoach && (
-                      <TiepNhanDeXuatAction onClick={xuLyTiepNhan} disabled={dangTiepNhan} />
-                    )}
-
                     <TaiLieuTongQuanCuocHop key={'de-xuat/' + cuocHopId} cuocHopId={cuocHopId} token={token} loai="de-xuat"
                       choPhepTaiLen={chiTiet.trangThai === 'NHAP' && nguoiDung.nguoiDungId === chiTiet.nguoiDeXuatId} />
                     {chiTiet.daHoanTatHoSo && <p className="text-sm font-semibold text-emerald-800">Đã hoàn tất hồ sơ.</p>}
@@ -445,23 +484,38 @@ export default function ChiTietDeXuat({ cuocHopId, token, nguoiDung, onQuayLai, 
                       </div>
                     )}
 
-                    {loiTiepNhan && <p role="alert" className="text-sm text-red-800">{loiTiepNhan}</p>}
+                    {!coTheTiepNhan && loiTiepNhan && <p role="alert" className="text-sm text-red-800">{loiTiepNhan}</p>}
                     {thongBaoTiepNhan && <p role="status" className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">{thongBaoTiepNhan}</p>}
                   </>
                 )}
 
                 {tabHienThi === 'ke-hoach' && (
                   <div className="space-y-6">
-                    {!chiXem && laThuKy && dangToChuc && !moFormCapNhatKeHoach && (
+                    {thongBaoTiepNhan && <p role="status" className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">{thongBaoTiepNhan}</p>}
+                    {dangLapKeHoach && !chiXem && choDoiLich === false && (
+                      <section className="space-y-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                        <TieuDeHoSo Icon={CalendarDays} thaoTac={<>
+                          {onLapLich && <button type="button" className={LOP_NUT_PHU} onClick={() => onLapLich(cuocHopId)}>Mở lịch tổng thể</button>}
+                          <button type="button" className={LOP_NUT_CHINH} aria-expanded={moLichTaiHoSo}
+                            onClick={() => moLichTaiHoSo ? setMoLichTaiHoSo(false) : moFormLich()}>
+                            {moLichTaiHoSo ? 'Đóng form lịch' : 'Tạo lịch đề xuất'}
+                          </button>
+                        </>}>Lập lịch cho cuộc họp</TieuDeHoSo>
+                        {moLichTaiHoSo && (
+                          <div className="space-y-2">
+                            <h4 ref={tieuDeFormLich} tabIndex={-1} className="scroll-mt-24 text-sm font-semibold">Giờ họp và phòng họp</h4>
+                            <FormDeXuatLich key={chiTiet.loaiHinh} cuocHopId={cuocHopId} loaiHinh={chiTiet.loaiHinh} token={token}
+                              thongTinDeXuat={chiTiet.thongTinDeXuat} thoiLuongDuKienPhut={chiTiet.thoiLuongDuKienPhut}
+                              onDaTao={(lich) => setLichMoiTao(lich)} />
+                          </div>
+                        )}
+                      </section>
+                    )}
+
+                    {!chiXem && laThuKy && dangToChuc && !moFormCapNhatKeHoach && choDoiLich === false && (
                       <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
-                        <p className="text-sm font-semibold text-amber-950">Cần đổi lịch hoặc nội dung kế hoạch?</p>
-                        <ol className="mt-2 list-inside list-decimal space-y-1 text-sm text-amber-900">
-                          <li>Nếu đổi lịch, tạo lịch mới ở trạng thái Đề xuất trên Calendar trước.</li>
-                          <li>Lưu kế hoạch. Khi trình lại, chọn giữ lịch đã xác nhận hoặc chọn lịch đề xuất mới.</li>
-                        </ol>
-                        <p className="mt-2 text-xs text-amber-900">
-                          Lịch đã xác nhận hiện tại vẫn được giữ nguyên trong lúc chờ duyệt bản cập nhật.
-                        </p>
+                        <p className="text-sm font-semibold text-amber-950">Chỉnh sửa nội dung kế hoạch</p>
+                        <p className="mt-2 text-sm text-amber-900">Nếu chỉ đổi giờ họp, dùng mục Dời lịch bên dưới để gửi giờ mới cho người được mời.</p>
                         <div className="mt-3 flex flex-wrap gap-2">
                           {onLapLich && (
                             <button
@@ -507,6 +561,7 @@ export default function ChiTietDeXuat({ cuocHopId, token, nguoiDung, onQuayLai, 
                       loaiHinh={chiTiet.loaiHinh}
                       token={token}
                       lichHopIdKeHoachDaDuyet={chiTiet.lichHopIdKeHoachDaDuyet}
+                      onTrangThaiDoiLich={setChoDoiLich}
                       coQuyenTrinhLai={!chiXem && laThuKy && dangToChuc}
                       onDaTrinhLai={(ketQua) => {
                         setChiTiet((hienTai) => ({
@@ -534,6 +589,8 @@ export default function ChiTietDeXuat({ cuocHopId, token, nguoiDung, onQuayLai, 
                           chiTiet={chiTiet}
                           token={token}
                           laBanCapNhat={moFormCapNhatKeHoach}
+                          lyDoKhoa={choDoiLich === true ? 'Hãy xử lý lịch đang dời ở mục Lịch họp phía trên trước khi lưu kế hoạch.'
+                            : choDoiLich === null ? 'Cần tải thông tin lịch trước khi lưu kế hoạch.' : ''}
                           onDaLuu={(duLieu, ketQua) => {
                             if (duLieu.coKhachMoiBenNgoai !== chiTiet.coKhachMoiBenNgoai) {
                               setLuaChonKeHoach(null)
@@ -549,15 +606,6 @@ export default function ChiTietDeXuat({ cuocHopId, token, nguoiDung, onQuayLai, 
                             onDaTiepNhan?.(cuocHopId, thayDoi)
                           }}
                         />
-                        {onLapLich && (dangLapKeHoach || !dangMoCapNhatKeHoach) && (
-                          <button
-                            type="button"
-                            className="rounded-lg border px-3 py-2 text-sm font-semibold"
-                            onClick={() => onLapLich(cuocHopId)}
-                          >
-                            Chọn lịch trên Calendar
-                          </button>
-                        )}
                         <TaiLieuKeHoachThuKy
                           luaChonKeHoach={luaChonKeHoach}
                           lichHopIdKeHoachDaDuyet={chiTiet.lichHopIdKeHoachDaDuyet}
@@ -565,9 +613,11 @@ export default function ChiTietDeXuat({ cuocHopId, token, nguoiDung, onQuayLai, 
                           cuocHopId={cuocHopId}
                           token={token}
                           loaiHinh={chiTiet.loaiHinh}
-                          onLapLich={onLapLich}
+                          onLapLich={dangLapKeHoach ? moFormLich : onLapLich}
+                          lichMoiTaoId={lichMoiTao?.lichHopId}
                           vaiTroNguoiDeXuat={chiTiet.vaiTroNguoiDeXuat}
-                          choPhepThaoTac={dangLapKeHoach}
+                          choPhepThaoTac={dangLapKeHoach && choDoiLich === false}
+                          choDoiLich={choDoiLich === true}
                           onDaTrinh={(chiTietMoi) => {
                             setChiTiet(chiTietMoi)
                             setMoFormCapNhatKeHoach(false)
@@ -616,8 +666,7 @@ export default function ChiTietDeXuat({ cuocHopId, token, nguoiDung, onQuayLai, 
                     {loiTaiQuyenDuyet && ['CHO_TRUONG_PHONG', 'CHO_LANH_DAO'].includes(buocXuLy) && (
                       <p role="alert" className="text-sm text-red-800">{loiTaiQuyenDuyet}</p>
                     )}
-                    {loiTiepNhan && <p role="alert" className="text-sm text-red-800">{loiTiepNhan}</p>}
-                    {thongBaoTiepNhan && <p role="status" className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">{thongBaoTiepNhan}</p>}
+                    {!coTheTiepNhan && loiTiepNhan && <p role="alert" className="text-sm text-red-800">{loiTiepNhan}</p>}
                   </div>
                 )}
 

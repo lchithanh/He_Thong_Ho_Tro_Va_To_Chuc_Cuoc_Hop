@@ -2,6 +2,7 @@ package com.example.demo.dto.response;
 
 import java.time.LocalDateTime;
 
+import com.example.demo.dto.ThongTinBoSungDeXuatDto;
 import com.example.demo.service.ThongTinThuMoiDaDuyet;
 
 public record DeXuatCuocHopResponse(
@@ -10,9 +11,12 @@ public record DeXuatCuocHopResponse(
         String tieuDe,
         String mucTieu,
         String noiDungDuKien,
+        Integer thoiLuongDuKienPhut,
+        ThongTinBoSungDeXuatDto thongTinDeXuat,
         String loaiHinh,
         String phamViCuocHop,
         Integer phongBanChuTriId,
+        String tenPhongBanChuTri,
         Integer nguoiDeXuatId,
         String tenNguoiDeXuat,
         Integer nguoiChuTriId,

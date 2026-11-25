@@ -97,6 +97,16 @@ export async function layLoiMoiCuaToi(token, signal) {
   return response.json()
 }
 
+export async function layDanhSachLoiMoi(token, signal) {
+  const response = await goiApi('/api/cuoc-hop/thanh-vien/loi-moi', { token, signal })
+  return docPhanHoiJson(response, 'Không tải được danh sách lời mời.')
+}
+
+export async function layChiTietLoiMoi(cuocHopId, token, signal) {
+  const response = await goiApi(`/api/cuoc-hop/${cuocHopId}/thanh-vien/loi-moi`, { token, signal })
+  return docPhanHoiJson(response, 'Không tải được chi tiết lời mời.')
+}
+
 export async function diemDanhThanhVienCuocHop(cuocHopId, nguoiDungId, coMat, token) {
   const response = await goiApi(
     `/api/cuoc-hop/${cuocHopId}/thanh-vien/${nguoiDungId}/diem-danh`,

@@ -1,3 +1,5 @@
+import { ChiTietLich } from './LichHopThuKy.jsx'
+import { LOP_NUT_PHU } from '../../components/GiaoDienPhongHop.js'
 import { useEffect, useState } from 'react'
 import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
 import { doiLichHop } from '../../api/nghiepVuCuocHopApi.js'
@@ -22,7 +24,6 @@ function DanhSachLich({ lich, loaiHinh, onTrinhLai, dangTrinh, thoiDiemTai }) {
         <li key={muc.lichHopId} className="space-y-1.5 py-3">
           <div className="flex flex-wrap items-center gap-2">
             <strong>{muc.laLichDoi && muc.trangThai === 'DE_XUAT' ? 'Chờ xác nhận dời lịch' : TEN_TRANG_THAI[muc.trangThai] || muc.trangThai}</strong>
-            <span className="text-slate-500">Lịch #{muc.lichHopId}</span>
             {onTrinhLai && !muc.laLichDoi && muc.trangThai === 'DE_XUAT' && Date.parse(muc.thoiGianBatDau) > thoiDiemTai && (
               <button type="button" disabled={dangTrinh != null}
                 className="rounded-lg bg-emerald-800 px-3 py-2 text-xs font-semibold text-white disabled:opacity-60"
@@ -35,9 +36,9 @@ function DanhSachLich({ lich, loaiHinh, onTrinhLai, dangTrinh, thoiDiemTai }) {
             {[
               ['Bắt đầu', dinhDangThoiGian(muc.thoiGianBatDau)],
               ['Kết thúc', dinhDangThoiGian(muc.thoiGianKetThuc)],
-              ['Địa điểm', muc.tenPhongHop || (muc.phongHopId != null ? 'Phòng #' + muc.phongHopId : loaiHinh === 'TRUC_TUYEN' ? 'Trực tuyến' : 'Chưa có thông tin phòng')],
-              ['Người đề xuất lịch', muc.tenNguoiDeXuat || (muc.nguoiDeXuatId != null ? 'Mã người dùng #' + muc.nguoiDeXuatId : null)],
-              ['Người xác nhận lịch', muc.tenNguoiXacNhan || (muc.nguoiXacNhanId != null ? 'Mã người dùng #' + muc.nguoiXacNhanId : null)],
+              ['Địa điểm', muc.tenPhongHop || (loaiHinh === 'TRUC_TUYEN' ? 'Trực tuyến' : 'Chưa có thông tin phòng')],
+              ['Người đề xuất lịch', muc.tenNguoiDeXuat],
+              ['Người xác nhận lịch', muc.tenNguoiXacNhan],
               ['Thời điểm xác nhận', muc.thoiGianXacNhan && dinhDangThoiGian(muc.thoiGianXacNhan)],
               ['Lý do thay đổi', muc.lyDoThayDoi],
             ].filter(([, giaTri]) => giaTri).map(([nhan, giaTri]) => (
@@ -54,13 +55,14 @@ function DanhSachLich({ lich, loaiHinh, onTrinhLai, dangTrinh, thoiDiemTai }) {
 }
 
 export default function LichCuaHoSo({
-  cuocHopId, loaiHinh, token, lichHopIdKeHoachDaDuyet, coQuyenTrinhLai, onDaTrinhLai,
+  cuocHopId, loaiHinh, token, lichHopIdKeHoachDaDuyet, coQuyenTrinhLai, onDaTrinhLai, onTrangThaiDoiLich,
 }) {
   const phienDongBo = useDongBoDuLieu()
   const [duLieuLich, setDuLieuLich] = useState(null)
   const lich = duLieuLich?.danhSach
   const [lanTai, setLanTai] = useState(0)
   const [loi, setLoi] = useState('')
+  const [lichDoiDangXem, setLichDoiDangXem] = useState(null)
   const [dangTrinh, setDangTrinh] = useState(null)
   const [loiTrinh, setLoiTrinh] = useState('')
   const [lyDoTrinhLai, setLyDoTrinhLai] = useState('')
@@ -90,14 +92,18 @@ export default function LichCuaHoSo({
       .then((duLieu) => {
         if (!controller.signal.aborted) {
           setDuLieuLich({ danhSach: duLieu, thoiDiemTai: Date.now() })
+          onTrangThaiDoiLich?.(duLieu.some((muc) => muc.laLichDoi && muc.trangThai === 'DE_XUAT'))
           setLoi('')
         }
       })
       .catch((error) => {
-        if (!controller.signal.aborted) setLoi(error.status === 403 ? 'Bạn không có quyền xem lịch của cuộc họp này.' : error.message)
+        if (!controller.signal.aborted) {
+          setLoi(error.status === 403 ? 'Bạn không có quyền xem lịch của cuộc họp này.' : error.message)
+          onTrangThaiDoiLich?.(null)
+        }
       })
     return () => controller.abort()
-  }, [cuocHopId, token, phienDongBo, lanTai])
+  }, [cuocHopId, token, phienDongBo, lanTai, onTrangThaiDoiLich])
 
   const hienTai = lich?.filter((muc) => ['DA_XAC_NHAN', 'DE_XUAT'].includes(muc.trangThai))
   const choXacNhanLich = !loi && hienTai?.some(
@@ -127,9 +133,21 @@ export default function LichCuaHoSo({
       {coQuyenTrinhLai && lichDaXacNhan && !lichDangDoi && (
         <FormDoiLich lich={lichDaXacNhan} token={token} onDaGui={() => setLanTai((lan) => lan + 1)} />
       )}
-      {lichDangDoi && <p role="status" className="text-amber-950">
-        Đang chờ người có quyền xác nhận giờ mới. Cuộc họp tạm dừng mở trong thời gian chờ.
-      </p>}
+      {lichDangDoi && (
+        <div className="space-y-2 rounded-xl border border-amber-200 bg-amber-50 p-3">
+          <p className="font-semibold text-amber-950">Lịch mới đang chờ xử lý</p>
+          <p className="text-amber-950">Xem phản hồi và chọn cách xử lý lịch mới. Người được mời phản hồi trong mục Lời mời họp hoặc qua link thư mời.</p>
+          <button type="button" className={LOP_NUT_PHU + ' bg-white'}
+            aria-expanded={lichDoiDangXem === lichDangDoi.lichHopId}
+            onClick={() => setLichDoiDangXem((id) => id === lichDangDoi.lichHopId ? null : lichDangDoi.lichHopId)}>
+            {lichDoiDangXem === lichDangDoi.lichHopId ? 'Đóng chi tiết dời lịch' : 'Mở xử lý dời lịch'}
+          </button>
+          {lichDoiDangXem === lichDangDoi.lichHopId && (
+            <ChiTietLich key={lichDangDoi.lichHopId} lich={lichDangDoi} token={token}
+              onDaXuLy={() => setLanTai((lan) => lan + 1)} />
+          )}
+        </div>
+      )}
       {hienNutTrinhLai && (
         <div className="space-y-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
           <p className="text-amber-950">Lịch đã duyệt bị hủy. Lần trình mới sẽ dùng tài liệu của kế hoạch đã duyệt.</p>
@@ -178,8 +196,8 @@ function FormDoiLich({ lich, token, onDaGui }) {
 
   const truong = 'mt-1 w-full rounded border border-slate-300 px-2 py-1.5'
   return (
-    <details className="rounded-lg border border-slate-200 p-3">
-      <summary className="cursor-pointer font-semibold">Dời lịch họp</summary>
+    <section className="rounded-lg border border-blue-100 bg-blue-50 p-3">
+      <h3 className="font-semibold">Dời lịch và hỏi ý kiến người được mời</h3>
       <form onSubmit={gui} className="mt-3 space-y-2">
         <fieldset disabled={dangGui} className="grid gap-2 sm:grid-cols-2">
           <label>Bắt đầu mới<input name="thoiGianBatDau" type="datetime-local" required className={truong} /></label>
@@ -188,11 +206,11 @@ function FormDoiLich({ lich, token, onDaGui }) {
             <textarea name="lyDoThayDoi" required maxLength={500} className={truong} />
           </label>
           <button className="justify-self-start rounded bg-emerald-800 px-3 py-2 font-semibold text-white disabled:opacity-60">
-            Gửi thông báo dời lịch
+            Gửi lịch mới để phản hồi
           </button>
         </fieldset>
         {loi && <p role="alert" className="text-red-800">{loi}</p>}
       </form>
-    </details>
+    </section>
   )
 }

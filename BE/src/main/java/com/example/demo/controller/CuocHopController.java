@@ -50,6 +50,12 @@ public class CuocHopController {
         return cuocHopService.layThuKyCoTheDeXuat(layNguoiDungId(authentication));
     }
 
+    @GetMapping("/de-xuat/phong-ban-chu-tri")
+    public List<DeXuatCuocHopService.PhongBanChuTriLuaChon> layPhongBanChuTriCoTheChon(
+            Authentication authentication) {
+        return deXuatCuocHopService.layPhongBanChuTriCoTheChon(layNguoiDungId(authentication));
+    }
+
     @PostMapping("/de-xuat")
     public ResponseEntity<DeXuatThaoTacResponse> taoDeXuat(
             @RequestBody TaoDeXuatCuocHopRequest request,

@@ -29,5 +29,7 @@ public interface PhongBanRepository
     @Query("select pb from PhongBan pb where pb.phongBanId = :id")
     Optional<PhongBan> khoaTheoId(@Param("id") Integer id);
 
+    List<PhongBan> findByTrangThaiOrderByTenPhongBanAsc(String trangThai);
+
     List<PhongBan> findByTruongPhongId(Integer truongPhongId);
 }

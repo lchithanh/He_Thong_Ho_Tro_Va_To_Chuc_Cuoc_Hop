@@ -301,7 +301,7 @@ export default function DanhSachDeXuatThuKy({ token, nguoiDung, onLapLich, onMoP
                   <td className="px-3 py-3">
                     <p className="font-medium">{deXuat.tieuDe}</p>
                     <p className="text-xs text-slate-600">
-                      {deXuat.maCuocHop || `#${deXuat.cuocHopId}`} · {dinhDangNgayGio(deXuat.ngayTao)}
+                      {[deXuat.tenPhongBanChuTri, deXuat.ngayTao && dinhDangNgayGio(deXuat.ngayTao)].filter(Boolean).join(' · ')}
                     </p>
                     {deXuat.thoiGianChuyenCap && <p className="text-xs text-slate-600">Đã chuyển cấp · {dinhDangNgayGio(deXuat.thoiGianChuyenCap)}</p>}
                   </td>
@@ -318,7 +318,7 @@ export default function DanhSachDeXuatThuKy({ token, nguoiDung, onLapLich, onMoP
                       onClick={() => setCuocHopDangXem(deXuat.cuocHopId)}
                       className="whitespace-nowrap rounded-lg border border-emerald-200 px-3 py-1.5 font-semibold text-emerald-800 transition hover:bg-emerald-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-700"
                     >
-                      Xem chi tiết
+                      {deXuat.trangThai === 'CHO_TIEP_NHAN' && deXuat.duocLapKeHoach ? 'Mở hồ sơ tiếp nhận' : 'Xem chi tiết'}
                     </button>
                   </td>
                 </tr>

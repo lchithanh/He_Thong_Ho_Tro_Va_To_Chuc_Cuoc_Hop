@@ -6,7 +6,9 @@ import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
+import com.example.demo.dto.ThongTinBoSungDeXuatDto;
 import com.example.demo.dto.request.TaoDeXuatCuocHopRequest;
 import com.example.demo.dto.response.DeXuatCuocHopResponse;
 import com.example.demo.dto.response.DeXuatCuocHopResponse.PhanHoiKeHoach;
@@ -14,6 +16,7 @@ import com.example.demo.entity.YeuCauPheDuyet.LoaiYeuCau;
 import com.example.demo.entity.YeuCauPheDuyet.TrangThai;
 import com.example.demo.repository.LichSuPheDuyetRepository;
 import com.example.demo.entity.CuocHop;
+import com.example.demo.entity.DeXuatCuocHop;
 import com.example.demo.entity.NguoiDung;
 import com.example.demo.entity.PhongBan;
 import com.example.demo.entity.ThanhVienCuocHop;
@@ -43,10 +46,30 @@ public class DeXuatCuocHopService {
     private final PhanCongXuLyKeHoachService phanCongXuLyKeHoachService;
     private final LichSuPheDuyetRepository lichSuPheDuyetRepository;
     private final ThongTinThuMoiDaDuyet thongTinThuMoiDaDuyet;
+    private final TaiLieuCuocHopService taiLieuCuocHopService;
+
+    public record PhongBanChuTriLuaChon(Integer phongBanId, String tenPhongBan) {}
+
+    @Transactional(readOnly = true)
+    public List<PhongBanChuTriLuaChon> layPhongBanChuTriCoTheChon(Integer nguoiDungId) {
+        phanQuyenCuocHopService.kiemTraQuyenTaoDeXuat(nguoiDungId);
+        if (!phanQuyenCuocHopService.coVaiTro(nguoiDungId, "LANH_DAO")) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Chỉ lãnh đạo được chọn phòng ban chủ trì khác phòng ban của mình");
+        }
+        return phongBanRepository.findByTrangThaiOrderByTenPhongBanAsc("HOAT_DONG").stream()
+                .map(phongBan -> new PhongBanChuTriLuaChon(phongBan.getPhongBanId(), phongBan.getTenPhongBan()))
+                .toList();
+    }
 
     public Integer taoDeXuatCuocHop(
             TaoDeXuatCuocHopRequest request,
             Integer nguoiDangNhapId) {
+        return taoDeXuatCuocHop(request, nguoiDangNhapId, List.of());
+    }
+
+    public Integer taoDeXuatCuocHop(TaoDeXuatCuocHopRequest request, Integer nguoiDangNhapId,
+            List<MultipartFile> taiLieu) {
         phanQuyenCuocHopService
                 .kiemTraQuyenTaoDeXuat(nguoiDangNhapId);
         kiemTraDuLieuDeXuat(request);
@@ -114,10 +137,15 @@ public class DeXuatCuocHopService {
                 null,
                 request.isGuiNgay()
         );
-        if (request.isGuiNgay()) {
-            ThaoTacCuocHop.thucHien(() -> ThaoTacCuocHop.guiDeXuat(cuocHop));
-        }
+        luuNoiDungDeXuat(cuocHop, request);
         CuocHop daLuu = cuocHopRepository.save(cuocHop);
+        for (MultipartFile file : taiLieu) {
+            taiLieuCuocHopService.luuTepDeXuat(daLuu, nguoiDeXuat, file);
+        }
+        if (request.isGuiNgay()) {
+            ThaoTacCuocHop.thucHien(() -> ThaoTacCuocHop.guiDeXuat(daLuu));
+            daLuu.getDeXuat().ghiNhanBuocXuLy(daLuu);
+        }
         if (thuKy != null) {
             ganThuKy(daLuu, thuKy);
         }
@@ -205,6 +233,7 @@ public class DeXuatCuocHopService {
         if (request.getThuKyCuocHopId() != null) {
             cuocHop.setThuKyCuocHop(phanCongXuLyKeHoachService.chonThuKyCuocHop(cuocHop, request.getThuKyCuocHopId()));
         }
+        luuNoiDungDeXuat(cuocHop, request);
         cuocHopRepository.save(cuocHop);
         capNhatRealtime.baoCho(nguoiDangNhapId);
     }
@@ -274,6 +303,9 @@ public class DeXuatCuocHopService {
 
         ganThuKy(cuocHop, thuKy);
         ThaoTacCuocHop.thucHien(() -> ThaoTacCuocHop.guiDeXuat(cuocHop));
+        if (cuocHop.getDeXuat() != null) {
+            cuocHop.getDeXuat().ghiNhanBuocXuLy(cuocHop);
+        }
         cuocHopRepository.save(cuocHop);
         capNhatRealtime.baoBuocDeXuat(cuocHop, nguoiDangNhapId);
     }
@@ -363,6 +395,9 @@ public class DeXuatCuocHopService {
             );
         }
         kiemTraTieuDeVaLoaiHinh(request.getTieuDe(), request.getLoaiHinh());
+        if (request.getThoiLuongDuKienPhut() != null && request.getThoiLuongDuKienPhut() <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Thời lượng dự kiến phải lớn hơn 0 phút");
+        }
         if (request.getPhamViCuocHop() == null
                 || !PHAM_VI_HOP_LE.contains(
                         request.getPhamViCuocHop())) {
@@ -464,10 +499,14 @@ public class DeXuatCuocHopService {
                 ch.getTieuDe(),
                 ch.getMucTieu(),
                 ch.getNoiDungDuKien(),
+                ch.getThoiLuongDuKienPhut(),
+                laChiTiet ? ThongTinBoSungDeXuatDto.tu(ch.getThongTinDeXuat()) : null,
                 ch.getLoaiHinh(),
                 ch.getPhamViCuocHop(),
                 ch.getPhongBanChuTri() != null
                         ? ch.getPhongBanChuTri().getPhongBanId() : null,
+                ch.getPhongBanChuTri() != null
+                        ? ch.getPhongBanChuTri().getTenPhongBan() : null,
                 ch.getNguoiDeXuat() != null
                         ? ch.getNguoiDeXuat().getNguoiDungId() : null,
                 ch.getNguoiDeXuat() != null
@@ -657,6 +696,21 @@ public class DeXuatCuocHopService {
         if (loaiHinh == null || !LOAI_HINH_HOP_LE.contains(loaiHinh)) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST, "Loại hình phải là TRUC_TIEP hoặc TRUC_TUYEN");
+        }
+    }
+
+    private void luuNoiDungDeXuat(CuocHop cuocHop, TaoDeXuatCuocHopRequest request) {
+        DeXuatCuocHop deXuat = cuocHop.getDeXuat();
+        if (deXuat == null) {
+            deXuat = new DeXuatCuocHop();
+            cuocHop.setDeXuat(deXuat);
+        }
+        deXuat.capNhatTuHoSo(cuocHop);
+        if (request.getThoiLuongDuKienPhut() != null) {
+            deXuat.setThoiLuongDuKienPhut(request.getThoiLuongDuKienPhut());
+        }
+        if (request.getThongTinDeXuat() != null) {
+            deXuat.setThongTinBoSung(request.getThongTinDeXuat().denHoSo(request.getLoaiHinh()));
         }
     }
 

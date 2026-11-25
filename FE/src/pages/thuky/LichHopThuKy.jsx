@@ -1,6 +1,9 @@
+import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
+import { xemTienDoDoiLich } from '../../api/nghiepVuCuocHopApi.js'
 import { useEffect, useRef, useState } from 'react'
 import {
   layChiTietLichCalendar,
+  huyCuocHop,
   layDanhSachDeXuat,
   layDanhSachLichHop,
   layTaiLieuLanTrinh,
@@ -14,6 +17,8 @@ import {
 import LichCuocHop from '../../lichhop/LichCuocHop.jsx'
 import { maNgay } from '../../lichhop/lichHopHienThi.js'
 import ThanhVienCuocHopThuKy from './ThanhVienCuocHopThuKy.jsx'
+import { dinhDangNgayGio } from '../../utils/thoiGianCuocHop.js'
+import { LOP_NUT_CHINH, LOP_NUT_PHU } from '../../components/GiaoDienPhongHop.js'
 
 const LOP_TRUONG = 'mt-1 w-full rounded-lg border border-slate-300 px-3 py-2'
 
@@ -24,7 +29,15 @@ const TRANG_THAI_PHONG = {
   BAN: 'Bận',
 }
 
-function FormDeXuatLich({ cuocHopId, loaiHinh, token, ngayChon, khungGio, onDaTao }) {
+function mocNhapLich(ngay) {
+  const gio = String(ngay.getHours()).padStart(2, '0')
+  const phut = String(ngay.getMinutes()).padStart(2, '0')
+  return `${maNgay(ngay)}T${gio}:${phut}`
+}
+
+export function FormDeXuatLich({
+  cuocHopId, loaiHinh, token, ngayChon, khungGio, onDaTao, thongTinDeXuat, thoiLuongDuKienPhut,
+}) {
   const [loiLuu, setLoiLuu] = useState('')
   const [thongBao, setThongBao] = useState('')
   const [dangLuu, setDangLuu] = useState(false)
@@ -68,6 +81,17 @@ function FormDeXuatLich({ cuocHopId, loaiHinh, token, ngayChon, khungGio, onDaTa
     setGioBatDau(ngay + 'T' + (batDau.value.slice(11) || '08:00'))
     setGioKetThuc(ngay + 'T' + (ketThuc.value.slice(11) || '09:00'))
     batDau.focus()
+  }
+
+  function dungKhungGioDeXuat(batDau) {
+    const ngay = new Date(batDau)
+    if (!Number.isFinite(ngay.getTime())) return
+    const phut = Number(thoiLuongDuKienPhut)
+    setGioBatDau(mocNhapLich(ngay))
+    setGioKetThuc(phut > 0 ? mocNhapLich(new Date(ngay.getTime() + phut * 60_000)) : '')
+    setLoiLuu('')
+    setThongBao('')
+    formLich.current.elements.namedItem(phut > 0 ? 'thoiGianBatDau' : 'thoiGianKetThuc').focus()
   }
 
   async function xuLyTaoLich(event) {
@@ -117,8 +141,22 @@ function FormDeXuatLich({ cuocHopId, loaiHinh, token, ngayChon, khungGio, onDaTa
 
   return (
       <form ref={formLich} onSubmit={xuLyTaoLich} className="space-y-4 rounded-xl border border-slate-200 bg-white p-4">
-        <button type="button" onClick={dienNgayVaoForm} disabled={dangLuu}
-          className="text-sm font-semibold text-emerald-800">Dùng ngày đang chọn trên lịch</button>
+        {thongTinDeXuat?.khungGioDeXuat?.length > 0 && (
+          <div className="space-y-2 rounded-xl border border-blue-100 bg-blue-50 p-3">
+            <p className="text-sm font-semibold text-blue-950">Khung giờ người đề xuất gợi ý</p>
+            <div className="flex flex-wrap gap-2">
+              {thongTinDeXuat.khungGioDeXuat.map((batDau, i) => (
+                <button key={`${batDau}/${i}`} type="button" className={LOP_NUT_PHU + ' bg-white'}
+                  disabled={dangLuu} onClick={() => dungKhungGioDeXuat(batDau)}>
+                  Dùng {dinhDangNgayGio(batDau)}
+                </button>
+              ))}
+            </div>
+            {thoiLuongDuKienPhut > 0 && <p className="text-xs text-slate-700">Thời lượng dự kiến {thoiLuongDuKienPhut} phút</p>}
+          </div>
+        )}
+        {ngayChon && <button type="button" onClick={dienNgayVaoForm} disabled={dangLuu}
+          className={LOP_NUT_PHU}>Dùng ngày đang chọn trên lịch</button>}
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block text-sm font-medium">
             Bắt đầu
@@ -140,7 +178,8 @@ function FormDeXuatLich({ cuocHopId, loaiHinh, token, ngayChon, khungGio, onDaTa
                 disabled={!phongHienTai?.length || dangLuu || Boolean(loiPhongHienTai)}>
                 <option value="">Chọn phòng họp</option>
                 {phongHienTai?.map((phong) => (
-                  <option key={phong.phongHopId} value={phong.phongHopId}>
+                  <option key={phong.phongHopId} value={phong.phongHopId}
+                    disabled={phong.trangThai !== 'SAN_SANG' || phong.trungLich === true}>
                     {phong.tenPhongHop} · {TRANG_THAI_PHONG[phong.trangThai] ?? phong.trangThai}
                     {phong.trungLich === true ? ' · Trùng lịch' : phong.trungLich === false ? ' · Còn trống' : ''}
                   </option>
@@ -176,16 +215,17 @@ function FormDeXuatLich({ cuocHopId, loaiHinh, token, ngayChon, khungGio, onDaTa
 
         <button
           type="submit"
-          disabled={dangLuu || (hopTrucTiep && (!phongHopLe || Boolean(loiPhongHienTai)))}
-          className="rounded-lg bg-emerald-800 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+          disabled={dangLuu || !coKhoangGio || (hopTrucTiep && (!phongHopLe || Boolean(loiPhongHienTai)))}
+          className={LOP_NUT_CHINH}
         >
-          {dangLuu ? 'Đang lưu…' : 'Đề xuất lịch họp'}
+          {dangLuu ? 'Đang lưu…' : 'Lưu lịch đề xuất'}
         </button>
       </form>
   )
 }
 
 export function LichHopCaNhan({ token, nguoiDung, cuocHopLapLich, onQuayLaiHoSo }) {
+  const phien = useDongBoDuLieu()
   const [danhSach, setDanhSach] = useState(null)
   const [loiTai, setLoiTai] = useState('')
   const [ngayChon, setNgayChon] = useState(() => new Date())
@@ -196,7 +236,7 @@ export function LichHopCaNhan({ token, nguoiDung, cuocHopLapLich, onQuayLaiHoSo 
       .then((lich) => { if (!controller.signal.aborted) setDanhSach(lich) })
       .catch((loi) => { if (!controller.signal.aborted) setLoiTai(loi.message) })
     return () => controller.abort()
-  }, [token])
+  }, [token, phien])
 
   const [khungGio, setKhungGio] = useState(null)
   const [moForm, setMoForm] = useState(Boolean(cuocHopLapLich))
@@ -286,8 +326,22 @@ export function LichHopCaNhan({ token, nguoiDung, cuocHopLapLich, onQuayLaiHoSo 
   )
 }
 
-function ChiTietLich({ lich, token, onDaXuLy }) {
+export function ChiTietLich({ lich, token, onDaXuLy }) {
   const lichHopId = lich.lichHopId
+  const phien = useDongBoDuLieu()
+  const [tienDo, setTienDo] = useState(null)
+  const [loiTienDo, setLoiTienDo] = useState('')
+  useEffect(() => {
+    if (!lich.laLichDoi || lich.trangThai !== 'DE_XUAT') return
+    const controller = new AbortController()
+    xemTienDoDoiLich(lich.lichHopId, token, controller.signal).then((ketQua) => {
+      if (!controller.signal.aborted) { setTienDo(ketQua); setLoiTienDo('') }
+    }).catch((error) => {
+      if (!controller.signal.aborted && error.status !== 403) setLoiTienDo(error.message)
+    })
+    return () => controller.abort()
+  }, [lich.laLichDoi, lich.trangThai, lich.lichHopId, token, phien])
+  const [daHuyCuocHop, setDaHuyCuocHop] = useState(false)
   const [chiTiet, setChiTiet] = useState(null)
   const [tep, setTep] = useState(null)
   const [loiTep, setLoiTep] = useState('')
@@ -318,16 +372,24 @@ function ChiTietLich({ lich, token, onDaXuLy }) {
     if (dangLuu) return
     setLoi('')
     if (thaoTac !== 'xac-nhan' && !lyDo.trim()) {
-      setLoi('Nhập lý do trước khi từ chối hoặc trả lại lịch.')
+      setLoi('Nhập lý do cho quyết định xử lý lịch.')
       return
     }
     setDangLuu(true)
     try {
+      if (thaoTac === 'huy-cuoc-hop') {
+        if (!window.confirm('Hủy cuộc họp và các lịch liên quan?')) return
+        await huyCuocHop(lich.cuocHopId, lyDo.trim(), token)
+        setDaHuyCuocHop(true)
+        onDaXuLy({ ...lich, trangThai: 'DA_HUY' })
+        setThongBao('Đã hủy cuộc họp.')
+        return
+      }
       const ketQua = thaoTac === 'xac-nhan'
         ? await xacNhanLichHop(lichHopId, token)
         : await xuLyLichKhongDuyet(lichHopId, thaoTac, lyDo.trim(), token)
       onDaXuLy(ketQua)
-      setThongBao({ 'xac-nhan': 'Đã xác nhận lịch.', 'tu-choi': lich.laLichDoi ? 'Đã từ chối đổi lịch và hủy lịch họp.' : 'Đã từ chối lịch.', 'tra-lai': 'Đã trả lại để thư ký đề xuất lịch mới.' }[thaoTac])
+      setThongBao({ 'xac-nhan': 'Đã xác nhận lịch.', 'tu-choi': lich.laLichDoi ? 'Đã giữ lịch họp cũ.' : 'Đã từ chối lịch.', 'tra-lai': 'Đã trả lại để thư ký đề xuất lịch mới.' }[thaoTac])
     } catch (loi) {
       setLoi(loi.message)
     } finally {
@@ -372,17 +434,23 @@ function ChiTietLich({ lich, token, onDaXuLy }) {
               ))}</ul>
             </div>
           )}
-          {chiTiet.duocXacNhan && lich.trangThai === 'DE_XUAT' && (
+          {loiTienDo && <p role="alert" className="text-rose-800">{loiTienDo}</p>}
+          {tienDo && lich.trangThai === 'DE_XUAT' && !daHuyCuocHop && (
+            <p className="rounded-lg bg-blue-50 p-3">Đồng ý {tienDo.dongY}/{tienDo.tong} · Không đồng ý {tienDo.tuChoi} · Chưa trả lời {tienDo.tong - tienDo.dongY - tienDo.tuChoi}</p>
+          )}
+          {!daHuyCuocHop && (chiTiet.duocXacNhan || (lich.laLichDoi && (chiTiet.duocHuyCuocHop || chiTiet.duocGiuLichCu))) && lich.trangThai === 'DE_XUAT' && (
             <div className="space-y-3 border-t border-slate-100 pt-3">
-              <label className="block font-semibold">Lý do từ chối hoặc trả lại
+              <label className="block font-semibold">Lý do xử lý
                 <textarea className={LOP_TRUONG} rows={2} value={lyDo} onChange={(event) => setLyDo(event.target.value)} />
               </label>
               <div className="flex flex-wrap gap-2">
                 {(lich.laLichDoi
-                  ? [['xac-nhan', 'Xác nhận giờ mới'], ['tu-choi', 'Từ chối và hủy lịch']]
+                  ? [...(chiTiet.duocXacNhan ? [['xac-nhan', 'Chốt lịch mới']] : []),
+                    ...(chiTiet.duocGiuLichCu ? [['tu-choi', 'Giữ lịch cũ']] : []),
+                    ...(chiTiet.duocHuyCuocHop ? [['huy-cuoc-hop', 'Hủy cuộc họp']] : [])]
                   : [['xac-nhan', 'Xác nhận lịch'], ['tu-choi', 'Từ chối lịch'], ['tra-lai', 'Trả lại để chỉnh lịch']]
                 ).map(([ma, ten]) => (
-                  <button key={ma} type="button" disabled={dangLuu} onClick={() => xuLy(ma)}
+                  <button key={ma} type="button" disabled={dangLuu || (lich.laLichDoi && ma === 'xac-nhan' && (!tienDo || tienDo.dongY !== tienDo.tong))} onClick={() => xuLy(ma)}
                     className={`rounded-lg border px-3 py-2 font-semibold disabled:opacity-60 ${ma === 'xac-nhan' ? 'bg-emerald-800 text-white' : 'border-slate-200'}`}>{ten}</button>
                 ))}
               </div>

@@ -1,4 +1,8 @@
 import { useEffect, useState } from 'react'
+import Paperclip from 'lucide-react/dist/esm/icons/paperclip.mjs'
+import Send from 'lucide-react/dist/esm/icons/send.mjs'
+import { TieuDeHoSo } from '../../components/GiaoDienPhongHop.jsx'
+import { LOP_NUT_CHINH, LOP_NUT_PHU } from '../../components/GiaoDienPhongHop.js'
 import XemTruocTepKeHoach from './XemTruocTepKeHoach.jsx'
 import {
   layChiTietDeXuat,
@@ -18,7 +22,9 @@ export default function TaiLieuKeHoachThuKy({
   loaiHinh,
   vaiTroNguoiDeXuat,
   onLapLich,
+  lichMoiTaoId,
   choPhepThaoTac = true,
+  choDoiLich = false,
 }) {
   const [danhSach, setDanhSach] = useState(null)
   const [lanTai, setLanTai] = useState(0)
@@ -29,13 +35,17 @@ export default function TaiLieuKeHoachThuKy({
   const [danhSachLich, setDanhSachLich] = useState(null)
   const [loiLich, setLoiLich] = useState('')
   const [dangTaiLich, setDangTaiLich] = useState(true)
-  const [lichHopIdDangChon, setLichHopIdDangChon] = useState('')
+  const [lichDaChon, setLichDaChon] = useState(null)
+  const lichHopIdDangChon = lichDaChon && lichDaChon.lichMoiTaoId === lichMoiTaoId
+    ? lichDaChon.giaTri : String(lichMoiTaoId ?? '')
+  const [thoiDiemTaiLich, setThoiDiemTaiLich] = useState(0)
   const [lanTaiLich, setLanTaiLich] = useState(0)
 
+  const choPhanHoiDoiLich = danhSachLich?.some((lich) => lich.laLichDoi && lich.trangThai === 'DE_XUAT')
   const lichCoTheTrinh = danhSachLich?.filter((lich) =>
-    (lich.trangThai === 'DE_XUAT'
+    ((lich.trangThai === 'DE_XUAT' && !lich.laLichDoi)
       || (lich.trangThai === 'DA_XAC_NHAN' && lich.lichHopId === lichHopIdKeHoachDaDuyet))
-    && new Date(lich.thoiGianBatDau).getTime() > Date.now()
+    && new Date(lich.thoiGianBatDau).getTime() > thoiDiemTaiLich
     && (loaiHinh !== 'TRUC_TIEP' || lich.phongHopId != null)
     && (loaiHinh !== 'TRUC_TUYEN' || lich.phongHopId == null),
   )
@@ -45,6 +55,8 @@ export default function TaiLieuKeHoachThuKy({
       .then((lich) => {
         if (!controller.signal.aborted) {
           setDanhSachLich(lich)
+          setThoiDiemTaiLich(Date.now())
+          setLoiLich('')
         }
       })
       .catch((loi) => {
@@ -54,7 +66,7 @@ export default function TaiLieuKeHoachThuKy({
         if (!controller.signal.aborted) setDangTaiLich(false)
       })
     return () => controller.abort()
-  }, [cuocHopId, token, lanTaiLich])
+  }, [cuocHopId, token, lanTaiLich, lichMoiTaoId])
 
   const lichDangChon = lichCoTheTrinh?.find((lich) => String(lich.lichHopId) === lichHopIdDangChon)
   const dangDoiLich = lichHopIdKeHoachDaDuyet != null && lichDangChon != null
@@ -94,7 +106,7 @@ export default function TaiLieuKeHoachThuKy({
 
   async function xuLyTaiLen(event) {
     event.preventDefault()
-    if (dangTaiLen) return
+    if (dangTaiLen || !choPhepThaoTac) return
 
     const form = event.currentTarget
     const file = new FormData(form).get('file')
@@ -120,7 +132,7 @@ export default function TaiLieuKeHoachThuKy({
 
   async function xuLyTrinh(event) {
     event.preventDefault()
-    if (dangTrinh || daTrinh || dangTaiLen || !coChuTriHopLe) return
+    if (!choPhepThaoTac || dangTrinh || daTrinh || dangTaiLen || !coChuTriHopLe || choPhanHoiDoiLich) return
 
     const form = new FormData(event.currentTarget)
     const duLieu = {
@@ -134,7 +146,7 @@ export default function TaiLieuKeHoachThuKy({
       return
     }
     const daChonLichPhuHop = lichCoTheTrinh?.some(
-      (lich) => Number(lich.lichHopId) === duLieu.lichHopId,
+      (lich) => Number(lich.lichHopId) === duLieu.lichHopId && Date.parse(lich.thoiGianBatDau) > Date.now(),
     )
 
     if (!daChonLichPhuHop) {
@@ -165,8 +177,8 @@ export default function TaiLieuKeHoachThuKy({
   }
   return (
     <XemTruocTepKeHoach danhSach={danhSach} cuocHopId={cuocHopId} token={token} loiDanhSach={loiDanhSach}>
-    <section className="space-y-4 border-t border-slate-200 pt-5">
-      <h3 className="font-semibold">Tải tài liệu lên</h3>
+    <section className="space-y-4 rounded-2xl border border-slate-200 p-4 sm:p-5">
+      <TieuDeHoSo Icon={Paperclip}>Tài liệu kế hoạch</TieuDeHoSo>
 
       {choPhepThaoTac ? (
         <form onSubmit={xuLyTaiLen} className="flex flex-wrap items-end gap-3">
@@ -184,20 +196,22 @@ export default function TaiLieuKeHoachThuKy({
           <button
             type="submit"
             disabled={dangTaiLen}
-            className="rounded-lg bg-emerald-800 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+            className={LOP_NUT_CHINH}
           >
             {dangTaiLen ? 'Đang tải lên…' : 'Tải lên'}
           </button>
         </form>
       ) : (
-        <p className="text-sm text-slate-600">Lưu nội dung cập nhật trước khi tải tệp mới hoặc trình kế hoạch.</p>
+        <p className="text-sm text-slate-600">{choDoiLich
+          ? 'Tạm khóa tải tệp và trình kế hoạch trong lúc lịch mới đang chờ xử lý.'
+          : 'Lưu nội dung cập nhật trước khi tải tệp mới hoặc trình kế hoạch.'}</p>
       )}
 
       {loiTaiLen && <p role="alert" className="text-sm text-red-800">{loiTaiLen}</p>}
 
       {choPhepThaoTac && danhSach !== null && !loiDanhSach && (
-  <form onSubmit={xuLyTrinh} className="space-y-4 border-t border-slate-200 pt-4">
-    <h4 className="font-semibold">Trình duyệt kế hoạch và lịch</h4>
+  <form onSubmit={xuLyTrinh} className="space-y-4 rounded-xl border border-blue-100 bg-blue-50/55 p-4">
+    <TieuDeHoSo Icon={Send} cap="h4">Trình duyệt kế hoạch và lịch</TieuDeHoSo>
     <p className="text-sm text-slate-600">
       {vaiTroNguoiDeXuat === 'LANH_DAO'
         ? 'Hồ sơ gửi thẳng tới lãnh đạo đề xuất để duyệt kế hoạch và lịch.'
@@ -205,9 +219,9 @@ export default function TaiLieuKeHoachThuKy({
           ? 'Hồ sơ gửi trưởng phòng trước. Sau khi trưởng phòng đồng ý, thư ký ban đầu chuyển hồ sơ đến thư ký lãnh đạo để rà soát và trình duyệt cuối.'
           : 'Hồ sơ gửi trưởng phòng để duyệt kế hoạch và lịch.'}
     </p>
-    <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">
-      Nếu chỉ sửa nội dung, chọn Giữ lịch đã xác nhận. Để đổi lịch, chọn lịch đề xuất mới. Lịch mới có hiệu lực sau khi duyệt cuối.
-    </p>
+    {lichHopIdKeHoachDaDuyet != null && <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">
+      Nếu chỉ sửa nội dung, chọn Giữ lịch đã xác nhận.
+    </p>}
 
     <button
       type="button"
@@ -217,12 +231,13 @@ export default function TaiLieuKeHoachThuKy({
         setLoiLich('')
         setLanTaiLich((lanHienTai) => lanHienTai + 1)
       }}
-      className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 disabled:opacity-60"
+      className={LOP_NUT_PHU}
     >
       {dangTaiLich ? 'Đang tải lịch…' : 'Làm mới danh sách lịch'}
     </button>
 
-    <fieldset disabled={dangTrinh || daTrinh || dangTaiLich} className="space-y-3">
+    {choPhanHoiDoiLich && <p className="text-sm text-amber-950">Đang lấy phản hồi lịch mới. Mở lịch này trong Lịch họp để xử lý dời lịch.</p>}
+    <fieldset disabled={dangTrinh || daTrinh || dangTaiLich || choPhanHoiDoiLich} className="space-y-3">
       {loiLich ? (
   <p role="alert" className="text-sm text-red-800">{loiLich}</p>
 ) : lichCoTheTrinh == null ? (
@@ -234,17 +249,17 @@ export default function TaiLieuKeHoachThuKy({
       name="lichHopId"
       required
       value={lichDangChon ? lichHopIdDangChon : ''}
-      onChange={(event) => setLichHopIdDangChon(event.target.value)}
+      onChange={(event) => setLichDaChon({ lichMoiTaoId, giaTri: event.target.value })}
       className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
     >
       <option value="">Chọn lịch để trình</option>
       {lichCoTheTrinh.map((lich) => (
         <option key={lich.lichHopId} value={lich.lichHopId}>
-          {lich.trangThai === 'DA_XAC_NHAN' ? 'Giữ lịch đã xác nhận' : 'Đề xuất lịch mới'} #{lich.lichHopId}
+          {lich.trangThai === 'DA_XAC_NHAN' ? 'Giữ lịch đã xác nhận' : 'Lịch đề xuất'}
           {' · '}{new Date(lich.thoiGianBatDau).toLocaleString('vi-VN')}
           {' – '}{new Date(lich.thoiGianKetThuc).toLocaleString('vi-VN')}
           {' · '}{lich.tenPhongHop
-            || (loaiHinh === 'TRUC_TUYEN' ? 'Trực tuyến' : `Phòng #${lich.phongHopId}`)}
+            || (loaiHinh === 'TRUC_TUYEN' ? 'Trực tuyến' : 'Chưa có tên phòng')}
         </option>
       ))}
     </select>
@@ -258,9 +273,9 @@ export default function TaiLieuKeHoachThuKy({
       <button
         type="button"
         onClick={() => onLapLich(cuocHopId)}
-        className="rounded-lg border px-3 py-2 text-sm font-semibold"
+        className={LOP_NUT_PHU}
       >
-        Đề xuất lịch trên Calendar
+        Tạo lịch đề xuất
       </button>
     )}
   </div>
@@ -297,8 +312,8 @@ export default function TaiLieuKeHoachThuKy({
 
     <button
       type="submit"
-      disabled={dangTrinh || daTrinh || dangTaiLen || !coChuTriHopLe || !lichCoTheTrinh?.length}
-      className="rounded-lg bg-emerald-800 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+      disabled={dangTrinh || daTrinh || dangTaiLen || !coChuTriHopLe || !lichCoTheTrinh?.length || choPhanHoiDoiLich}
+      className={LOP_NUT_CHINH}
     >
       {dangTrinh ? 'Đang trình…' : daTrinh ? 'Đã trình kế hoạch và lịch' : 'Trình duyệt kế hoạch và lịch'}
     </button>

@@ -50,7 +50,11 @@ class ThongBaoEmailCuocHop {
 
     void deXuatDoiLich(LichHop lich) {
         bao(lich, nguoiDuocMoi(lich), "Cuộc họp đang chờ dời lịch",
-                "Khung giờ mới đang chờ xác nhận. Lý do: " + lich.getLyDoThayDoi());
+                "Mở mục Lời mời họp để phản hồi khung giờ mới. Lý do: " + lich.getLyDoThayDoi());
+    }
+
+    void giuLichCu(LichHop lich, String lyDo) {
+        bao(lich, nguoiDuocMoi(lich), "Giữ lịch họp cũ", "Tiếp tục dùng lịch đã xác nhận. Lý do: " + lyDo);
     }
 
     void xacNhanLich(LichHop lich, boolean coLichCu) {

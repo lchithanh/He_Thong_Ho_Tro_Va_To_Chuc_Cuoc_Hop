@@ -34,6 +34,10 @@ public class TaiLieuCuocHop {
     @JoinColumn(name = "cuoc_hop_id", nullable = false)
     private CuocHop cuocHop;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "de_xuat_id")
+    private DeXuatCuocHop deXuat;
+
     // Người tải tài liệu lên
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "nguoi_tai_len_id", nullable = false)

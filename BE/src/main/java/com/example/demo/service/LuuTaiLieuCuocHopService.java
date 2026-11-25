@@ -29,6 +29,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class LuuTaiLieuCuocHopService {
 
+    static final String LOAI_DE_XUAT = "DE_XUAT_CUOC_HOP";
     private static final long DUNG_LUONG_TOI_DA = 10L * 1024 * 1024;
     private static final Set<String> DINH_DANG_HO_TRO =
             Set.of("pdf", "doc", "docx", "xls", "xlsx");
@@ -87,6 +88,9 @@ public class LuuTaiLieuCuocHopService {
 
             TaiLieuCuocHop taiLieu = new TaiLieuCuocHop();
             taiLieu.setCuocHop(cuocHop);
+            if (LOAI_DE_XUAT.equals(loaiTaiLieu)) {
+                taiLieu.setDeXuat(cuocHop.getDeXuat());
+            }
             taiLieu.setNguoiTaiLen(nguoiTaiLen);
             taiLieu.setTenTaiLieu(tenGoc);
             taiLieu.setTenFileGoc(tenGoc);

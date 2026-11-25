@@ -1,5 +1,8 @@
 package com.example.demo.dto.request;
 
+import com.example.demo.dto.ThongTinBoSungDeXuatDto;
+
+import jakarta.validation.Valid;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -12,6 +15,10 @@ public class TaoDeXuatCuocHopRequest {
     private String tieuDe;
     private String mucTieu;
     private String noiDungDuKien;
+    private Integer thoiLuongDuKienPhut;
+
+    @Valid
+    private ThongTinBoSungDeXuatDto thongTinDeXuat;
 
     // TRUC_TIEP hoặc TRUC_TUYEN
     private String loaiHinh;

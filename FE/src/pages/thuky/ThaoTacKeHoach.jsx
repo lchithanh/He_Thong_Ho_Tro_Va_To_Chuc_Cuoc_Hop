@@ -1,4 +1,6 @@
 import { useRef, useState } from 'react'
+import ClipboardCheck from 'lucide-react/dist/esm/icons/clipboard-check.mjs'
+import { TieuDeHoSo } from '../../components/GiaoDienPhongHop.jsx'
 import { xuLyYeuCauKeHoach } from '../../api/cuocHopApi.js'
 import TiepNhanAction from './thaoTacKeHoach/TiepNhanAction.jsx'
 import ChuyenLanhDaoAction from './thaoTacKeHoach/ChuyenLanhDaoAction.jsx'
@@ -105,14 +107,12 @@ export default function ThaoTacKeHoach({
   return (
     <section
       aria-label="Xử lý kế hoạch"
-      className="space-y-4 rounded-xl border border-slate-200 bg-white p-4 sm:p-5"
+      className="space-y-4 rounded-xl border border-blue-200 bg-blue-50/60 p-4 sm:p-5"
     >
-      <div>
-        <h3 className="text-base font-bold text-slate-900">Thao tác của bạn</h3>
-        <p className="mt-1 text-sm text-slate-600">
-          Chọn một kết quả xử lý. Lý do bắt buộc khi yêu cầu chỉnh sửa hoặc từ chối.
-        </p>
-      </div>
+      <TieuDeHoSo Icon={ClipboardCheck}
+        phu="Nhập lý do khi yêu cầu chỉnh sửa hoặc từ chối. Khi đồng ý, bạn có thể ghi thêm ý kiến.">
+        {cheDo === 'duyet' ? 'Quyết định duyệt' : 'Xử lý hồ sơ'}
+      </TieuDeHoSo>
 
       <label className="block text-sm font-semibold text-slate-800">
         Ý kiến xử lý
@@ -123,7 +123,7 @@ export default function ThaoTacKeHoach({
           onChange={(event) => setYKien(event.target.value)}
           disabled={dangGui || daGui}
           placeholder="Ghi chú thêm cho người tiếp nhận hồ sơ (không bắt buộc với thao tác đồng ý)."
-          className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 font-normal outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100"
+          className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 font-normal outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100"
         />
       </label>
 

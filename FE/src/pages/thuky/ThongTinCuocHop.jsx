@@ -1,3 +1,9 @@
+import CalendarDays from 'lucide-react/dist/esm/icons/calendar-days.mjs'
+import FileText from 'lucide-react/dist/esm/icons/file-text.mjs'
+import ListChecks from 'lucide-react/dist/esm/icons/list-checks.mjs'
+import Users from 'lucide-react/dist/esm/icons/users.mjs'
+import { TieuDeHoSo } from '../../components/GiaoDienPhongHop.jsx'
+import LienKetDeXuat from '../../components/LienKetDeXuat.jsx'
 import { dinhDangNgayGio } from '../../utils/thoiGianCuocHop.js'
 import { layTrangThaiHienThiCuocHop } from '../../api/cuocHopApi.js'
 import { TEN_PHAM_VI } from './hienThiDeXuat.js'
@@ -28,63 +34,83 @@ const THONG_BAO = {
 
 const HINH_THUC = { TRUC_TIEP: 'Trực tiếp', TRUC_TUYEN: 'Trực tuyến' }
 
-function nguoi(ten, id) {
-  return ten || (id != null ? 'Mã người dùng #' + id : 'Chưa có thông tin phân công')
+function hienThiKhungGio(batDau, soPhut) {
+  const mocBatDau = dinhDangNgayGio(batDau)
+  if (!soPhut || !Number.isFinite(Date.parse(batDau))) return mocBatDau
+  const ketThuc = new Date(Date.parse(batDau) + soPhut * 60_000)
+  return `${mocBatDau} – ${dinhDangNgayGio(ketThuc)}`
+}
+
+function NhomThongTin({ Icon, ten, cacMuc }) {
+  return (
+    <section className="min-w-0 space-y-3 rounded-xl border border-slate-200 bg-white p-4">
+      <TieuDeHoSo Icon={Icon} cap="h2">{ten}</TieuDeHoSo>
+      <dl className="space-y-2">
+        {cacMuc.map(([nhan, giaTri, laLienKet]) => (
+          <div key={nhan} className="min-w-0 rounded-lg bg-slate-50 px-3 py-2">
+            <dt className="text-xs font-semibold text-slate-600">{nhan}</dt>
+            <dd className="mt-1 whitespace-pre-wrap wrap-anywhere text-sm text-slate-900">
+              {laLienKet ? <LienKetDeXuat noiDung={giaTri} /> : giaTri || 'Chưa có thông tin'}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </section>
+  )
 }
 
 export default function ThongTinCuocHop({ chiTiet }) {
   const trangThai = layTrangThaiHienThiCuocHop(chiTiet)
   const buoc = chiTiet.buocXuLyHienTai
-  const thongTin = [
-    ['Phạm vi', TEN_PHAM_VI[chiTiet.phamViCuocHop] || chiTiet.phamViCuocHop],
-    ['Hình thức', HINH_THUC[chiTiet.loaiHinh] || chiTiet.loaiHinh],
-    ['Người đề xuất', nguoi(chiTiet.tenNguoiDeXuat, chiTiet.nguoiDeXuatId)],
-    ['Ngày tạo', dinhDangNgayGio(chiTiet.ngayTao)],
-    ...(chiTiet.thoiGianChuyenCap
-      ? [['Đã chuyển cấp', dinhDangNgayGio(chiTiet.thoiGianChuyenCap)]]
-      : []),
-    ['Chủ trì', nguoi(chiTiet.tenNguoiChuTri || chiTiet.tenChuTri, chiTiet.nguoiChuTriId)],
-    ['Thư ký cuộc họp', nguoi(chiTiet.tenThuKyCuocHop, chiTiet.thuKyCuocHopId)],
-    ['Phòng ban chủ trì', chiTiet.tenPhongBanChuTri || (chiTiet.phongBanChuTriId != null ? 'Mã phòng ban #' + chiTiet.phongBanChuTriId : null)],
-    ['Khách mời bên ngoài', chiTiet.coKhachMoiBenNgoai == null ? null : chiTiet.coKhachMoiBenNgoai ? 'Có' : 'Không'],
-  ]
+  const deXuat = chiTiet.thongTinDeXuat
+  const khungGio = deXuat?.khungGioDeXuat ?? []
+  const diaDiem = [
+    ['Địa điểm đề xuất', deXuat?.diaDiemDeXuat],
+    ['Nền tảng dự kiến', deXuat?.nenTangTrucTuyen],
+    ['Liên kết tham gia dự kiến', deXuat?.lienKetTrucTuyen, true],
+    ['Hướng dẫn tham gia', deXuat?.huongDanTrucTuyen],
+  ].filter(([, noiDung]) => noiDung)
 
   return (
-    <>
+    <div className="space-y-4">
       {(THONG_BAO[trangThai] || TEN_BUOC[buoc]) && (
-        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm">
-          {THONG_BAO[trangThai] && <p className="font-semibold text-slate-900">{THONG_BAO[trangThai]}</p>}
-          {TEN_BUOC[buoc] && <p className="mt-1 text-slate-600">Bước hiện tại · {TEN_BUOC[buoc]}</p>}
+        <div className="rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm">
+          {THONG_BAO[trangThai] && <p className="font-semibold text-blue-950">{THONG_BAO[trangThai]}</p>}
+          {TEN_BUOC[buoc] && <p className="mt-1 text-slate-700">Bước hiện tại · {TEN_BUOC[buoc]}</p>}
         </div>
       )}
-      <section className="space-y-3" aria-label="Thông tin chung">
-        <h2 className="font-semibold text-slate-900">Thông tin chung</h2>
-        <dl className="grid gap-x-4 gap-y-3 rounded-xl border border-slate-200 p-4 text-sm sm:grid-cols-2">
-          {thongTin.map(([nhan, giaTri]) => (
-            <div key={nhan} className="min-w-0">
-              <dt className="text-slate-500">{nhan}</dt>
-              <dd className="mt-0.5 break-words font-medium text-slate-900">{giaTri ?? 'Chưa có thông tin'}</dd>
-            </div>
-          ))}
-        </dl>
-      </section>
-      <section className="space-y-3" aria-label="Nội dung cuộc họp">
-        <h2 className="font-semibold text-slate-900">Nội dung cuộc họp</h2>
-        <dl className="grid gap-3 sm:grid-cols-2">
-          {[
-            ['Mục tiêu', chiTiet.mucTieu],
-            ['Nội dung dự kiến', chiTiet.noiDungDuKien],
-          ].map(([nhan, giaTri]) => (
-            <div key={nhan} className="min-w-0 rounded-xl bg-slate-50 p-4 text-sm">
-              <dt className="font-semibold text-slate-700">{nhan}</dt>
-              <dd className="mt-1 whitespace-pre-wrap break-words leading-6 text-slate-800">{giaTri || 'Chưa nhập'}</dd>
-            </div>
-          ))}
-        </dl>
-      </section>
-    </>
+      <div className="grid items-start gap-4 lg:grid-cols-2">
+        <NhomThongTin Icon={FileText} ten="Nội dung đề xuất" cacMuc={[
+          ['Mục đích', chiTiet.mucTieu],
+          ['Kết quả kỳ vọng', deXuat?.ketQuaKyVong],
+          ['Phạm vi', TEN_PHAM_VI[chiTiet.phamViCuocHop] || chiTiet.phamViCuocHop],
+          ['Ngày tạo', chiTiet.ngayTao && dinhDangNgayGio(chiTiet.ngayTao)],
+          ...(chiTiet.thoiGianChuyenCap ? [['Đã chuyển cấp', dinhDangNgayGio(chiTiet.thoiGianChuyenCap)]] : []),
+        ]} />
+        <NhomThongTin Icon={CalendarDays} ten="Thời gian và địa điểm dự kiến" cacMuc={[
+          ['Hình thức', HINH_THUC[chiTiet.loaiHinh] || chiTiet.loaiHinh],
+          ['Thời lượng dự kiến', chiTiet.thoiLuongDuKienPhut && `${chiTiet.thoiLuongDuKienPhut} phút`],
+          ...(khungGio.length ? khungGio.map((batDau, i) => [
+            i === 0 ? 'Khung giờ ưu tiên' : `Khung giờ phương án ${i + 1}`,
+            hienThiKhungGio(batDau, chiTiet.thoiLuongDuKienPhut),
+          ]) : [['Khung giờ dự kiến', 'Chưa có khung giờ đề xuất']]),
+          ...diaDiem,
+        ]} />
+        <NhomThongTin Icon={Users} ten="Thành phần và phụ trách" cacMuc={[
+          ['Người đề xuất', chiTiet.tenNguoiDeXuat],
+          ['Phòng ban chủ trì', chiTiet.tenPhongBanChuTri],
+          ['Chủ trì', chiTiet.tenNguoiChuTri || chiTiet.tenChuTri || 'Chưa phân công'],
+          ['Thư ký cuộc họp', chiTiet.tenThuKyCuocHop || 'Chưa phân công'],
+          ['Bắt buộc tham dự', deXuat?.thanhPhanBatBuoc],
+          ['Tham dự để nắm thông tin', deXuat?.thanhPhanTuyChon],
+          ['Khách mời bên ngoài', chiTiet.coKhachMoiBenNgoai == null ? null : chiTiet.coKhachMoiBenNgoai ? 'Có' : 'Không'],
+        ]} />
+        <NhomThongTin Icon={ListChecks} ten="Chương trình và chuẩn bị" cacMuc={[
+          ['Chương trình dự kiến', chiTiet.noiDungDuKien],
+          ['Yêu cầu chuẩn bị trước', deXuat?.yeuCauChuanBi],
+          ...(deXuat?.lienKetTaiLieu ? [['Liên kết tài liệu', deXuat.lienKetTaiLieu, true]] : []),
+        ]} />
+      </div>
+    </div>
   )
 }
-
-
-

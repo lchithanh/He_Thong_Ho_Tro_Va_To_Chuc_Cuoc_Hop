@@ -1,8 +1,7 @@
 import { useEffect, useId, useRef } from 'react'
 import Plus from 'lucide-react/dist/esm/icons/plus.mjs'
 import Search from 'lucide-react/dist/esm/icons/search.mjs'
-import { LOP_HOP_THOAI, LOP_MAU_NHAN, LOP_NHAN_THE, LOP_NUT_CHINH, LOP_TRUONG } from './giaoDienPhongHop.js'
-
+import { LOP_HOP_THOAI, LOP_MAU_NHAN, LOP_NHAN_THE, LOP_NUT_CHINH, LOP_TRUONG } from './GiaoDienPhongHop.js'
 export function NhanHoSo({ mau = 'thuong', children }) {
   return <span className={LOP_NHAN_THE + ' ' + LOP_MAU_NHAN[mau]}>{children}</span>
 }

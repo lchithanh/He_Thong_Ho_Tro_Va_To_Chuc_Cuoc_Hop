@@ -108,6 +108,26 @@ public class LichHopController {
         return lichHopService.doiLich(lichHopId, nguoiDungHienTaiService.layNguoiDungId(auth), request);
     }
 
+    public record PhanHoiDoiLichRequest(Boolean dongY) {}
+
+    @GetMapping("/doi-lich/cua-toi")
+    public java.util.List<LichHopService.LoiMoiDoiLich> loiMoiDoiLich(Authentication auth) {
+        return lichHopService.loiMoiDoiLich(layNguoiDungId(auth));
+    }
+
+    @GetMapping("/{lichHopId}/doi-lich/phan-hoi")
+    public LichHopService.TienDoDoiLich tienDoDoiLich(@PathVariable("lichHopId") Integer lichHopId, Authentication auth) {
+        return lichHopService.xemTienDoDoiLich(lichHopId, layNguoiDungId(auth));
+    }
+
+    @PutMapping("/{lichHopId}/doi-lich/phan-hoi")
+    public ResponseEntity<Void> phanHoiDoiLich(@PathVariable("lichHopId") Integer lichHopId,
+            @RequestBody PhanHoiDoiLichRequest request, Authentication auth) {
+        if (request.dongY() == null) return ResponseEntity.badRequest().build();
+        lichHopService.phanHoiDoiLich(lichHopId, layNguoiDungId(auth), request.dongY());
+        return ResponseEntity.noContent().build();
+    }
+
     @PutMapping("/{lichHopId}/xac-nhan")
     public ResponseEntity<LichHopResponse> xacNhanLichHop(
             @PathVariable("lichHopId") Integer lichHopId, Authentication authentication) {

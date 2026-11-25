@@ -5,10 +5,8 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -21,6 +19,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.example.demo.dto.response.TaiLieuDeXuatResponse;
 import com.example.demo.entity.CuocHop;
 import com.example.demo.entity.NguoiDung;
 import com.example.demo.entity.TaiLieuCuocHop;
@@ -35,7 +34,7 @@ public class TaiLieuCuocHopService {
 
     private static final long DUNG_LUONG_TOI_DA = 10L * 1024 * 1024;
 
-    private static final String LOAI_DE_XUAT = "DE_XUAT_CUOC_HOP";
+    private static final String LOAI_DE_XUAT = LuuTaiLieuCuocHopService.LOAI_DE_XUAT;
 
     private static final Set<String> DINH_DANG_HO_TRO =
             Set.of("pdf", "doc", "docx", "xls", "xlsx");
@@ -69,6 +68,10 @@ public class TaiLieuCuocHopService {
         kiemTraNguoiDeXuat(cuocHop, nguoiDangNhapId);
         kiemTraConNhap(cuocHop);
 
+        return luuTepDeXuat(cuocHop, nguoiTaiLen, file);
+    }
+
+    Integer luuTepDeXuat(CuocHop cuocHop, NguoiDung nguoiTaiLen, MultipartFile file) {
         return luuTaiLieuCuocHopService.luuTaiLieu(
                 cuocHop, nguoiTaiLen, file, LOAI_DE_XUAT, layThuMucUpload());
     }
@@ -77,28 +80,26 @@ public class TaiLieuCuocHopService {
     // =====================================================
 
     @Transactional(readOnly = true)
-    public List<Map<String, Object>> layDanhSachDeXuat(
+    public List<TaiLieuDeXuatResponse> layDanhSachDeXuat(
             Integer cuocHopId,
             Integer nguoiDungId) {
 
         kiemTraQuyenXemDeXuat(cuocHopId, nguoiDungId);
 
-        return taiLieuCuocHopRepository
-                .findByCuocHop_CuocHopId(cuocHopId)
-                .stream()
-                .filter(tl -> LOAI_DE_XUAT.equals(
-                        tl.getLoaiTaiLieu()))
-                .map(tl -> {
-                    Map<String, Object> ketQua = new LinkedHashMap<>();
-                    ketQua.put("taiLieuId", tl.getTaiLieuId());
-                    ketQua.put("tenTaiLieu", tl.getTenTaiLieu());
-                    ketQua.put("tenFileGoc", tl.getTenFileGoc());
-                    ketQua.put("dinhDangFile", tl.getDinhDangFile());
-                    ketQua.put("dungLuongByte", tl.getDungLuongByte());
-                    ketQua.put("ngayTaiLen", tl.getNgayTaiLen());
-                    return ketQua;
-                })
+        return taiLieuDeXuat(cuocHopId).stream()
+                .map(taiLieu -> new TaiLieuDeXuatResponse(
+                        taiLieu.getTaiLieuId(),
+                        taiLieu.getTenTaiLieu(),
+                        taiLieu.getTenFileGoc(),
+                        taiLieu.getDinhDangFile(),
+                        taiLieu.getDungLuongByte(),
+                        taiLieu.getNgayTaiLen()))
                 .toList();
+    }
+
+    List<TaiLieuCuocHop> taiLieuDeXuat(Integer cuocHopId) {
+        return taiLieuCuocHopRepository.findByCuocHop_CuocHopIdAndLoaiTaiLieuOrderByTaiLieuIdAsc(
+                cuocHopId, LOAI_DE_XUAT);
     }
 
     // =====================================================
@@ -118,11 +119,11 @@ public class TaiLieuCuocHopService {
 
         kiemTraQuyenXemDeXuat(cuocHopId, nguoiDungId);
 
-        TaiLieuCuocHop taiLieu = timTaiLieuDeXuat(
-                cuocHopId,
-                taiLieuId
-        );
+        return docTepDeXuat(cuocHopId, taiLieuId);
+    }
 
+    FileDeXuat docTepDeXuat(Integer cuocHopId, Integer taiLieuId) {
+        TaiLieuCuocHop taiLieu = timTaiLieuDeXuat(cuocHopId, taiLieuId);
         Path file = layDuongDanFile(taiLieu);
 
         try {

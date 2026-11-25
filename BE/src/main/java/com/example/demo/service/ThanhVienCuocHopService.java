@@ -191,6 +191,7 @@ public class ThanhVienCuocHopService {
         }
         if (!"CHO_PHAN_HOI".equals(tv.getTrangThaiMoi())) throw loi(HttpStatus.CONFLICT, "Lời mời đã được phản hồi");
         tv.setTrangThaiMoi(thamDu ? "DA_XAC_NHAN" : "TU_CHOI");
+        capNhatRealtime.baoCuocHop(ch, nguoiDungId);
     }
 
 	@Transactional(readOnly = true)
@@ -222,9 +223,10 @@ public class ThanhVienCuocHopService {
                 cuocHop.getMucTieu(), cuocHop.getNoiDungDuKien(), thanhVien.getNgayMoi());
     }
 
-    private boolean coLichKeHoachDaDuyet(CuocHop cuocHop) {
+    boolean coLichKeHoachDaDuyet(CuocHop cuocHop) {
         return ThaoTacCuocHop.coTheLapLich(cuocHop)
-                && ThaoTacCuocHop.coLichMoiThamDu(cuocHop, layKeHoachMoiNhat(cuocHop.getCuocHopId()));
+                && ThaoTacCuocHop.coLichMoiThamDu(
+                        cuocHop, layKeHoachMoiNhat(cuocHop.getCuocHopId()));
     }
 
     private YeuCauPheDuyet layKeHoachMoiNhat(Integer cuocHopId) {

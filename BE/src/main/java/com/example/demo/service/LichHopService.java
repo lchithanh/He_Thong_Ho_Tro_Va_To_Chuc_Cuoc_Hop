@@ -2,6 +2,7 @@ package com.example.demo.service;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.springframework.stereotype.Service;
+import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import com.example.demo.dto.response.LichHopResponse;
@@ -26,6 +27,7 @@ import org.springframework.web.server.ResponseStatusException;
 @RequiredArgsConstructor
 @Transactional
 public class LichHopService {
+    private final JdbcClient jdbc;
     private final CapNhatHoSoRealtime capNhatRealtime;
     private final ThongBaoService thongBao;
     private final PhanCongXuLyKeHoachService phanCong;
@@ -117,7 +119,7 @@ public class LichHopService {
     public record ChiTietLichCalendar(LichHopResponse lich, LuaChonPhongHop phong,
             String mucTieu, String noiDungDuKien, Integer yeuCauPheDuyetId,
             String ghiChuTrinh, boolean duocXacNhan, boolean duocXemThanhVien,
-            boolean duocHuyLich, boolean duocHuyCuocHop) {}
+            boolean duocHuyLich, boolean duocHuyCuocHop, boolean duocGiuLichCu) {}
 
     @Transactional(readOnly = true)
     public ChiTietLichCalendar layChiTietCalendar(Integer lichHopId, Integer nguoiDungId) {
@@ -129,6 +131,10 @@ public class LichHopService {
         var yc = yeuCauPheDuyetRepository
                 .findFirstByCuocHop_CuocHopIdAndLoaiYeuCauOrderByYeuCauPheDuyetIdDesc(
                         cuocHopId, LoaiYeuCau.KE_HOACH_CUOC_HOP).orElse(null);
+        boolean duocGiuLichCu = lich.isLaLichDoi() && ThaoTacLichHop.dangDeXuat(lich)
+                && lich.getLichThayThe() != null && ThaoTacLichHop.daXacNhan(lich.getLichThayThe())
+                && lich.getLichThayThe().getThoiGianBatDau().isAfter(LocalDateTime.now())
+                && quyTrinhKeHoachService.coQuyenXacNhanLich(ch, nguoiDungId);
         boolean duocXacNhan = ThaoTacCuocHop.coTheLapLich(ch) && ThaoTacLichHop.coTheXacNhan(lich)
                 && lich.getThoiGianBatDau() != null && lich.getThoiGianBatDau().isAfter(LocalDateTime.now())
                 && (lich.isLaLichDoi()
@@ -150,7 +156,7 @@ public class LichHopService {
                 xemKeHoach ? ch.getMucTieu() : null, xemKeHoach ? ch.getNoiDungDuKien() : null,
                 xemTep ? yc.getYeuCauPheDuyetId() : null,
                 xemTep ? yc.getGhiChuTrinh() : null, duocXacNhan, xemThanhVien,
-                duocHuyLich(lich, nguoiDungId), huyCuocHopService.duocHuy(ch, nguoiDungId));
+                duocHuyLich(lich, nguoiDungId), huyCuocHopService.duocHuy(ch, nguoiDungId), duocGiuLichCu);
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
@@ -189,6 +195,20 @@ public class LichHopService {
         lichSuPheDuyetService.ghiNhan(hop.getCuocHopId(), lichMoi.getLichHopId(), null,
                 nguoiDungId, "LICH_HOP", "DOI_LICH", lichMoi.getLyDoThayDoi());
         var nguoiNhan = new java.util.ArrayList<>(nguoiDaDuocMoi(hop));
+        jdbc.sql("""
+                INSERT INTO phan_hoi_doi_lich (lich_hop_id, nguoi_dung_id)
+                SELECT :lich, tv.nguoi_dung_id
+                FROM thanh_vien_cuoc_hop tv JOIN nguoi_dung nd ON nd.nguoi_dung_id = tv.nguoi_dung_id
+                WHERE tv.cuoc_hop_id = :hop AND tv.vai_tro_tai_cuoc_hop = 'THAM_DU'
+                  AND tv.trang_thai_moi IN ('CHO_PHAN_HOI', 'DA_XAC_NHAN') AND nd.trang_thai = 'HOAT_DONG'
+                """).param("lich", lichMoi.getLichHopId()).param("hop", hop.getCuocHopId()).update();
+        jdbc.sql("""
+                INSERT INTO phan_hoi_doi_lich_khach (lich_hop_id, khach_moi_cuoc_hop_id)
+                SELECT :lich, tv.khach_moi_cuoc_hop_id
+                FROM khach_moi_cuoc_hop tv JOIN khach_moi km ON km.khach_moi_id = tv.khach_moi_id
+                WHERE tv.cuoc_hop_id = :hop AND tv.trang_thai_moi IN ('CHO_PHAN_HOI', 'DONG_Y')
+                  AND km.trang_thai = 'HOAT_DONG'
+                """).param("lich", lichMoi.getLichHopId()).param("hop", hop.getCuocHopId()).update();
         nguoiNhan.add(keHoach.getNguoiDuyet());
         thongBao.gui(hop, nguoiDungId, "DOI_LICH", "Chờ xác nhận dời lịch",
                 "Giờ đề xuất: " + lichMoi.getThoiGianBatDau() + ". " + lichMoi.getLyDoThayDoi(),
@@ -196,6 +216,66 @@ public class LichHopService {
         thongBaoEmail.deXuatDoiLich(lichMoi);
         capNhatRealtime.baoCuocHop(hop, nguoiDungId);
         return chuyenDoiResponse(lichMoi);
+    }
+
+    public record LoiMoiDoiLich(Integer lichHopId, String tieuDe, LocalDateTime batDauCu, LocalDateTime ketThucCu,
+            LocalDateTime batDauMoi, LocalDateTime ketThucMoi, String lyDo, Boolean dongY, boolean conHan) {}
+
+    public record TienDoDoiLich(int tong, int dongY, int tuChoi) {}
+
+    @Transactional(readOnly = true)
+    public List<LoiMoiDoiLich> loiMoiDoiLich(Integer nguoiDungId) {
+        kiemTraTaiKhoanHoatDong(nguoiDungId);
+        return jdbc.sql("""
+                SELECT l.lich_hop_id, ch.tieu_de, c.thoi_gian_bat_dau AS bat_dau_cu,
+                       c.thoi_gian_ket_thuc AS ket_thuc_cu, l.thoi_gian_bat_dau AS bat_dau_moi,
+                       l.thoi_gian_ket_thuc AS ket_thuc_moi, l.ly_do_thay_doi AS ly_do, p.dong_y,
+                       (l.thoi_gian_bat_dau > CURRENT_TIMESTAMP) AS con_han
+                FROM phan_hoi_doi_lich p JOIN lich_hop l ON l.lich_hop_id = p.lich_hop_id
+                JOIN lich_hop c ON c.lich_hop_id = l.lich_thay_the_id
+                JOIN cuoc_hop ch ON ch.cuoc_hop_id = l.cuoc_hop_id
+                WHERE p.nguoi_dung_id = :nguoi AND l.trang_thai = 'DE_XUAT' AND l.la_lich_doi = 1
+                ORDER BY l.thoi_gian_bat_dau
+                """).param("nguoi", nguoiDungId).query(LoiMoiDoiLich.class).list();
+    }
+
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    public void phanHoiDoiLich(Integer lichHopId, Integer nguoiDungId, boolean dongY) {
+        kiemTraTaiKhoanHoatDong(nguoiDungId);
+        var lich = timLichHopVaKhoa(lichHopId);
+        if (!lich.isLaLichDoi() || !ThaoTacLichHop.dangDeXuat(lich)
+                || !lich.getThoiGianBatDau().isAfter(LocalDateTime.now())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Lịch mới đã ngừng nhận phản hồi");
+        }
+        int soDong = jdbc.sql("""
+                UPDATE phan_hoi_doi_lich SET dong_y = :dongY, thoi_gian_phan_hoi = CURRENT_TIMESTAMP
+                WHERE lich_hop_id = :lich AND nguoi_dung_id = :nguoi
+                """).param("dongY", dongY).param("lich", lichHopId).param("nguoi", nguoiDungId).update();
+        if (soDong == 0) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Bạn không có lời mời xác nhận lịch này");
+        capNhatRealtime.baoCuocHop(lich.getCuocHop(), nguoiDungId);
+    }
+
+    @Transactional(readOnly = true)
+    public TienDoDoiLich xemTienDoDoiLich(Integer lichHopId, Integer nguoiDungId) {
+        var lich = timLichHop(lichHopId);
+        kiemTraTaiKhoanHoatDong(nguoiDungId);
+        if (!phanCong.laThuKyToChuc(lich.getCuocHop(), nguoiDungId)
+                && !quyTrinhKeHoachService.coQuyenXacNhanLich(lich.getCuocHop(), nguoiDungId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bạn không có quyền xem phản hồi dời lịch");
+        }
+        return demPhanHoiDoiLich(lichHopId);
+    }
+
+    private TienDoDoiLich demPhanHoiDoiLich(Integer lichHopId) {
+        return jdbc.sql("""
+                SELECT COUNT(*) AS tong, COUNT(CASE WHEN dong_y = 1 THEN 1 END) AS dong_y,
+                       COUNT(CASE WHEN dong_y = 0 THEN 1 END) AS tu_choi
+                FROM (
+                    SELECT dong_y FROM phan_hoi_doi_lich WHERE lich_hop_id = :lich
+                    UNION ALL
+                    SELECT dong_y FROM phan_hoi_doi_lich_khach WHERE lich_hop_id = :lich
+                ) p
+                """).param("lich", lichHopId).query(TienDoDoiLich.class).single();
     }
 
     /** Xác nhận riêng cho hồ sơ đã được duyệt trước khi áp dụng duyệt kèm lịch. */
@@ -217,6 +297,13 @@ public class LichHopService {
         if (!lich.isLaLichDoi()
                 && (yeuCau.getLichHop() == null || !lichHopId.equals(yeuCau.getLichHop().getLichHopId()))) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Hãy trình lịch đề xuất cùng kế hoạch để duyệt.");
+        }
+        if (lich.isLaLichDoi()) {
+            var phanHoi = demPhanHoiDoiLich(lichHopId);
+            if (phanHoi.dongY() != phanHoi.tong()) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        "Chỉ chốt lịch mới khi tất cả người được hỏi đã đồng ý");
+            }
         }
         xacNhanLichHopService.xacNhan(cuocHop, lich, timNguoiDung(nguoiXacNhanId), null);
         if (lich.isLaLichDoi()) {
@@ -256,7 +343,7 @@ public class LichHopService {
             Integer lichHopId, Integer nguoiXacNhanId, String lyDoTuChoi, String hanhDong) {
         kiemTraTaiKhoanHoatDong(nguoiXacNhanId);
         LichHop lich = timLichHopVaKhoa(lichHopId);
-        if (!ThaoTacCuocHop.coTheLapLich(lich.getCuocHop())) throw new ResponseStatusException(
+        if (!lich.isLaLichDoi() && !ThaoTacCuocHop.coTheLapLich(lich.getCuocHop())) throw new ResponseStatusException(
                 HttpStatus.CONFLICT, "Cuộc họp không ở bước tổ chức lịch");
         kiemTraQuyenXacNhanLich(lich.getCuocHop(), nguoiXacNhanId);
         kiemTraLichKhongChoDuyetKeHoach(lichHopId);
@@ -266,28 +353,26 @@ public class LichHopService {
                 HttpStatus.BAD_REQUEST, "Vui lòng nhập lý do xử lý lịch");
         if (lich.isLaLichDoi()) {
             if (!"TU_CHOI".equals(hanhDong)) {
-                throw new ResponseStatusException(HttpStatus.CONFLICT, "Hãy xác nhận lịch mới hoặc từ chối để hủy lịch");
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "Chọn giữ lịch cũ hoặc hủy cuộc họp");
             }
             LichHop lichCu = lich.getLichThayThe();
-            if (lichCu == null || !ThaoTacLichHop.daXacNhan(lichCu)) {
-                throw new ResponseStatusException(HttpStatus.CONFLICT, "Lịch cũ không còn hiệu lực");
+            if (lichCu == null || !ThaoTacLichHop.daXacNhan(lichCu)
+                    || !lichCu.getThoiGianBatDau().isAfter(LocalDateTime.now())) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "Lịch cũ đã qua hoặc hết hiệu lực. Chọn hủy cuộc họp.");
             }
-            ThaoTacLichHop.huyLich(lichCu, lyDoTuChoi.strip());
-            lichSuPheDuyetService.ghiNhan(lich.getCuocHop().getCuocHopId(), lichCu.getLichHopId(), null,
-                    nguoiXacNhanId, "LICH_HOP", "HUY", lyDoTuChoi.strip());
-            thongBaoEmail.huyLich(lichCu, lyDoTuChoi.strip());
+            thongBaoEmail.giuLichCu(lichCu, lyDoTuChoi.strip());
             var nguoiNhan = new java.util.ArrayList<>(nguoiDaDuocMoi(lich.getCuocHop()));
             nguoiNhan.add(lich.getNguoiDeXuat());
-            thongBao.gui(lich.getCuocHop(), nguoiXacNhanId, "DOI_LICH", "Lịch họp đã hủy",
+            thongBao.gui(lich.getCuocHop(), nguoiXacNhanId, "DOI_LICH", "Giữ lịch họp cũ",
                     lyDoTuChoi.strip(), nguoiNhan.toArray(NguoiDung[]::new));
-            capNhatRealtime.baoCuocHop(lich.getCuocHop(), nguoiXacNhanId);
         }
         NguoiDung nguoiTuChoi = timNguoiDung(nguoiXacNhanId);
         ThaoTacCuocHop.thucHien(() -> ThaoTacLichHop.tuChoi(lich, nguoiTuChoi, lyDoTuChoi.trim()));
         LichHop daLuu = lichHopRepository.save(lich);
         lichSuPheDuyetService.ghiNhan(lich.getCuocHop().getCuocHopId(), lichHopId,
                 null, nguoiXacNhanId, "LICH_HOP", hanhDong, lyDoTuChoi.trim());
-        capNhatRealtime.baoNguoiPhuTrach(lich.getCuocHop(), nguoiXacNhanId);
+        if (lich.isLaLichDoi()) capNhatRealtime.baoCuocHop(lich.getCuocHop(), nguoiXacNhanId);
+        else capNhatRealtime.baoNguoiPhuTrach(lich.getCuocHop(), nguoiXacNhanId);
         return chuyenDoiResponse(daLuu);
     }
 
