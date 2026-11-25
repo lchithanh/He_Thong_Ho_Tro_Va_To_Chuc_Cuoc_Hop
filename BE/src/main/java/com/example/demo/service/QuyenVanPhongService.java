@@ -17,7 +17,7 @@ public class QuyenVanPhongService {
     private final NguoiDungHienTaiService nguoiDungHienTaiService;
     private final PhanQuyenCuocHopService phanQuyenCuocHopService;
 
-    public record TaiKhoan(Integer nguoiDungId, String hoTen, boolean vanPhong) {}
+    public record TaiKhoan(Integer nguoiDungId, String hoTen, String email, String tenPhongBan, boolean vanPhong) {}
 
     public boolean duocDieuPhoi(Integer id) {
         return jdbc.sql("""
@@ -32,11 +32,13 @@ public class QuyenVanPhongService {
 
     public List<TaiKhoan> danhSach() {
         return jdbc.sql("""
-                SELECT nd.nguoi_dung_id, nd.ho_ten, (vp.nguoi_dung_id IS NOT NULL) AS van_phong
+                SELECT nd.nguoi_dung_id, nd.ho_ten, nd.email, pb.ten_phong_ban,
+                    (vp.nguoi_dung_id IS NOT NULL) AS van_phong
                 FROM nguoi_dung nd
                 JOIN nguoi_dung_vai_tro ndvt ON ndvt.nguoi_dung_id = nd.nguoi_dung_id
                 JOIN vai_tro vt ON vt.vai_tro_id = ndvt.vai_tro_id
                 LEFT JOIN thu_ky_van_phong vp ON vp.nguoi_dung_id = nd.nguoi_dung_id
+                LEFT JOIN phong_ban pb ON pb.phong_ban_id = nd.phong_ban_id
                 WHERE nd.trang_thai = 'HOAT_DONG' AND vt.ma_vai_tro = 'THU_KY'
                 ORDER BY nd.ho_ten, nd.nguoi_dung_id
                 """).query(TaiKhoan.class).list();

@@ -16,7 +16,7 @@ import TongQuanCuocHop from '../pages/TongQuanCuocHop.jsx'
 import TongQuanQuanTri from '../pages/quantri/TongQuanQuanTri.jsx'
 import DanhMucQuanTri from '../pages/quantri/DanhMucQuanTri.jsx'
 import PhanCongThuKy from '../pages/quantri/PhanCongThuKy.jsx'
-import { PhanHoi } from '../pages/quantri/uiQuanTri.jsx'
+import { PhanHoi, TieuDeTrang } from '../pages/quantri/uiQuanTri.jsx'
 import ThuKyVanPhong from '../pages/quantri/ThuKyVanPhong.jsx'
 import './quanTri.css'
 
@@ -43,7 +43,7 @@ export default function KhongGianQuanTri({ nguoiDung, loi, onDangXuat }) {
   const [phongHopLoc, setPhongHopLoc] = useState(null)
   const [moMenu, setMoMenu] = useState(false)
   const [hoSo, setHoSo] = useState(null)
-  const tenMuc = CAC_MUC.find(({ id }) => id === muc)?.ten
+  const { ten: tenMuc, BieuTuong: BieuTuongMuc } = CAC_MUC.find(({ id }) => id === muc)
   const { token, hoTen, nguoiDungId } = nguoiDung
   useKetNoiHoSo(token)
   const chuDau = hoTen?.trim().split(/\s+/).slice(-2).map((tu) => tu[0]).join('').toLocaleUpperCase('vi') || 'QT'
@@ -84,7 +84,7 @@ export default function KhongGianQuanTri({ nguoiDung, loi, onDangXuat }) {
 
       <div className="adm-workspace">
         <header className="adm-topbar">
-          <p><span>Quản trị</span><span aria-hidden="true">/</span><strong>{tenMuc}</strong></p>
+          <p><BieuTuongMuc size={17} aria-hidden="true" /><span>Quản trị</span><span aria-hidden="true">/</span><strong>{tenMuc}</strong></p>
           <div className="adm-profile">
             <span className="adm-avatar" aria-hidden="true">{chuDau}</span>
             <div><strong>{hoTen || 'Quản trị viên'}</strong><span>Quản trị viên</span></div>
@@ -99,7 +99,10 @@ export default function KhongGianQuanTri({ nguoiDung, loi, onDangXuat }) {
             : muc === 'cuoc-hop' ? hoSo ? (
               <ChiTietDeXuat key={hoSo} cuocHopId={hoSo} token={token} nguoiDung={nguoiDung}
                 chiXem tabBanDau="thong-tin" onQuayLai={() => setHoSo(null)} />
-            ) : <TongQuanCuocHop token={token} nguoiDung={nguoiDung} onXemCuocHop={setHoSo} />
+            ) : <section className="adm-page">
+              <TieuDeTrang ten="Hoạt động cuộc họp" />
+              <TongQuanCuocHop token={token} nguoiDung={nguoiDung} onXemCuocHop={setHoSo} />
+            </section>
               : muc === 'thu-ky-van-phong' ? <ThuKyVanPhong token={token} />
                 : muc === 'phan-cong' ? <PhanCongThuKy token={token} />
                 : <DanhMucQuanTri key={muc} token={token} loai={muc} nguoiDungId={nguoiDungId} phongHopLoc={phongHopLoc}

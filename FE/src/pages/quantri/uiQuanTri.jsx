@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useId, useRef } from 'react'
 import Search from 'lucide-react/dist/esm/icons/search.mjs'
 import X from 'lucide-react/dist/esm/icons/x.mjs'
 
@@ -37,8 +37,9 @@ export function PhanHoi({ loi, thongBao, onTaiLai }) {
   )
 }
 
-export function NganChinhSua({ tieuDe, moTa, dangLuu, onDong, children }) {
+export function NganChinhSua({ tieuDe, moTa, dangLuu, onDong, oGiua = false, children }) {
   const cuaSo = useRef(null)
+  const id = useId()
 
   useEffect(() => {
     const dialog = cuaSo.current
@@ -47,11 +48,11 @@ export function NganChinhSua({ tieuDe, moTa, dangLuu, onDong, children }) {
   }, [])
 
   return (
-    <dialog ref={cuaSo} className="adm-drawer" aria-labelledby="adm-drawer-title"
+    <dialog ref={cuaSo} className={oGiua ? 'adm-drawer adm-dialog' : 'adm-drawer'} aria-labelledby={id}
       onCancel={(event) => { event.preventDefault(); if (!dangLuu) onDong() }}>
       <header>
         <div>
-          <h2 id="adm-drawer-title">{tieuDe}</h2>
+          <h2 id={id}>{tieuDe}</h2>
           {moTa && <p>{moTa}</p>}
         </div>
         <button type="button" className="adm-icon-btn" disabled={dangLuu} onClick={onDong} aria-label="Đóng">

@@ -2,6 +2,7 @@ import { useEffect, useId, useState } from 'react'
 import Pencil from 'lucide-react/dist/esm/icons/pencil.mjs'
 import Plus from 'lucide-react/dist/esm/icons/plus.mjs'
 import { goiApiQuanTri } from '../../api/quanTriApi.js'
+import { khopTuKhoa } from '../../components/giaoDienPhongHop.js'
 import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
 import { TINH_TRANG_THIET_BI, TRANG_THAI_PHONG, TRANG_THAI_TAI_KHOAN } from './danhMucQuanTri.js'
 import { NganChinhSua, PhanHoi, TieuDeTrang, TimKiem, TrangThai } from './uiQuanTri.jsx'
@@ -79,13 +80,12 @@ export default function DanhMucQuanTri({ token, loai, nguoiDungId, phongHopLoc, 
     return () => controller.abort()
   }, [loai, danhMucLienQuan, lanTai, token, phienDongBo])
 
-  const dangLoc = tuKhoa.trim().toLocaleLowerCase('vi')
   const khoaTrangThai = loai === 'equipment' ? 'tinhTrang' : 'trangThai'
   const ketQua = danhSach?.filter((muc) =>
     (!loc || muc[khoaTrangThai] === loc)
     && (loai !== 'equipment' || !locPhongHop || String(muc.phongHopId ?? '') === locPhongHop)
     && [muc[tenChinh], muc[truongPhu], muc.email, ...cot.map(([, key]) => muc[key])]
-      .some((giaTri) => String(giaTri ?? '').toLocaleLowerCase('vi').includes(dangLoc)),
+      .some((giaTri) => khopTuKhoa(String(giaTri ?? ''), tuKhoa)),
   )
   const id = mucChon?.[khoa]
   const laTaiKhoanHienTai = id != null && Number(nguoiDungId) === id
