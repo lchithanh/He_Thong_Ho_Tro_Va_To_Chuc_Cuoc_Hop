@@ -101,7 +101,7 @@ function DeXuatNhom({ chiTiet, dangGui, gui }) {
   const capDuyet = phamVi !== 'NOI_BO' || coKhachNgoai || coLanhDaoCapCao
     ? 'LANH_DAO' : 'VAN_PHONG'
   const tenThuKy = chiTiet.thanhVien.find((muc) => muc.nguoiDungId === chiTiet.nhom.thuKyNhomId)?.hoTen
-  const thieuLanhDao = capDuyet === 'LANH_DAO' && !chiTiet.coLanhDaoLapNhom
+  const thieuLanhDao = capDuyet === 'LANH_DAO' && chiTiet.lanhDaoPhuTrach === null
   return <Phieu tieuDe="Gửi đề xuất họp từ nhóm" nut={thieuLanhDao ? null : 'Gửi đề xuất'} dangGui={dangGui}
     onGui={(f) => !thieuLanhDao && gui('/de-xuat', 'POST', {
       tieuDe: f.get('tieuDe'), mucTieu: f.get('mucTieu'), noiDung: f.get('noiDung'), loaiHinh: f.get('loaiHinh'),
@@ -129,9 +129,13 @@ function DeXuatNhom({ chiTiet, dangGui, gui }) {
       <Truong ten="Thư ký tiếp nhận và tổ chức">
         <input className={TRUONG} value={tenThuKy || 'Thư ký nhóm'} readOnly />
       </Truong>
-      <p className="self-center text-sm text-slate-700">Trưởng nhóm duyệt trước · Duyệt cuối: {TEN_CAP_DUYET[capDuyet]}</p>
+      <p className="self-center text-sm text-slate-700">
+        Trưởng nhóm duyệt trước · Duyệt cuối: {capDuyet === 'LANH_DAO'
+          ? chiTiet.lanhDaoPhuTrach?.hoTen || TEN_CAP_DUYET.LANH_DAO
+          : TEN_CAP_DUYET.VAN_PHONG}
+      </p>
     </div>
-    {thieuLanhDao && <p role="alert" className="text-sm text-amber-800">Phạm vi này cần lãnh đạo đã thành lập nhóm. Nhóm hiện chưa có lãnh đạo thành lập.</p>}
+    {thieuLanhDao && <p role="alert" className="text-sm text-amber-800">Chưa tìm thấy lãnh đạo đang hoạt động đã lập hoặc kích hoạt nhóm này.</p>}
   </Phieu>
 }
 
@@ -157,7 +161,7 @@ function DoiNguoi({ chiTiet, quyen, dangGui, gui }) {
   </Phieu>
 }
 
-function ChiTietNhom({ chiTiet, quyen, dangGui, gui, id }) {
+function ChiTietNhom({ chiTiet, quyen, dangGui, gui, id, laLanhDao }) {
   const { nhom, phongBan, thanhVien, nguonNhanSu, doiNguoi, deXuat } = chiTiet
   const conCuNguoi = ['CHO_CU_NHAN_SU', 'CHO_KICH_HOAT'].includes(nhom.trangThai)
   const phongCuaToi = phongBan.find((p) => p.phongBanId === quyen.phongTruongPhong)
@@ -216,7 +220,7 @@ function ChiTietNhom({ chiTiet, quyen, dangGui, gui, id }) {
       </article>)}
     </details>}
 
-    {chiTiet.duocGui && <DeXuatNhom chiTiet={chiTiet} dangGui={dangGui} gui={gui} />}
+    {!laLanhDao && chiTiet.duocGui && <DeXuatNhom chiTiet={chiTiet} dangGui={dangGui} gui={gui} />}
     {deXuat.length > 0 && <details className={KHUNG}>
       <summary className="cursor-pointer font-semibold">Đề xuất họp đã gửi ({deXuat.length})</summary>
       <ul className="space-y-2 text-sm">
@@ -235,6 +239,7 @@ function ChiTietNhom({ chiTiet, quyen, dangGui, gui, id }) {
 
 export default function NhomLienPhong({ token, nguoiDung, onMoMuc }) {
   const phienDongBo = useDongBoDuLieu()
+  const laLanhDao = nguoiDung.maVaiTro === 'LANH_DAO'
   const [trang, setTrang] = useState(null)
   const [chiTiet, setChiTiet] = useState(null)
   const [nhomId, setNhomId] = useState(null)
@@ -295,7 +300,7 @@ export default function NhomLienPhong({ token, nguoiDung, onMoMuc }) {
         {muc !== 'nhom' && <button className={NUT} onClick={() => chonNhom(null)}>Danh sách nhóm</button>}
         {trang?.quyen && (trang.quyen.lanhDao || trang.quyen.phongTruongPhong != null) &&
           <button className={NUT} onClick={() => { chonNhom(null); setMuc('tao') }}>Lập nhóm</button>}
-        {trang?.quyen.lanhDao && <button className={NUT} onClick={() => onMoMuc('de-xuat-cua-toi')}>
+        {laLanhDao && <button className={NUT} onClick={() => onMoMuc('de-xuat-cua-toi')}>
           Đề xuất họp
         </button>}
         {trang?.quyen.vanPhong && <button className={NUT} onClick={() => { chonNhom(null); setMuc('duyet') }}>Kế hoạch chờ duyệt</button>}
@@ -321,7 +326,7 @@ export default function NhomLienPhong({ token, nguoiDung, onMoMuc }) {
       </section>
       {nhomId && !chiTiet && !loi && <p role="status">Đang tải chi tiết nhóm…</p>}
       {chiTiet && <ChiTietNhom key={nhomId} chiTiet={chiTiet} quyen={trang.quyen} dangGui={dangGui}
-        gui={gui} id={nguoiDung.nguoiDungId} />}
+        gui={gui} id={nguoiDung.nguoiDungId} laLanhDao={laLanhDao} />}
     </div>}
   </div>
 }

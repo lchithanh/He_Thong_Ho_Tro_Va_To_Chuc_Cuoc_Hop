@@ -68,8 +68,10 @@ public class CuocHopService {
             boolean canLanhDao = "LANH_DAO".equals(tuyen.capDuyet()) || !noiBo
                     || Boolean.TRUE.equals(ch.getCoKhachMoiBenNgoai())
                     || khachMoiCuocHopRepository.existsByCuocHop_CuocHopIdAndTrangThaiMoiNot(cuocHopId, "DA_HUY");
+            var lanhDaoNhom = canLanhDao ? nhomThamDu.layLanhDaoPhuTrach(tuyen.nhomId()) : null;
             List<NguoiCoTheMoiResponse> duyetCuoi = canLanhDao
-                    ? lanhDao.stream().filter(nd -> nd.nguoiDungId().equals(tuyen.nguoiLapNhomId())).toList()
+                    ? (lanhDaoNhom == null ? List.of() : List.of(new NguoiCoTheMoiResponse(
+                            lanhDaoNhom.nguoiDungId(), lanhDaoNhom.hoTen(), null, null)))
                     : quyenVanPhong.danhSach().stream().filter(QuyenVanPhongService.TaiKhoan::vanPhong)
                         .filter(nd -> !nd.nguoiDungId().equals(nguoiDungId))
                         .map(nd -> new NguoiCoTheMoiResponse(nd.nguoiDungId(), nd.hoTen(), nd.tenPhongBan(), null))

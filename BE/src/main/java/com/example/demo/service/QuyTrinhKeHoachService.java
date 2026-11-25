@@ -261,18 +261,18 @@ public class QuyTrinhKeHoachService {
         }
         boolean canLanhDao = "LANH_DAO".equals(tuyen.capDuyet()) || !ThaoTacCuocHop.laCuocHopNoiBo(ch)
                 || coKhachNgoai(ch);
-        Integer nguoiDuyetId = canLanhDao ? tuyen.nguoiLapNhomId() : nguoiDuocChonId;
+        Integer nguoiDuyetId = canLanhDao ? nhomThamDu.yeuCauLanhDaoPhuTrach(tuyen.nhomId()).nguoiDungId() : nguoiDuocChonId;
         if (nguoiDuyetId == null || Objects.equals(thuKyId, nguoiDuyetId)) {
             throw loi(HttpStatus.BAD_REQUEST, "Chọn thư ký Văn phòng khác thư ký nhóm để duyệt cuối");
         }
         if (canLanhDao && nguoiDuocChonId != null && !nguoiDuyetId.equals(nguoiDuocChonId)) {
-            throw loi(HttpStatus.FORBIDDEN, "Hồ sơ này phải do lãnh đạo đã thành lập nhóm duyệt");
+            throw loi(HttpStatus.FORBIDDEN, "Hồ sơ này phải do lãnh đạo phụ trách nhóm duyệt");
         }
         NguoiDung nguoiDuyet = nguoiDungHienTaiService.layTaiKhoanHoatDong(nguoiDuyetId);
         if (canLanhDao ? !phanQuyenCuocHopService.coVaiTro(nguoiDuyetId, "LANH_DAO")
                 : !quyenVanPhong.duocDieuPhoi(nguoiDuyetId)) {
             throw loi(HttpStatus.CONFLICT, canLanhDao
-                    ? "Nhóm chưa có lãnh đạo thành lập đang hoạt động" : "Người nhận chưa có quyền duyệt Văn phòng");
+                    ? "Lãnh đạo phụ trách nhóm không còn hoạt động hoặc đã đổi vai trò" : "Người nhận chưa có quyền duyệt Văn phòng");
         }
 
         xacNhanLichHopService.kiemTraLichCuaLanTrinh(ch, truoc.getLichHop(),

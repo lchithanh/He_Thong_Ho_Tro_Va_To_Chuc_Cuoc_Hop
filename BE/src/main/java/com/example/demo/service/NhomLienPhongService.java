@@ -38,6 +38,7 @@ public class NhomLienPhongService {
     private final PhanCongXuLyKeHoachService phanCong;
     private final ObjectMapper objectMapper;
     private final CapNhatHoSoRealtime realtime;
+    private final NhomThamDuCuocHopService nhomThamDu;
 
     public record Nhom(Integer nhomId, String tenNhom, String mucDich, Integer phongBanChuTriId,
             Integer nguoiLapId, String capNhom, String trangThai, Integer truongNhomId, Integer thuKyNhomId) {}
@@ -52,7 +53,7 @@ public class NhomLienPhongService {
     }
     public record TrangNhom(Quyen quyen, List<Nhom> danhSach, List<Phong> phongBanTao) {}
     public record ChiTiet(Nhom nhom, List<Phong> phongBan, List<NhanSu> thanhVien, List<NhanSu> nguonNhanSu,
-            List<DoiNguoi> doiNguoi, List<DeXuat> deXuat, boolean coLanhDaoLapNhom,
+            List<DoiNguoi> doiNguoi, List<DeXuat> deXuat, NhomThamDuCuocHopService.LanhDaoPhuTrach lanhDaoPhuTrach,
             boolean duocKichHoat, boolean duocDong, boolean duocGui) {}
 
     public record TaoNhom(String tenNhom, String mucDich, String capNhom, Integer phongBanChuTriId, List<Integer> phongBanIds) {}
@@ -140,7 +141,7 @@ public class NhomLienPhongService {
                 LEFT JOIN nguoi_dung nd ON nd.nguoi_dung_id = dx.nguoi_duyet_id
                 WHERE dx.nhom_id = :id ORDER BY ch.cuoc_hop_id DESC
                 """).param("id", nhomId).query(DeXuat.class).list();
-        return new ChiTiet(n, pb, tv, nguon, doiNguoi, deXuat, phanQuyen.coVaiTro(n.nguoiLapId(), "LANH_DAO"),
+        return new ChiTiet(n, pb, tv, nguon, doiNguoi, deXuat, nhomThamDu.layLanhDaoPhuTrach(nhomId),
                 CHO_KICH_HOAT.equals(n.trangThai()) && q.lanhDao(),
                 !DA_DONG.equals(n.trangThai()) && duocDong(n, q, id), gui);
     }
@@ -251,6 +252,7 @@ public class NhomLienPhongService {
         var n = tim(nhomId, true);
         var q = quyen(id);
         phaiOTrangThai(n, HOAT_DONG);
+        choPhep(!q.lanhDao(), "Lãnh đạo gửi họp từ Đề xuất của tôi và chọn nhóm tham gia tại đó");
         choPhep(duocGui(n, q, id), "Bạn không có quyền gửi đề xuất họp của nhóm này");
         var thanhVien = doiChieuNhanSu(nhomId);
         hopLe(List.of("NOI_BO", "LIEN_PHONG_BAN", "TOAN_CO_QUAN", "BEN_NGOAI")
@@ -265,13 +267,7 @@ public class NhomLienPhongService {
         boolean coKhachNgoai = request.coKhachNgoai() || "BEN_NGOAI".equals(request.phamVi());
         boolean canLanhDao = !"NOI_BO".equals(request.phamVi()) || coKhachNgoai
                 || request.coLanhDaoCapCao() || phanQuyen.coVaiTro(chuTri, "LANH_DAO");
-        Integer duyetId = null;
-        if (canLanhDao) {
-            var nguoiLap = timTaiKhoan(n.nguoiLapId());
-            xungDot(phanQuyen.coVaiTro(nguoiLap.getNguoiDungId(), "LANH_DAO"),
-                    "Cuộc họp này cần lãnh đạo đã thành lập nhóm duyệt. Nhóm hiện chưa có lãnh đạo thành lập");
-            duyetId = nguoiLap.getNguoiDungId();
-        }
+        Integer duyetId = canLanhDao ? nhomThamDu.yeuCauLanhDaoPhuTrach(nhomId).nguoiDungId() : null;
 
         var duLieu = new TaoDeXuatCuocHopRequest();
         duLieu.setTieuDe(vanBan(request.tieuDe(), 255));

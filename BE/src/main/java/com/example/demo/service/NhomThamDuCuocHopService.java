@@ -23,13 +23,35 @@ public class NhomThamDuCuocHopService {
                 """).param("id", cuocHopId).query(Boolean.class).single();
     }
 
-    record TuyenDuyet(String capDuyet, Integer nguoiLapNhomId) {}
+    record TuyenDuyet(String capDuyet, Integer nhomId) {}
+
+    public record LanhDaoPhuTrach(Integer nguoiDungId, String hoTen) {}
+
+    LanhDaoPhuTrach layLanhDaoPhuTrach(Integer nhomId) {
+        return jdbc.sql("""
+                SELECT nd.nguoi_dung_id, nd.ho_ten
+                FROM nhom_lien_phong n
+                JOIN nguoi_dung nd ON nd.nguoi_dung_id IN (n.nguoi_lap_id, n.nguoi_kich_hoat_id)
+                JOIN nguoi_dung_vai_tro nvt ON nvt.nguoi_dung_id = nd.nguoi_dung_id
+                JOIN vai_tro vt ON vt.vai_tro_id = nvt.vai_tro_id
+                WHERE n.nhom_id = :nhom AND nd.trang_thai = 'HOAT_DONG' AND vt.ma_vai_tro = 'LANH_DAO'
+                ORDER BY CASE WHEN nd.nguoi_dung_id = n.nguoi_lap_id THEN 0 ELSE 1 END
+                LIMIT 1
+                """).param("nhom", nhomId).query(LanhDaoPhuTrach.class).optional().orElse(null);
+    }
+
+    LanhDaoPhuTrach yeuCauLanhDaoPhuTrach(Integer nhomId) {
+        var lanhDao = layLanhDaoPhuTrach(nhomId);
+        if (lanhDao == null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Chưa có lãnh đạo đang hoạt động trong hồ sơ lập hoặc kích hoạt nhóm");
+        }
+        return lanhDao;
+    }
 
     TuyenDuyet layTuyenDuyet(Integer cuocHopId) {
         return jdbc.sql("""
-                SELECT dx.cap_duyet, n.nguoi_lap_id AS nguoi_lap_nhom_id
-                FROM nhom_lien_phong_de_xuat dx JOIN nhom_lien_phong n ON n.nhom_id = dx.nhom_id
-                WHERE dx.cuoc_hop_id = :id
+                SELECT cap_duyet, nhom_id FROM nhom_lien_phong_de_xuat WHERE cuoc_hop_id = :id
                 """).param("id", cuocHopId).query(TuyenDuyet.class).optional().orElse(null);
     }
 

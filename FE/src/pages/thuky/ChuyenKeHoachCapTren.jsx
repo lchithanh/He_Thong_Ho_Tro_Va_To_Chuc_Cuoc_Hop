@@ -21,7 +21,7 @@ export default function ChuyenKeHoachCapTren({
   const [dangMo, setDangMo] = useState(false)
   const capNhom = luaChon?.capDuyetCuoiNhom
   const nhanNguoiDuyet = capNhom === 'VAN_PHONG' ? 'Thư ký Văn phòng'
-    : capNhom === 'LANH_DAO' ? 'Lãnh đạo thành lập nhóm' : 'Lãnh đạo'
+    : capNhom === 'LANH_DAO' ? 'Lãnh đạo phụ trách nhóm' : 'Lãnh đạo'
   const nguoiDuyetId = capNhom === 'LANH_DAO' ? String(luaChon.lanhDaoDuyet[0]?.nguoiDungId ?? '') : lanhDaoId
 
   useEffect(() => {
@@ -100,26 +100,33 @@ export default function ChuyenKeHoachCapTren({
       <form onSubmit={gui} className="space-y-3">
         <label className="block text-sm font-medium">
           {nhanNguoiDuyet} duyệt
-          <select
-            required
-            value={nguoiDuyetId}
-            onChange={(event) => setLanhDaoId(event.target.value)}
-            disabled={dangGui || daGui || luaChon === null || capNhom === 'LANH_DAO'}
-            className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2"
-          >
-            <option value="">
-              {luaChon === null ? 'Đang tải…' : `Chọn ${nhanNguoiDuyet.toLocaleLowerCase('vi')}`}
-            </option>
-            {luaChon?.lanhDaoDuyet.map((nguoi) => (
-              <option key={nguoi.nguoiDungId} value={nguoi.nguoiDungId}>
-                {nguoi.hoTen}{nguoi.tenPhongBan ? ` · ${nguoi.tenPhongBan}` : ''}
+          {capNhom === 'LANH_DAO' ? (
+            <input readOnly value={luaChon.lanhDaoDuyet[0]?.hoTen ?? ''} placeholder="Chưa xác định được lãnh đạo"
+              className="mt-1 w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2" />
+          ) : (
+            <select
+              required
+              value={nguoiDuyetId}
+              onChange={(event) => setLanhDaoId(event.target.value)}
+              disabled={dangGui || daGui || luaChon === null}
+              className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2"
+            >
+              <option value="">
+                {luaChon === null ? 'Đang tải…' : `Chọn ${nhanNguoiDuyet.toLocaleLowerCase('vi')}`}
               </option>
-            ))}
-          </select>
+              {luaChon?.lanhDaoDuyet.map((nguoi) => (
+                <option key={nguoi.nguoiDungId} value={nguoi.nguoiDungId}>
+                  {nguoi.hoTen}{nguoi.tenPhongBan ? ` · ${nguoi.tenPhongBan}` : ''}
+                </option>
+              ))}
+            </select>
+          )}
         </label>
         {luaChon?.lanhDaoDuyet.length === 0 && (
           <p role="alert" className="text-sm text-amber-900">
-            Chưa có người đủ điều kiện nhận hồ sơ ở cấp này.
+            {capNhom === 'LANH_DAO'
+              ? 'Chưa tìm thấy lãnh đạo đang hoạt động đã lập hoặc kích hoạt nhóm này.'
+              : 'Chưa có người đủ điều kiện nhận hồ sơ ở cấp này.'}
           </p>
         )}
         <label className="block text-sm font-medium">
