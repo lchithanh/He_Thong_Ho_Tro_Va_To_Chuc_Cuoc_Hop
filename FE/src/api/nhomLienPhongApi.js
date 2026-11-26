@@ -4,8 +4,3 @@ export async function goiNhomLienPhong(duongDan, token, tuyChon = {}) {
   const response = await goiApi(`/api/nhom-lien-phong${duongDan}`, { token, ...tuyChon })
   return docPhanHoiJson(response, 'Không thể xử lý nhóm liên phòng.')
 }
-
-export async function goiQuyenVanPhong(duongDan, token, tuyChon = {}) {
-  const response = await goiApi(`/api/admin/thu-ky-van-phong${duongDan}`, { token, ...tuyChon })
-  return docPhanHoiJson(response, 'Không thể cập nhật quyền Văn phòng.')
-}

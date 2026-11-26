@@ -1,6 +1,10 @@
 package com.example.demo.service;
 
 import java.util.HashSet;
+import java.util.List;
+
+import com.example.demo.dto.response.ChiTietKeHoachPheDuyetResponse.ThanhPhanHopNhom;
+import com.example.demo.entity.CuocHop;
 import java.util.Set;
 
 import org.springframework.http.HttpStatus;
@@ -23,36 +27,109 @@ public class NhomThamDuCuocHopService {
                 """).param("id", cuocHopId).query(Boolean.class).single();
     }
 
-    record TuyenDuyet(String capDuyet, Integer nhomId) {}
+    static final String HOP_THUONG = "HOP_THUONG";
+    static final String CHU_TICH_CHU_TRI = "CHU_TICH_CHU_TRI";
+    static final String XIN_CHU_TICH_KET_LUAN = "XIN_CHU_TICH_KET_LUAN";
 
-    public record LanhDaoPhuTrach(Integer nguoiDungId, String hoTen) {}
+    record TuyenDuyet(Integer nhomId, String mucDichHop, Integer nguoiDuyetId, String thanhVienMoiThem, String emailKhachNgoai) {}
 
-    LanhDaoPhuTrach layLanhDaoPhuTrach(Integer nhomId) {
+    public record LanhDaoPhuTrach(Integer nguoiDungId, String hoTen, String chucVu, boolean chuTich) {}
+
+    List<LanhDaoPhuTrach> layLanhDaoCoThamQuyen(Integer nhomId, boolean chiChuTich) {
         return jdbc.sql("""
-                SELECT nd.nguoi_dung_id, nd.ho_ten
+                SELECT nd.nguoi_dung_id, nd.ho_ten, nd.chuc_vu,
+                    (TRIM(nd.chuc_vu) COLLATE utf8mb4_unicode_ci = 'Chủ tịch') AS chu_tich
                 FROM nhom_lien_phong n
-                JOIN nguoi_dung nd ON nd.nguoi_dung_id IN (n.nguoi_lap_id, n.nguoi_kich_hoat_id)
+                JOIN nguoi_dung nd ON nd.trang_thai = 'HOAT_DONG' AND nd.chuc_vu IS NOT NULL
                 JOIN nguoi_dung_vai_tro nvt ON nvt.nguoi_dung_id = nd.nguoi_dung_id
-                JOIN vai_tro vt ON vt.vai_tro_id = nvt.vai_tro_id
-                WHERE n.nhom_id = :nhom AND nd.trang_thai = 'HOAT_DONG' AND vt.ma_vai_tro = 'LANH_DAO'
-                ORDER BY CASE WHEN nd.nguoi_dung_id = n.nguoi_lap_id THEN 0 ELSE 1 END
-                LIMIT 1
-                """).param("nhom", nhomId).query(LanhDaoPhuTrach.class).optional().orElse(null);
-    }
-
-    LanhDaoPhuTrach yeuCauLanhDaoPhuTrach(Integer nhomId) {
-        var lanhDao = layLanhDaoPhuTrach(nhomId);
-        if (lanhDao == null) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Chưa có lãnh đạo đang hoạt động trong hồ sơ lập hoặc kích hoạt nhóm");
-        }
-        return lanhDao;
+                JOIN vai_tro vt ON vt.vai_tro_id = nvt.vai_tro_id AND vt.ma_vai_tro = 'LANH_DAO'
+                WHERE n.nhom_id = :nhom AND (
+                    TRIM(nd.chuc_vu) COLLATE utf8mb4_unicode_ci = 'Chủ tịch'
+                    OR (NOT :chiChuTich AND TRIM(nd.chuc_vu) COLLATE utf8mb4_unicode_ci = 'Phó Chủ tịch'
+                        AND nd.nguoi_dung_id IN (n.nguoi_lap_id, n.nguoi_kich_hoat_id)))
+                ORDER BY nd.ho_ten, nd.nguoi_dung_id
+                """).param("nhom", nhomId).param("chiChuTich", chiChuTich).query(LanhDaoPhuTrach.class).list();
     }
 
     TuyenDuyet layTuyenDuyet(Integer cuocHopId) {
         return jdbc.sql("""
-                SELECT cap_duyet, nhom_id FROM nhom_lien_phong_de_xuat WHERE cuoc_hop_id = :id
+                SELECT nhom_id, muc_dich_hop, nguoi_duyet_id, thanh_vien_moi_them, email_khach_ngoai
+                FROM nhom_lien_phong_de_xuat WHERE cuoc_hop_id = :id
                 """).param("id", cuocHopId).query(TuyenDuyet.class).optional().orElse(null);
+    }
+
+    boolean canLanhDao(TuyenDuyet tuyen, boolean coKhachNgoai) {
+        return !HOP_THUONG.equals(tuyen.mucDichHop()) || coKhachNgoai || coNguoiMoiThem(tuyen);
+    }
+
+    boolean coNguoiMoiThem(TuyenDuyet tuyen) {
+        return tuyen.thanhVienMoiThem() != null && !objectMapper.readTree(tuyen.thanhVienMoiThem()).isEmpty();
+    }
+
+    boolean laEmailNoiBo(String email) {
+        return jdbc.sql("SELECT EXISTS (SELECT 1 FROM nguoi_dung WHERE email = :email)")
+                .param("email", email).query(Boolean.class).single();
+    }
+
+    boolean duocMoiKhachNgoai(TuyenDuyet tuyen, String email) {
+        if (tuyen == null || tuyen.emailKhachNgoai() == null) return true;
+        for (var muc : objectMapper.readTree(tuyen.emailKhachNgoai())) {
+            if (email.equals(muc.asText())) return true;
+        }
+        return false;
+    }
+
+    ThanhPhanHopNhom layThanhPhanTrinh(Integer cuocHopId) {
+        var tuyen = layTuyenDuyet(cuocHopId);
+        if (tuyen == null) return null;
+        var idsNhom = layThanhVienDaChon(cuocHopId);
+        List<Integer> idsMoi = tuyen.thanhVienMoiThem() == null ? List.of()
+                : objectMapper.readerForListOf(Integer.class).readValue(tuyen.thanhVienMoiThem());
+        List<String> email = tuyen.emailKhachNgoai() == null ? List.of()
+                : objectMapper.readerForListOf(String.class).readValue(tuyen.emailKhachNgoai());
+        return new ThanhPhanHopNhom(tuyen.mucDichHop(), layHoTen(idsNhom), layHoTen(idsMoi), email);
+    }
+
+    private List<String> layHoTen(java.util.Collection<Integer> ids) {
+        if (ids.isEmpty()) return List.of();
+        return jdbc.sql("SELECT ho_ten FROM nguoi_dung WHERE nguoi_dung_id IN (:ids) ORDER BY ho_ten, nguoi_dung_id")
+                .param("ids", ids).query(String.class).list();
+    }
+
+    boolean duocMoi(CuocHop hop, TuyenDuyet tuyen, Integer nguoiId) {
+        if (tuyen == null) return true;
+        if (layThanhVienDaChon(hop.getCuocHopId()).contains(nguoiId)) return true;
+        return duocMoiThem(tuyen, nguoiId);
+    }
+
+    boolean duocMoiThem(TuyenDuyet tuyen, Integer nguoiId) {
+        if (tuyen.thanhVienMoiThem() != null) {
+            for (var muc : objectMapper.readTree(tuyen.thanhVienMoiThem())) {
+                if (muc.asInt() == nguoiId) return true;
+            }
+        }
+        return false;
+    }
+
+    Integer layTruongVanPhong() {
+        var danhSach = jdbc.sql("""
+                SELECT pb.truong_phong_id
+                FROM phong_ban pb JOIN nguoi_dung nd ON nd.nguoi_dung_id = pb.truong_phong_id
+                WHERE TRIM(pb.ten_phong_ban) COLLATE utf8mb4_unicode_ci = 'Văn phòng'
+                  AND pb.trang_thai = 'HOAT_DONG' AND nd.trang_thai = 'HOAT_DONG'
+                  AND nd.phong_ban_id = pb.phong_ban_id
+                """).query(Integer.class).list();
+        return danhSach.size() == 1 ? danhSach.getFirst() : null;
+    }
+
+    List<Integer> layTruongPhongPhoiHop(Integer nhomId, Integer phongChuTriId) {
+        return jdbc.sql("""
+                SELECT pb.truong_phong_id FROM nhom_lien_phong_phong_ban np
+                JOIN phong_ban pb ON pb.phong_ban_id = np.phong_ban_id
+                JOIN nguoi_dung nd ON nd.nguoi_dung_id = pb.truong_phong_id
+                WHERE np.nhom_id = :nhom AND pb.phong_ban_id <> :chuTri
+                  AND pb.trang_thai = 'HOAT_DONG' AND nd.trang_thai = 'HOAT_DONG'
+                """).param("nhom", nhomId).param("chuTri", phongChuTriId).query(Integer.class).list();
     }
 
     void ganNguoiDuyetCuoi(Integer cuocHopId, Integer nguoiDuyetId, String cap) {

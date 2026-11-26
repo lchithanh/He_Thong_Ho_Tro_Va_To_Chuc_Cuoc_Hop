@@ -29,7 +29,8 @@ export default function KhongGianLamViec({ nguoiDung, loi, onDangXuat }) {
     return () => window.removeEventListener('hashchange', capNhat)
   }, [])
 
-  const cacMuc = layMenuKhongGianLamViec(maVaiTro, laQuanLy)
+  const laTruongVanPhong = nguoiDung.truongPhong && nguoiDung.tenPhongBan?.trim().toLocaleLowerCase('vi') === 'văn phòng'
+  const cacMuc = layMenuKhongGianLamViec(maVaiTro, laQuanLy, laTruongVanPhong)
 
   const mucHienTai = cacMuc.find((muc) => muc.id === mucDangChon)
   const TrangHienTai = mucHienTai?.Trang
@@ -149,6 +150,7 @@ export default function KhongGianLamViec({ nguoiDung, loi, onDangXuat }) {
           nguoiDung={nguoiDung}
           chiXemBanGiao={mucDangChon === 'cuoc-hop-duoc-giao'}
           chiXemRaSoat={mucDangChon === 'ho-so-ra-soat'}
+          hienLichCongTacNhom={laTruongVanPhong && mucDangChon === 'ho-so-ra-soat'}
           chiXemChuyenCap={mucDangChon === 'ho-so-chuyen-cap'}
           chiXemPhanHoi={mucDangChon === 'phan-hoi-ke-hoach'}
           cuocHopLapLich={lichDangMoTuHoSo?.id}
