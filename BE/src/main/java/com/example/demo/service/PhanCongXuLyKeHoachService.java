@@ -178,6 +178,12 @@ public class PhanCongXuLyKeHoachService {
         return lanMoiNhat.getYeuCauPheDuyetId();
     }
 
+    boolean laNguoiTiepNhanLanTrinhMoiNhat(Integer cuocHopId, Integer nguoiDungId) {
+        var yeuCau = layLanTrinhMoiNhat(cuocHopId);
+        return yeuCau != null && yeuCau.getThuKyTiepNhan() != null
+                && nguoiDungId.equals(yeuCau.getThuKyTiepNhan().getNguoiDungId());
+    }
+
     public boolean laThuKyThamGia(Integer cuocHopId, Integer nguoiDungId) {
         if (cuocHopId == null || nguoiDungId == null) return false;
 

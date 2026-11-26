@@ -7,7 +7,6 @@ import LayoutDashboard from 'lucide-react/dist/esm/icons/layout-dashboard.mjs'
 import LogOut from 'lucide-react/dist/esm/icons/log-out.mjs'
 import Menu from 'lucide-react/dist/esm/icons/menu.mjs'
 import Monitor from 'lucide-react/dist/esm/icons/monitor.mjs'
-import ShieldCheck from 'lucide-react/dist/esm/icons/shield-check.mjs'
 import UserRoundCog from 'lucide-react/dist/esm/icons/user-round-cog.mjs'
 import Users from 'lucide-react/dist/esm/icons/users.mjs'
 import X from 'lucide-react/dist/esm/icons/x.mjs'
@@ -17,7 +16,6 @@ import TongQuanQuanTri from '../pages/quantri/TongQuanQuanTri.jsx'
 import DanhMucQuanTri from '../pages/quantri/DanhMucQuanTri.jsx'
 import PhanCongThuKy from '../pages/quantri/PhanCongThuKy.jsx'
 import { PhanHoi, TieuDeTrang } from '../pages/quantri/uiQuanTri.jsx'
-import ThuKyVanPhong from '../pages/quantri/ThuKyVanPhong.jsx'
 import './quanTri.css'
 
 const NHOM_MENU = [
@@ -28,7 +26,6 @@ const NHOM_MENU = [
   { ten: 'Tổ chức', muc: [
     { id: 'users', ten: 'Tài khoản', BieuTuong: Users },
     { id: 'departments', ten: 'Phòng ban', BieuTuong: Building2 },
-    { id: 'thu-ky-van-phong', ten: 'Quyền Văn phòng', BieuTuong: ShieldCheck },
     { id: 'phan-cong', ten: 'Phân công thư ký', BieuTuong: UserRoundCog },
   ] },
   { ten: 'Cơ sở vật chất', muc: [
@@ -60,7 +57,6 @@ export default function KhongGianQuanTri({ nguoiDung, loi, onDangXuat }) {
     <div className="adm-shell">
       <aside className="adm-sidebar">
         <div className="adm-brand">
-          <span className="adm-brand-icon"><ShieldCheck size={23} aria-hidden="true" /></span>
           <div><strong>Họp hành chính</strong><span>Không gian quản trị</span></div>
           <button type="button" className="adm-icon-btn adm-menu-toggle"
             aria-label={moMenu ? 'Đóng điều hướng' : 'Mở điều hướng'} aria-controls="adm-navigation"
@@ -103,7 +99,6 @@ export default function KhongGianQuanTri({ nguoiDung, loi, onDangXuat }) {
               <TieuDeTrang ten="Hoạt động cuộc họp" />
               <TongQuanCuocHop token={token} nguoiDung={nguoiDung} onXemCuocHop={setHoSo} />
             </section>
-              : muc === 'thu-ky-van-phong' ? <ThuKyVanPhong token={token} />
                 : muc === 'phan-cong' ? <PhanCongThuKy token={token} />
                 : <DanhMucQuanTri key={muc} token={token} loai={muc} nguoiDungId={nguoiDungId} phongHopLoc={phongHopLoc}
                   onXemThietBi={(phongHopId) => chonMuc('equipment', phongHopId)} />}

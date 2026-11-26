@@ -141,7 +141,7 @@ export default function TaiLieuKeHoachThuKy({
       lichHopId: Number(form.get('lichHopId')),
       taiLieuIds: form.getAll('taiLieuIds').map(Number),
       ghiChuTrinh: form.get('ghiChuTrinh').trim() || null,
-      lanhDaoDuyetId: null,
+      lanhDaoDuyetId: Number(form.get('lanhDaoDuyetId')) || null,
     }
     if (canNhapLyDo && !duLieu.ghiChuTrinh) {
       setLoiTrinh('Nhập lý do thay đổi trước khi trình.')
@@ -215,12 +215,32 @@ export default function TaiLieuKeHoachThuKy({
   <form onSubmit={xuLyTrinh} className="space-y-4 rounded-xl border border-blue-100 bg-blue-50/55 p-4">
     <TieuDeHoSo Icon={Send} cap="h4">Trình duyệt kế hoạch và lịch</TieuDeHoSo>
     <p className="text-sm text-slate-600">
-      {vaiTroNguoiDeXuat === 'LANH_DAO'
+      {luaChonKeHoach?.thuKyNhomCoDinh
+        ? luaChonKeHoach.capDuyetCuoiNhom === 'LANH_DAO'
+          ? 'Văn phòng rà soát hồ sơ trước khi trình lãnh đạo có thẩm quyền.'
+          : 'Tổ trưởng duyệt kế hoạch và lịch. Nếu chọn phòng họp chung, Văn phòng rà soát lịch phòng trước.'
+        : vaiTroNguoiDeXuat === 'LANH_DAO'
         ? 'Hồ sơ gửi thẳng tới lãnh đạo đề xuất để duyệt kế hoạch và lịch.'
         : luaChonKeHoach?.canChonLanhDao
           ? 'Hồ sơ gửi trưởng phòng trước. Sau khi trưởng phòng đồng ý, thư ký ban đầu chuyển hồ sơ đến thư ký lãnh đạo để rà soát và trình duyệt cuối.'
           : 'Hồ sơ gửi trưởng phòng để duyệt kế hoạch và lịch.'}
     </p>
+    {luaChonKeHoach?.capDuyetCuoiNhom === 'LANH_DAO' && (
+      <label className="block text-sm font-medium">
+        Người duyệt kế hoạch nhóm
+        <select name="lanhDaoDuyetId" required className="mt-1 block w-full rounded-lg border border-slate-300 p-2"
+          key={luaChonKeHoach.nguoiDuyetNhomId}
+          defaultValue={luaChonKeHoach.lanhDaoDuyet.some((nguoi) => nguoi.nguoiDungId === luaChonKeHoach.nguoiDuyetNhomId)
+            ? luaChonKeHoach.nguoiDuyetNhomId
+            : luaChonKeHoach.lanhDaoDuyet.length === 1 ? luaChonKeHoach.lanhDaoDuyet[0].nguoiDungId : ''}>
+          <option value="">Chọn người duyệt</option>
+          {luaChonKeHoach.lanhDaoDuyet.map((nguoi) => <option key={nguoi.nguoiDungId} value={nguoi.nguoiDungId}>
+            {nguoi.hoTen} · {nguoi.chucVu}
+          </option>)}
+        </select>
+        {!luaChonKeHoach.lanhDaoDuyet.length && <span role="alert">Chưa có tài khoản đúng thẩm quyền.</span>}
+      </label>
+    )}
     {lichHopIdKeHoachDaDuyet != null && <p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">
       Nếu chỉ sửa nội dung, chọn Giữ lịch đã xác nhận.
     </p>}

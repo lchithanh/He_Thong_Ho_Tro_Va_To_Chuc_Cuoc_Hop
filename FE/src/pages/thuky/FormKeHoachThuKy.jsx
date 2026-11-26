@@ -43,7 +43,7 @@ export default function FormKeHoachThuKy({
       loaiHinh: form.get('loaiHinh'),
       thuKyCuocHopId: Number(form.get('thuKyCuocHopId')) || null,
       nguoiChuTriId: Number(form.get('nguoiChuTriId')),
-      coKhachMoiBenNgoai: form.get('coKhachMoiBenNgoai') === 'true',
+      coKhachMoiBenNgoai: thuKyNhomCoDinh ? Boolean(chiTiet.coKhachMoiBenNgoai) : form.get('coKhachMoiBenNgoai') === 'true',
     }
 
     setDangLuu(true)
@@ -126,7 +126,9 @@ export default function FormKeHoachThuKy({
             </select>
           </label>
         )}
-        <label className="block text-sm font-medium">
+        {thuKyNhomCoDinh ? (
+          <p className="text-sm">Khách ngoài cơ quan · {chiTiet.coKhachMoiBenNgoai ? 'Có trong đề xuất nhóm' : 'Không'}</p>
+        ) : <label className="block text-sm font-medium">
           Có khách mời bên ngoài
           <select
             name="coKhachMoiBenNgoai"
@@ -138,7 +140,7 @@ export default function FormKeHoachThuKy({
             <option value="true">Có</option>
             <option value="false">Không</option>
           </select>
-        </label>
+        </label>}
       </div>
 
       {lyDoKhoa && <p role="status" className="rounded-lg bg-amber-50 p-3 text-sm text-amber-950">{lyDoKhoa}</p>}

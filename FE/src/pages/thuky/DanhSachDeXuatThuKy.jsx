@@ -17,7 +17,9 @@ export { ChiTietDeXuat }
 export { default as LichCuaHoSo } from './LichCuaHoSo.jsx'
 export { default as HoSoDaTrinh } from './HoSoDaTrinh.jsx'
 
-export default function DanhSachDeXuatThuKy({ token, nguoiDung, onLapLich, onMoPhongHop, viecDaChon, chiXemPhanHoi = false, chiXemBanGiao = false, chiXemRaSoat = false, chiXemChuyenCap = false }) {
+import LichCongTacNhom from '../nhom/LichCongTacNhom.jsx'
+
+export default function DanhSachDeXuatThuKy({ token, nguoiDung, onLapLich, onMoPhongHop, viecDaChon, chiXemPhanHoi = false, chiXemBanGiao = false, chiXemRaSoat = false, chiXemChuyenCap = false, hienLichCongTacNhom = false }) {
   const phienDongBo = useDongBoDuLieu()
   const [danhSach, setDanhSach] = useState(null)
   const [loi, setLoi] = useState('')
@@ -87,12 +89,13 @@ export default function DanhSachDeXuatThuKy({ token, nguoiDung, onLapLich, onMoP
     return (
       <section className="space-y-4">
         <h1 className="text-2xl font-bold">Hồ sơ chờ rà soát</h1>
+        {hienLichCongTacNhom && <LichCongTacNhom token={token} />}
         {loi ? <p role="alert">{loi}</p> : !danhSach ? <p role="status">Đang tải hồ sơ…</p>
           : !danhSachTheoViec?.length && <p>Chưa có hồ sơ chờ rà soát.</p>}
         {danhSachTheoViec?.map((muc) => (
           <article key={muc.yeuCauPheDuyetId} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4">
             <div><h2 className="font-semibold">{muc.tieuDe}</h2>
-              <p className="text-sm text-slate-600">Chuyển cấp · {dinhDangNgayGio(muc.thoiGianTrinh)}</p></div>
+              <p className="text-sm text-slate-600">Đã trình {dinhDangNgayGio(muc.thoiGianTrinh)}</p></div>
             <button type="button" className="rounded-lg border px-3 py-2 text-sm font-semibold text-emerald-800"
               onClick={() => setCuocHopDangXem(muc.cuocHopId)}>Xem hồ sơ</button>
           </article>

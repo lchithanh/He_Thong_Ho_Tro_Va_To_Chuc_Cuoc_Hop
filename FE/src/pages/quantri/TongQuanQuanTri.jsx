@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import ArrowRight from 'lucide-react/dist/esm/icons/arrow-right.mjs'
 import CalendarDays from 'lucide-react/dist/esm/icons/calendar-days.mjs'
-import ShieldCheck from 'lucide-react/dist/esm/icons/shield-check.mjs'
 import Building2 from 'lucide-react/dist/esm/icons/building-2.mjs'
 import DoorOpen from 'lucide-react/dist/esm/icons/door-open.mjs'
 import Monitor from 'lucide-react/dist/esm/icons/monitor.mjs'
@@ -25,7 +24,6 @@ const LOAI_CO_SO = [
 ]
 
 const TAC_VU = [
-  { id: 'thu-ky-van-phong', ten: 'Quyền Văn phòng', moTa: 'Cấp hoặc thu hồi quyền duyệt kế hoạch họp nội bộ.', BieuTuong: ShieldCheck, mau: 'xanh' },
   { id: 'phan-cong', ten: 'Phân công thư ký', moTa: 'Gán thư ký mặc định cho lãnh đạo và trưởng phòng.', BieuTuong: UserRoundCog, mau: 'lam' },
 ]
 

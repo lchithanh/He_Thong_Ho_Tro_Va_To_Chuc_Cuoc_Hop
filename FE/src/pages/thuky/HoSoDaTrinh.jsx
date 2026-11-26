@@ -21,7 +21,7 @@ const TEN_TRANG_THAI = {
 }
 
 const MAU_TRANG_THAI = { CHO_DUYET: 'vang', DA_DUYET: 'luc', TRA_LAI: 'vang', TU_CHOI: 'do', DA_HUY: 'do' }
-const TEN_CAP = { TRUONG_PHONG: 'Trưởng phòng', TRUONG_NHOM: 'Trưởng nhóm', LANH_DAO: 'Lãnh đạo', VAN_PHONG: 'Văn phòng' }
+const TEN_CAP = { TRUONG_PHONG: 'Trưởng phòng', TRUONG_NHOM: 'Tổ trưởng', LANH_DAO: 'Lãnh đạo', VAN_PHONG: 'Văn phòng (luồng cũ)' }
 
 function NhomHoSo({ Icon, ten, cacMuc }) {
   return (
@@ -114,7 +114,7 @@ export default function HoSoDaTrinh({
           ['Cấp duyệt', TEN_CAP[hoSo.capPheDuyet]],
           ['Người duyệt', tenNguoiDuyet],
           ['Thời điểm trình', gio(hoSo.thoiGianTrinh)],
-          ...(hoSo.yeuCauTruocId == null ? [] : [['Lần trình trước', 'Đã qua cấp trưởng phòng']]),
+          ...(hoSo.yeuCauTruocId == null ? [] : [['Lần trình trước', 'Xem trong lịch sử trình duyệt']]),
         ]} />
       </div>
       <NhomHoSo Icon={FileText} ten="Nội dung kế hoạch" cacMuc={[
@@ -123,6 +123,17 @@ export default function HoSoDaTrinh({
         ['Phạm vi', TEN_PHAM_VI[hoSo.phamViCuocHop] || hoSo.phamViCuocHop],
         ['Ghi chú trình', hoSo.ghiChuTrinh || 'Không có ghi chú'],
       ]} />
+      {hoSo.thanhPhanHopNhom && <NhomHoSo Icon={Users} ten="Thành phần họp nhóm" cacMuc={[
+        ['Mục đích', {
+          HOP_THUONG: 'Trao đổi chuyên môn, triển khai hoặc rà soát tiến độ',
+          CHU_TICH_CHU_TRI: 'Mời Chủ tịch chủ trì',
+          XIN_CHU_TICH_KET_LUAN: 'Xin Chủ tịch tháo gỡ vướng mắc hoặc kết luận',
+          LANH_DAO_CU: 'Hồ sơ lãnh đạo duyệt từ quy trình trước',
+        }[hoSo.thanhPhanHopNhom.mucDichHop]],
+        ['Thành viên nhóm', hoSo.thanhPhanHopNhom.thanhVienNhom.join(', ')],
+        ['Cán bộ mời thêm', hoSo.thanhPhanHopNhom.nguoiMoiThem.join(', ')],
+        ['Email khách ngoài', hoSo.thanhPhanHopNhom.emailKhachNgoai.join(', ')],
+      ]} />}
       <XemTruocTepKeHoach key={'xem-truoc-' + lanTrinhId} danhSach={tep?.lanTrinhId === lanTrinhId ? tep?.duLieu ?? null : null}
         yeuCauId={lanTrinhId} token={token} loiDanhSach={loiTep} />
       {duocDuyet && (

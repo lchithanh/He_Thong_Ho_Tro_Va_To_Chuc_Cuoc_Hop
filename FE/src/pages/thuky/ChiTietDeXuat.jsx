@@ -76,6 +76,7 @@ export default function ChiTietDeXuat({ cuocHopId, token, nguoiDung, onQuayLai, 
   const [thongBaoChuyenCap, setThongBaoChuyenCap] = useState('')
   const buocXuLy = chiTiet?.buocXuLyHienTai
 
+  const laNguoiRaSoat = chiTiet?.nguoiDangXuLyId === nguoiDung?.nguoiDungId
   const buocThuKyLanhDao = ['CHO_THU_KY_LANH_DAO', 'THU_KY_LANH_DAO_XU_LY'].includes(buocXuLy)
 
   useEffect(() => {
@@ -105,7 +106,7 @@ export default function ChiTietDeXuat({ cuocHopId, token, nguoiDung, onQuayLai, 
   }, [cuocHopId, token, phienDongBo])
 
   useEffect(() => {
-    if (chiXem || !buocThuKyLanhDao || nguoiDung?.maVaiTro !== 'THU_KY') return
+    if (chiXem || !buocThuKyLanhDao || !laNguoiRaSoat) return
 
     const controller = new AbortController()
     layHoSoThuKyLanhDao(token, controller.signal)
@@ -120,17 +121,16 @@ export default function ChiTietDeXuat({ cuocHopId, token, nguoiDung, onQuayLai, 
       })
 
     return () => controller.abort()
-  }, [chiXem, buocThuKyLanhDao, cuocHopId, nguoiDung?.maVaiTro, token, phienDongBo])
+  }, [chiXem, buocThuKyLanhDao, cuocHopId, laNguoiRaSoat, token, phienDongBo])
 
   useEffect(() => {
-    if (!['CHO_TRUONG_PHONG', 'CHO_TRUONG_NHOM', 'CHO_LANH_DAO', 'CHO_VAN_PHONG_DUYET'].includes(buocXuLy)) return
+    if (!['CHO_TRUONG_PHONG', 'CHO_TRUONG_NHOM', 'CHO_LANH_DAO'].includes(buocXuLy)) return
 
     const controller = new AbortController()
     const cap = {
       CHO_TRUONG_PHONG: 'TRUONG_PHONG',
       CHO_TRUONG_NHOM: 'TRUONG_NHOM',
       CHO_LANH_DAO: 'LANH_DAO',
-      CHO_VAN_PHONG_DUYET: 'VAN_PHONG',
     }[buocXuLy]
     layKeHoachChoToiDuyet(token, controller.signal)
       .then((danhSach) => {
@@ -338,7 +338,7 @@ export default function ChiTietDeXuat({ cuocHopId, token, nguoiDung, onQuayLai, 
               </div>
 
               {yeuCauDuyet?.cuocHopId === chiTiet.cuocHopId
-                && ['CHO_TRUONG_PHONG', 'CHO_TRUONG_NHOM', 'CHO_LANH_DAO', 'CHO_VAN_PHONG_DUYET'].includes(buocXuLy) && tabHienThi !== 'ke-hoach' && (
+                && ['CHO_TRUONG_PHONG', 'CHO_TRUONG_NHOM', 'CHO_LANH_DAO'].includes(buocXuLy) && tabHienThi !== 'ke-hoach' && (
                 <div className="px-5 pt-4 sm:px-7">
                   <section className="rounded-xl border border-blue-100 bg-blue-50 p-4">
                     <TieuDeHoSo Icon={CalendarDays} cap="h2"
@@ -669,7 +669,7 @@ export default function ChiTietDeXuat({ cuocHopId, token, nguoiDung, onQuayLai, 
                         />
                       </div>
                     )}
-                    {loiTaiQuyenDuyet && ['CHO_TRUONG_PHONG', 'CHO_TRUONG_NHOM', 'CHO_LANH_DAO', 'CHO_VAN_PHONG_DUYET'].includes(buocXuLy) && (
+                    {loiTaiQuyenDuyet && ['CHO_TRUONG_PHONG', 'CHO_TRUONG_NHOM', 'CHO_LANH_DAO'].includes(buocXuLy) && (
                       <p role="alert" className="text-sm text-red-800">{loiTaiQuyenDuyet}</p>
                     )}
                     {!coTheTiepNhan && loiTiepNhan && <p role="alert" className="text-sm text-red-800">{loiTiepNhan}</p>}

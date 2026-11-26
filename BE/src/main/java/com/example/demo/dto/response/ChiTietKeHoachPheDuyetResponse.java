@@ -2,6 +2,8 @@ package com.example.demo.dto.response;
 
 import java.time.LocalDateTime;
 
+import java.util.List;
+
 public record ChiTietKeHoachPheDuyetResponse(
 	    Integer yeuCauPheDuyetId,
 	    Integer cuocHopId,
@@ -25,9 +27,13 @@ public record ChiTietKeHoachPheDuyetResponse(
 	    String capPheDuyet,
 	    Integer yeuCauTruocId,
 	    String tenNguoiDuyet,
-	    LocalDateTime thoiGianTrinh
+	    LocalDateTime thoiGianTrinh,
+        ThanhPhanHopNhom thanhPhanHopNhom
 	)
 {
+    public record ThanhPhanHopNhom(String mucDichHop, List<String> thanhVienNhom,
+            List<String> nguoiMoiThem, List<String> emailKhachNgoai) {}
+
     public record QuyetDinh(
             Integer nguoiDuyetId,
             String hoTenNguoiDuyet,

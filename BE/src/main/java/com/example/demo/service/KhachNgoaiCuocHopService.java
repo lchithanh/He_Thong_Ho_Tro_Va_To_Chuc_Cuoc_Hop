@@ -51,6 +51,7 @@ import lombok.RequiredArgsConstructor;
 public class KhachNgoaiCuocHopService {
     private static final String TAI_LIEU_BO_SUNG = "CHIA_SE_KHACH_NGOAI";
     private static final Path THU_MUC_KHACH = Path.of("uploads", "chia-se-khach-ngoai");
+    private final NhomThamDuCuocHopService nhomThamDu;
     private final LienKetLoiMoiKhachService lienKet;
     private final JdbcClient jdbc;
     private final LuuTaiLieuCuocHopService luuTaiLieu;
@@ -123,6 +124,9 @@ public class KhachNgoaiCuocHopService {
         }
 
         String email = request.email().strip().toLowerCase(Locale.ROOT);
+        if (!nhomThamDu.duocMoiKhachNgoai(nhomThamDu.layTuyenDuyet(cuocHopId), email)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Email chưa có trong danh sách khách ngoài của kế hoạch đã duyệt");
+        }
         if (nguoiDungRepository.existsByEmail(email)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Email này thuộc tài khoản nội bộ. Hãy mời qua mục Thành viên");
         }

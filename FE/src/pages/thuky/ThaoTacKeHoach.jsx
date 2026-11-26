@@ -15,7 +15,7 @@ const CAU_HINH_THAC_TAC = {
     { ma: 'tu-choi-tiep-nhan', thongBao: 'Đã từ chối tiếp nhận.', batBuocLyDo: true },
   ],
   dangRaSoat: [
-    { ma: 'trinh-lanh-dao', thongBao: 'Đã chuyển lãnh đạo duyệt.' },
+    { ma: 'trinh-lanh-dao', thongBao: 'Đã chuyển hồ sơ đến người duyệt.' },
     { ma: 'tra-lai', thongBao: 'Đã trả hồ sơ cho thư ký.', batBuocLyDo: true },
   ],
   duyet: [

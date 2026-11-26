@@ -19,10 +19,6 @@ export default function ChuyenKeHoachCapTren({
   const [dangGui, setDangGui] = useState(false)
   const [daGui, setDaGui] = useState(false)
   const [dangMo, setDangMo] = useState(false)
-  const capNhom = luaChon?.capDuyetCuoiNhom
-  const nhanNguoiDuyet = capNhom === 'VAN_PHONG' ? 'Thư ký Văn phòng'
-    : capNhom === 'LANH_DAO' ? 'Lãnh đạo phụ trách nhóm' : 'Lãnh đạo'
-  const nguoiDuyetId = capNhom === 'LANH_DAO' ? String(luaChon.lanhDaoDuyet[0]?.nguoiDungId ?? '') : lanhDaoId
 
   useEffect(() => {
     const controller = new AbortController()
@@ -38,14 +34,14 @@ export default function ChuyenKeHoachCapTren({
 
   async function gui(event) {
     event.preventDefault()
-    if (dangGui || daGui || !nguoiDuyetId) return
+    if (dangGui || daGui || !lanhDaoId) return
     setDangGui(true)
     setLoi('')
     setThongBao('')
 
     try {
       const ketQua = await guiKeHoachLenCapTren(cuocHopId, yeuCauId, {
-        lanhDaoId: Number(nguoiDuyetId),
+        lanhDaoId: Number(lanhDaoId),
         ghiChu: ghiChu.trim() || null,
       }, token)
       setDaGui(true)
@@ -87,46 +83,39 @@ export default function ChuyenKeHoachCapTren({
   return (
     <section className="space-y-3 rounded-xl border border-blue-200 bg-blue-50/70 p-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-blue-900">{capNhom ? 'Trưởng nhóm đã duyệt kế hoạch.' : 'Hồ sơ đã qua bước duyệt đầu tiên.'}</p>
+        <p className="text-sm text-blue-900">Hồ sơ đã qua bước duyệt đầu tiên.</p>
         {!daGui && <button type="button" className="rounded-lg bg-emerald-800 px-4 py-2 text-sm font-semibold text-white"
-          onClick={() => setDangMo(true)}>{capNhom ? 'Gửi duyệt cuối' : 'Chuyển hồ sơ'}</button>}
+          onClick={() => setDangMo(true)}>Chuyển hồ sơ</button>}
       </div>
       {!dangMo && loi && <p role="alert" className="text-sm text-red-800">{loi}</p>}
       {!dangMo && thongBao && <p role="status" className="text-sm font-medium text-emerald-800">{thongBao}</p>}
-      {dangMo && <HopThoaiHoSo tieuDe={capNhom ? 'Gửi kế hoạch nhóm duyệt cuối' : 'Chuyển hồ sơ lên cấp trên'}
+      {dangMo && <HopThoaiHoSo tieuDe="Chuyển hồ sơ lên cấp trên"
         Icon={FileText} dangLuu={dangGui} onDong={() => setDangMo(false)}>
       {loi && <p role="alert" className="text-sm text-red-800">{loi}</p>}
       {thongBao && <p role="status" className="text-sm font-medium text-emerald-800">{thongBao}</p>}
       <form onSubmit={gui} className="space-y-3">
         <label className="block text-sm font-medium">
-          {nhanNguoiDuyet} duyệt
-          {capNhom === 'LANH_DAO' ? (
-            <input readOnly value={luaChon.lanhDaoDuyet[0]?.hoTen ?? ''} placeholder="Chưa xác định được lãnh đạo"
-              className="mt-1 w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2" />
-          ) : (
-            <select
-              required
-              value={nguoiDuyetId}
-              onChange={(event) => setLanhDaoId(event.target.value)}
-              disabled={dangGui || daGui || luaChon === null}
-              className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2"
-            >
-              <option value="">
-                {luaChon === null ? 'Đang tải…' : `Chọn ${nhanNguoiDuyet.toLocaleLowerCase('vi')}`}
+          Lãnh đạo duyệt
+          <select
+            required
+            value={lanhDaoId}
+            onChange={(event) => setLanhDaoId(event.target.value)}
+            disabled={dangGui || daGui || luaChon === null}
+            className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2"
+          >
+            <option value="">
+              {luaChon === null ? 'Đang tải…' : 'Chọn lãnh đạo'}
+            </option>
+            {luaChon?.lanhDaoDuyet.map((nguoi) => (
+              <option key={nguoi.nguoiDungId} value={nguoi.nguoiDungId}>
+                {nguoi.hoTen}{nguoi.tenPhongBan ? ` · ${nguoi.tenPhongBan}` : ''}
               </option>
-              {luaChon?.lanhDaoDuyet.map((nguoi) => (
-                <option key={nguoi.nguoiDungId} value={nguoi.nguoiDungId}>
-                  {nguoi.hoTen}{nguoi.tenPhongBan ? ` · ${nguoi.tenPhongBan}` : ''}
-                </option>
-              ))}
-            </select>
-          )}
+            ))}
+          </select>
         </label>
         {luaChon?.lanhDaoDuyet.length === 0 && (
           <p role="alert" className="text-sm text-amber-900">
-            {capNhom === 'LANH_DAO'
-              ? 'Chưa tìm thấy lãnh đạo đang hoạt động đã lập hoặc kích hoạt nhóm này.'
-              : 'Chưa có người đủ điều kiện nhận hồ sơ ở cấp này.'}
+            Chưa có người đủ điều kiện nhận hồ sơ ở cấp này.
           </p>
         )}
         <label className="block text-sm font-medium">
@@ -144,7 +133,7 @@ export default function ChuyenKeHoachCapTren({
           disabled={dangGui || daGui || luaChon === null || !luaChon.lanhDaoDuyet.length}
           className="rounded-lg bg-emerald-800 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
         >
-          {dangGui ? 'Đang chuyển hồ sơ…' : capNhom ? 'Gửi duyệt cuối' : 'Gửi hồ sơ lên cấp trên'}
+          {dangGui ? 'Đang chuyển hồ sơ…' : 'Gửi hồ sơ lên cấp trên'}
         </button>
       </form>
       <div className="space-y-2 border-t border-blue-200 pt-3">

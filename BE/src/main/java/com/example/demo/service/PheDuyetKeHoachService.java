@@ -3,6 +3,7 @@ package com.example.demo.service;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Objects;
 import java.util.Map;
 
 import org.springframework.http.HttpStatus;
@@ -33,6 +34,7 @@ public class PheDuyetKeHoachService {
 
     private final CuocHopRepository cuocHopRepository;
     private final KhachMoiCuocHopRepository khachMoiCuocHopRepository;
+    private final NhomThamDuCuocHopService nhomThamDu;
     private final PhanQuyenCuocHopService phanQuyenCuocHopService;
     private final YeuCauPheDuyetRepository yeuCauPheDuyetRepository;
     private final LichSuPheDuyetService lichSuPheDuyetService;
@@ -182,7 +184,8 @@ private ChiTietKeHoachPheDuyetResponse taoChiTietKeHoachResponse(
             yeuCau.getCapPheDuyet(),
             yeuCau.getYeuCauTruoc() == null ? null
                     : yeuCau.getYeuCauTruoc().getYeuCauPheDuyetId(),
-            ten(yeuCau.getNguoiDuyet()), yeuCau.getThoiGianTrinh());
+            ten(yeuCau.getNguoiDuyet()), yeuCau.getThoiGianTrinh(),
+            nhomThamDu.layThanhPhanTrinh(yeuCau.getCuocHop().getCuocHopId()));
 }
 
 static ChiTietKeHoachPheDuyetResponse taoBanChup(YeuCauPheDuyet yeuCau) {
@@ -213,7 +216,7 @@ static ChiTietKeHoachPheDuyetResponse taoBanChup(YeuCauPheDuyet yeuCau) {
             yeuCau.getCapPheDuyet(),
             yeuCau.getYeuCauTruoc() == null ? null
                     : yeuCau.getYeuCauTruoc().getYeuCauPheDuyetId(),
-            ten(yeuCau.getNguoiDuyet()), yeuCau.getThoiGianTrinh());
+            ten(yeuCau.getNguoiDuyet()), yeuCau.getThoiGianTrinh(), null);
 }
 
 private static String ten(NguoiDung nd) {
@@ -286,13 +289,14 @@ public List<LichSuKeHoachResponse> layLichSuPheDuyetKeHoach(
     @Transactional(readOnly = true)
     public List<KeHoachPheDuyetResponse> layHoSoCuaThuKyLanhDao(Integer nguoiDungId) {
         nguoiDungHienTaiService.layTaiKhoanHoatDong(nguoiDungId);
-        if (!phanQuyenCuocHopService.coVaiTro(nguoiDungId, "THU_KY")) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bạn không có vai trò THU_KY");
-        }
+        boolean laThuKy = phanQuyenCuocHopService.coVaiTro(nguoiDungId, "THU_KY");
+        boolean laTruongVanPhong = Objects.equals(nguoiDungId, nhomThamDu.layTruongVanPhong());
+        if (!laThuKy && !laTruongVanPhong) return List.of();
         return yeuCauPheDuyetRepository
                 .timTheoThuKyTiepNhan(LoaiYeuCau.KE_HOACH_CUOC_HOP, TrangThai.CHO_DUYET,
                         nguoiDungId, List.of("CHO_THU_KY_LANH_DAO", "THU_KY_LANH_DAO_XU_LY"))
                 .stream()
+                .filter(yc -> nhomThamDu.laDeXuatTuNhom(yc.getCuocHop().getCuocHopId()) ? laTruongVanPhong : laThuKy)
                 .map(this::chuyenDanhSachResponse)
                 .toList();
     }
@@ -312,7 +316,7 @@ public List<LichSuKeHoachResponse> layLichSuPheDuyetKeHoach(
     }
 
     private boolean laDuyetCapTrungGian(YeuCauPheDuyet yc) {
-        return "TRUONG_NHOM".equals(yc.getCapPheDuyet()) || ("TRUONG_PHONG".equals(yc.getCapPheDuyet())
+        return ("TRUONG_PHONG".equals(yc.getCapPheDuyet())
                 && QuyTacDuyetKeHoach.canTrinhCapTren(
                         phanQuyenCuocHopService.coVaiTro(
                                 yc.getCuocHop().getNguoiDeXuat().getNguoiDungId(), "LANH_DAO"),

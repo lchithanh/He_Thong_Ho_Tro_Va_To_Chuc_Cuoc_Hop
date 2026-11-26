@@ -426,6 +426,7 @@ private boolean coVaiTroTaiCuocHop(
                 || (!"NHAP".equals(cuocHop.getTrangThai())
                 && (ThaoTacCuocHop.laNguoiChuTri(cuocHop, nguoiDungId)
                 || phanCongXuLyKeHoachService.laThuKyThamGia(cuocHop.getCuocHopId(), nguoiDungId)
+                || phanCongXuLyKeHoachService.laNguoiTiepNhanLanTrinhMoiNhat(cuocHop.getCuocHopId(), nguoiDungId)
                 || ("CHO_GUI_CAP_TREN".equals(cuocHop.getBuocXuLyHienTai())
                         && phanCongXuLyKeHoachService.laThuKyDangXuLy(cuocHop.getCuocHopId(), nguoiDungId))
                 || phanCongXuLyKeHoachService.laNguoiDuyetMoiNhat(cuocHop.getCuocHopId(), nguoiDungId)));
