@@ -217,8 +217,8 @@ export default function TaiLieuKeHoachThuKy({
     <p className="text-sm text-slate-600">
       {luaChonKeHoach?.thuKyNhomCoDinh
         ? luaChonKeHoach.capDuyetCuoiNhom === 'LANH_DAO'
-          ? 'Văn phòng rà soát hồ sơ trước khi trình lãnh đạo có thẩm quyền.'
-          : 'Tổ trưởng duyệt kế hoạch và lịch. Nếu chọn phòng họp chung, Văn phòng rà soát lịch phòng trước.'
+          ? 'Tổ trưởng xem xét trước. Sau khi Tổ trưởng đồng ý, thư ký nhóm chuyển hồ sơ lên lãnh đạo.'
+          : 'Thư ký nhóm trình trực tiếp Tổ trưởng duyệt kế hoạch và lịch.'
         : vaiTroNguoiDeXuat === 'LANH_DAO'
         ? 'Hồ sơ gửi thẳng tới lãnh đạo đề xuất để duyệt kế hoạch và lịch.'
         : luaChonKeHoach?.canChonLanhDao
@@ -227,7 +227,7 @@ export default function TaiLieuKeHoachThuKy({
     </p>
     {luaChonKeHoach?.capDuyetCuoiNhom === 'LANH_DAO' && (
       <label className="block text-sm font-medium">
-        Người duyệt kế hoạch nhóm
+        Lãnh đạo duyệt sau Tổ trưởng
         <select name="lanhDaoDuyetId" required className="mt-1 block w-full rounded-lg border border-slate-300 p-2"
           key={luaChonKeHoach.nguoiDuyetNhomId}
           defaultValue={luaChonKeHoach.lanhDaoDuyet.some((nguoi) => nguoi.nguoiDungId === luaChonKeHoach.nguoiDuyetNhomId)

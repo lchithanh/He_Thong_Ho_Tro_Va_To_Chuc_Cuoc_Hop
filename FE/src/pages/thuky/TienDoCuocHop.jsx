@@ -31,7 +31,7 @@ const NOI_DUNG_BUOC = {
   LAP_KE_HOACH: 'Thư ký phụ trách đang hoàn thiện lịch và kế hoạch.',
   CHO_TRUONG_NHOM: 'Hồ sơ đang chờ tổ trưởng xem xét.',
   CHO_TRUONG_PHONG: 'Hồ sơ đang chờ Trưởng phòng xem xét.',
-  CHO_GUI_CAP_TREN: 'Trưởng phòng đã đồng ý; hồ sơ đang chờ thư ký ban đầu chuyển cấp.',
+  CHO_GUI_CAP_TREN: 'Cấp duyệt đầu tiên đã đồng ý. Hồ sơ đang chờ thư ký chuyển cấp.',
   CHO_THU_KY_LANH_DAO: 'Hồ sơ đang chờ tiếp nhận để rà soát.',
   THU_KY_LANH_DAO_XU_LY: 'Đang rà soát hồ sơ.',
   CHO_LANH_DAO: 'Hồ sơ đang chờ lãnh đạo phê duyệt.',

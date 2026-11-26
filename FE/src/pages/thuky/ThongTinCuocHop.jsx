@@ -23,7 +23,7 @@ const THONG_BAO = {
   NHAP: 'Đề xuất đang được lưu dưới dạng bản nháp.',
   CHO_TIEP_NHAN: 'Đề xuất đang chờ thư ký tiếp nhận.',
   DANG_CHUAN_BI: 'Thư ký đang chuẩn bị kế hoạch cuộc họp.',
-  CHO_GUI_CAP_TREN: 'Trưởng phòng đã đồng ý. Kế hoạch chưa được duyệt cuối; hồ sơ đang chờ thư ký ban đầu chuyển đến thư ký lãnh đạo.',
+  CHO_GUI_CAP_TREN: 'Cấp duyệt đầu tiên đã đồng ý. Hồ sơ đang chờ thư ký chuyển cấp.',
   CHO_DUYET: 'Hồ sơ đang trong quy trình phê duyệt.',
   TRA_LAI: 'Kế hoạch đã được trả lại để chỉnh sửa.',
   TU_CHOI: 'Hồ sơ đã bị từ chối.',

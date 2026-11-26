@@ -162,12 +162,13 @@ export function layTrangThaiHienThiCuocHop(cuocHop) {
   }
 
   const buocChoDuyet = [
-    'CHO_TRUONG_PHONG',
-    'CHO_GUI_CAP_TREN',
-    'CHO_THU_KY_LANH_DAO',
-    'THU_KY_LANH_DAO_XU_LY',
-    'CHO_LANH_DAO',
-  ]
+  'CHO_TRUONG_PHONG',
+  'CHO_TRUONG_NHOM',
+  'CHO_GUI_CAP_TREN',
+  'CHO_THU_KY_LANH_DAO',
+  'THU_KY_LANH_DAO_XU_LY',
+  'CHO_LANH_DAO',
+]
 
   if (cuocHop.trangThai === 'DANG_CHUAN_BI' && buocChoDuyet.includes(cuocHop.buocXuLyHienTai)) {
     return 'CHO_DUYET'

@@ -19,6 +19,10 @@ export default function ChuyenKeHoachCapTren({
   const [dangGui, setDangGui] = useState(false)
   const [daGui, setDaGui] = useState(false)
   const [dangMo, setDangMo] = useState(false)
+  const lanhDaoMacDinh = luaChon?.thuKyNhomCoDinh && luaChon.lanhDaoDuyet.some(
+    (nguoi) => nguoi.nguoiDungId === luaChon.nguoiDuyetNhomId,
+  ) ? String(luaChon.nguoiDuyetNhomId) : ''
+  const nguoiDuyetId = lanhDaoId || lanhDaoMacDinh
 
   useEffect(() => {
     const controller = new AbortController()
@@ -34,19 +38,19 @@ export default function ChuyenKeHoachCapTren({
 
   async function gui(event) {
     event.preventDefault()
-    if (dangGui || daGui || !lanhDaoId) return
+    if (dangGui || daGui || !nguoiDuyetId) return
     setDangGui(true)
     setLoi('')
     setThongBao('')
 
     try {
       const ketQua = await guiKeHoachLenCapTren(cuocHopId, yeuCauId, {
-        lanhDaoId: Number(lanhDaoId),
+        lanhDaoId: Number(nguoiDuyetId),
         ghiChu: ghiChu.trim() || null,
       }, token)
       setDaGui(true)
       setDangMo(false)
-      setThongBao(ketQua.message || 'Đã chuyển hồ sơ lên thư ký lãnh đạo.')
+      setThongBao(ketQua.message || 'Đã chuyển hồ sơ lên cấp trên.')
       try {
         await onDaGui?.(ketQua)
       } catch {
@@ -98,7 +102,7 @@ export default function ChuyenKeHoachCapTren({
           Lãnh đạo duyệt
           <select
             required
-            value={lanhDaoId}
+            value={nguoiDuyetId}
             onChange={(event) => setLanhDaoId(event.target.value)}
             disabled={dangGui || daGui || luaChon === null}
             className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2"

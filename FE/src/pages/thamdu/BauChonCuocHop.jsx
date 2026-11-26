@@ -72,7 +72,7 @@ function VongBau({ muc, thanhVien, laChuTri, lanBauPhu, dangGui, gui, chiXem }) 
       {daBoPhieu && trangThai === 'DANG_MO' && <p role="status">Đã gửi phiếu.</p>}
       {!chiXem && laChuTri && trangThai === 'NHAP' && (
         <fieldset className="space-y-2" disabled={dangGui}>
-          <legend>Người được bỏ phiếu ({cuTriConCoMat.length})</legend>
+          <legend>Cử tri được bỏ phiếu ({cuTriConCoMat.length})</legend>
           {thanhVien.length > 0 ? (
             <>
               <button type="button" className="underline"

@@ -1,3 +1,4 @@
+import { BauLaiTrongCuocHop } from '../nhom/BauLaiChucDanhNhom.jsx'
 import { useEffect, useState } from 'react'
 import ArrowLeft from 'lucide-react/dist/esm/icons/arrow-left.mjs'
 import Award from 'lucide-react/dist/esm/icons/award.mjs'
@@ -129,7 +130,7 @@ function ThanhBenPhongHop({ cacMuc, mucHienTai, setMuc, onQuayLai, thongKe, moDa
   )
 }
 
-export default function PhongCuocHop({ cuocHopId, nguoiDung, onQuayLai, onDaKetThuc, onMoHoSo, chiXemHoSo = false }) {
+export default function PhongCuocHop({ cuocHopId, nguoiDung, onQuayLai, onDaKetThuc, onMoHoSo, chiXemHoSo = false, mucBanDau }) {
   const { token } = nguoiDung
   const phienDongBo = useDongBoDuLieu()
   const [hop, setHop] = useState(null)
@@ -137,7 +138,7 @@ export default function PhongCuocHop({ cuocHopId, nguoiDung, onQuayLai, onDaKetT
   const [loiLuu, setLoiLuu] = useState('')
   const [thaoTac, setThaoTac] = useState(null)
   const [xacNhanKetThuc, setXacNhanKetThuc] = useState(false)
-  const [muc, setMuc] = useState('')
+  const [muc, setMuc] = useState(mucBanDau ?? '')
   const [lanTai, setLanTai] = useState(0)
   const [thongKePhong, setThongKePhong] = useState(null)
 
@@ -373,7 +374,10 @@ export default function PhongCuocHop({ cuocHopId, nguoiDung, onQuayLai, onDaKetT
                     </div>
                   )}
                   {mucHienTai.id === 'diem-danh' && <DiemDanhThuKy cuocHopId={cuocHopId} token={token} readOnly={!laThuKy || !dangHop} />}
-                  {mucHienTai.id === 'bau-chon' && <BauChonCuocHop cuocHopId={cuocHopId} token={token} hienTieuDe={false} />}
+                  {mucHienTai.id === 'bau-chon' && <div className="space-y-4">
+                    <BauLaiTrongCuocHop cuocHopId={cuocHopId} token={token} />
+                    <BauChonCuocHop cuocHopId={cuocHopId} token={token} hienTieuDe={false} />
+                  </div>}
                   {mucHienTai.id === 'nghi-quyet' && <NghiQuyetCuocHop cuocHopId={cuocHopId} token={token} duocQuanLy={laNguoiDieuHanh} chuTri={laChuTri ? nguoiDung : undefined} hienTieuDe={false} />}
                   {mucHienTai.id === 'bieu-quyet' && (laChuTri
                     ? <TaoBieuQuyet nguoiDung={nguoiDung} cuocHopId={cuocHopId} />

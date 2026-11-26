@@ -10,7 +10,7 @@ import { useKetNoiHoSo } from '../services/useKetNoiHoSo.js'
 import { layMenuKhongGianLamViec } from './menuKhongGianLamViec.js'
 
 function docPhongHopTuHash() {
-  return /^#cuoc-hop\/([1-9]\d{0,9}(?:\/tai-lieu)?)$/.exec(window.location.hash)?.[1] ?? null
+  return /^#cuoc-hop\/([1-9]\d{0,9}(?:\/(?:tai-lieu|bau-chon))?)$/.exec(window.location.hash)?.[1] ?? null
 }
 
 export default function KhongGianLamViec({ nguoiDung, loi, onDangXuat }) {
@@ -76,6 +76,7 @@ export default function KhongGianLamViec({ nguoiDung, loi, onDangXuat }) {
   if (phongHopId) {
     const [id, mucHoSo] = phongHopId.split('/')
     return <PhongCuocHop key={phongHopId} cuocHopId={Number(id)} nguoiDung={nguoiDung} chiXemHoSo={mucHoSo === 'tai-lieu'}
+      mucBanDau={mucHoSo === 'bau-chon' ? mucHoSo : undefined}
       onQuayLai={veTongQuan} onDaKetThuc={sauKhiKetThuc} onMoHoSo={moHoSoTuPhongHop} />
   }
 
