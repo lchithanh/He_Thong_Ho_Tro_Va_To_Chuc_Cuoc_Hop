@@ -6,6 +6,7 @@ import { NhanHoSo, TieuDeHoSo } from '../../components/GiaoDienPhongHop.jsx'
 import { dinhDangNgayGio } from '../../utils/thoiGianCuocHop.js'
 import ThaoTacKeHoach from './ThaoTacKeHoach.jsx'
 import XemTruocTepKeHoach from './XemTruocTepKeHoach.jsx'
+import XepLichPhongNhom from '../nhom/XepLichPhongNhom.jsx'
 import { useEffect, useState } from 'react'
 import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
 import {
@@ -41,8 +42,10 @@ function NhomHoSo({ Icon, ten, cacMuc }) {
 
 export default function HoSoDaTrinh({
   yeuCauId, cuocHopId, token, yeuCauDuyet, onDaXuLy, onDangXuLy, children,
+  choVanPhongXepLich, lichHopIdDaDuyet,
 }) {
   const phienDongBo = useDongBoDuLieu()
+  const [lanTai, setLanTai] = useState(0)
   const [hoSo, setHoSo] = useState(undefined)
   const [tep, setTep] = useState(null)
   const [loi, setLoi] = useState('')
@@ -62,7 +65,7 @@ export default function HoSoDaTrinh({
       })
       .catch((error) => { if (!controller.signal.aborted) setLoi(error.message) })
     return () => controller.abort()
-  }, [yeuCauId, cuocHopId, token, phienDongBo])
+  }, [yeuCauId, cuocHopId, token, phienDongBo, lanTai])
 
   useEffect(() => {
     if (lanTrinhId == null) return
@@ -123,6 +126,10 @@ export default function HoSoDaTrinh({
         ['Phạm vi', TEN_PHAM_VI[hoSo.phamViCuocHop] || hoSo.phamViCuocHop],
         ['Ghi chú trình', hoSo.ghiChuTrinh || 'Không có ghi chú'],
       ]} />
+      {choVanPhongXepLich && hoSo.thanhPhanHopNhom && hoSo.tenPhongHop
+        && hoSo.lichHopId !== lichHopIdDaDuyet && dangCho && (
+          <XepLichPhongNhom hoSo={hoSo} token={token} onDaLuu={() => setLanTai((lan) => lan + 1)} />
+        )}
       {hoSo.thanhPhanHopNhom && <NhomHoSo Icon={Users} ten="Thành phần họp nhóm" cacMuc={[
         ['Mục đích', {
           HOP_THUONG: 'Trao đổi chuyên môn, triển khai hoặc rà soát tiến độ',

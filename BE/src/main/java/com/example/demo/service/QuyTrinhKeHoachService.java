@@ -356,6 +356,26 @@ public class QuyTrinhKeHoachService {
                 ch.getNguoiDeXuat(), yc.getNguoiTrinh(), yc.getNguoiDuyet());
     }
 
+    YeuCauPheDuyet timYeuCauXepLichNhom(CuocHop ch, Integer nguoiId) {
+        if (!"THU_KY_LANH_DAO_XU_LY".equals(ch.getBuocXuLyHienTai())
+                || !nhomThamDu.laDeXuatTuNhom(ch.getCuocHopId())
+                || !Objects.equals(nguoiId, nhomThamDu.layTruongVanPhong())) return null;
+        var yeuCau = phanCongXuLyKeHoachService.layLanTrinhMoiNhat(ch.getCuocHopId());
+        return yeuCau != null && yeuCau.getTrangThai() == TrangThai.CHO_DUYET
+                && yeuCau.getThuKyTiepNhan() != null && nguoiId.equals(yeuCau.getThuKyTiepNhan().getNguoiDungId())
+                && yeuCau.getLichHop() != null && yeuCau.getLichHop().getPhongHop() != null
+                && ThaoTacLichHop.coTheCapNhat(yeuCau.getLichHop()) ? yeuCau : null;
+    }
+
+    void ghiNhanVanPhongXepLich(YeuCauPheDuyet yeuCau, Integer nguoiId, String lyDo) {
+        var ch = yeuCau.getCuocHop();
+        yeuCau.setKeHoachDaTrinh(objectMapper.writeValueAsString(PheDuyetKeHoachService.taoBanChup(yeuCau)));
+        lichSuPheDuyetService.ghiNhan(ch.getCuocHopId(), yeuCau.getLichHop().getLichHopId(), null, nguoiId,
+                "LICH_HOP", "XEP_LICH", lyDo, yeuCau);
+        thongBaoService.gui(ch, nguoiId, "KE_HOACH_XEP_LICH",
+                "Văn phòng đã cập nhật lịch phòng họp nhóm", ch.getTieuDe(), yeuCau.getNguoiTrinh());
+    }
+
     public void trinhLanhDao(Integer cuocHopId, Integer yeuCauId, Integer thuKyId, String ghiChu) {
         nguoiDungHienTaiService.layTaiKhoanHoatDong(thuKyId);
         CuocHop ch = timVaKhoaCuocHop(cuocHopId);

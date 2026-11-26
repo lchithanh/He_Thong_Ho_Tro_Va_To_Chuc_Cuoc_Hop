@@ -50,7 +50,10 @@ public class LichHopService {
     @Transactional(readOnly = true)
     public List<LuaChonPhongHop> layPhongHopDeXuat(Integer cuocHopId, Integer nguoiDungId,
             LocalDateTime batDau, LocalDateTime ketThuc) {
-        phanQuyenCuocHopService.kiemTraLaThuKy(cuocHopId, nguoiDungId);
+        var cuocHop = cuocHopRepository.findById(cuocHopId).orElse(null);
+        if (cuocHop == null || quyTrinhKeHoachService.timYeuCauXepLichNhom(cuocHop, nguoiDungId) == null) {
+            phanQuyenCuocHopService.kiemTraLaThuKy(cuocHopId, nguoiDungId);
+        }
         if (batDau != null || ketThuc != null) {
             if (batDau == null || ketThuc == null || !ketThuc.isAfter(batDau)) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Khoảng giờ kiểm tra không hợp lệ");

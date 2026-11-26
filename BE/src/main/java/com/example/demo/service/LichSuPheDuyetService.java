@@ -147,6 +147,11 @@ public class LichSuPheDuyetService {
                 "YEU_CAU_CHINH_SUA", "HUY", "DOI_LICH" -> {
             // Hành động phê duyệt hợp lệ
         }
+        case "XEP_LICH" -> {
+            if (!"LICH_HOP".equals(loaiPheDuyet)) {
+                throw new RuntimeException("Xếp lịch chỉ áp dụng cho lịch họp");
+            }
+        }
         default -> throw new RuntimeException(
                 "Hành động phê duyệt không hợp lệ");
     }

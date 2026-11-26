@@ -637,6 +637,8 @@ export default function ChiTietDeXuat({ cuocHopId, token, nguoiDung, onQuayLai, 
                         cuocHopId={cuocHopId}
                         token={token}
                         choChuyenCap={buocXuLy === 'CHO_GUI_CAP_TREN'}
+                        choVanPhongXepLich={!chiXem && laNguoiRaSoat && buocXuLy === 'THU_KY_LANH_DAO_XU_LY'}
+                        lichHopIdDaDuyet={chiTiet.lichHopIdKeHoachDaDuyet}
                         yeuCauDuyet={yeuCauDuyet}
                         onDaXuLy={async (_, thongBao) => {
                           setThongBaoTiepNhan(thongBao)

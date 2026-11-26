@@ -238,6 +238,11 @@ export async function taoLichHop(duLieu, token) {
   return docPhanHoiLichHop(response)
 }
 
+export async function capNhatLichHop(lichHopId, duLieu, token) {
+  const response = await goiApi(`/api/lich-hop/${lichHopId}`, { method: 'PUT', token, duLieu })
+  return docPhanHoiLichHop(response)
+}
+
 export async function layKeHoachToiDaDuyet(token, signal) {
   const response = await goiApi('/api/quy-trinh-ke-hoach/cua-toi/da-duyet', {
     token,
