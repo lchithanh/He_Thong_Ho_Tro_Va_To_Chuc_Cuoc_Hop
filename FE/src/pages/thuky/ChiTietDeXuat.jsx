@@ -329,7 +329,7 @@ export default function ChiTietDeXuat({ cuocHopId, token, nguoiDung, onQuayLai, 
                       </dl>
                     )}
                   </div>
-                  <NhanTrangThai trangThai={layTrangThaiHienThiCuocHop(chiTiet)} />
+                  <NhanTrangThai trangThai={buocThuKyLanhDao ? buocXuLy : layTrangThaiHienThiCuocHop(chiTiet)} />
                 </div>
               </div>
 
@@ -636,6 +636,8 @@ export default function ChiTietDeXuat({ cuocHopId, token, nguoiDung, onQuayLai, 
                         key={`${cuocHopId}/${buocXuLy}/${chiTiet.yeuCauBanGiaoId ?? ''}`}
                         cuocHopId={cuocHopId}
                         token={token}
+                        buocRaSoat={buocThuKyLanhDao ? buocXuLy : null}
+                        tenNguoiRaSoat={buocThuKyLanhDao ? chiTiet.tenNguoiDangXuLy : null}
                         choChuyenCap={buocXuLy === 'CHO_GUI_CAP_TREN'}
                         choVanPhongXepLich={!chiXem && laNguoiRaSoat && buocXuLy === 'THU_KY_LANH_DAO_XU_LY'}
                         lichHopIdDaDuyet={chiTiet.lichHopIdKeHoachDaDuyet}

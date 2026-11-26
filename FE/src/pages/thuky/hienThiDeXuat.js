@@ -11,6 +11,8 @@ export const TEN_TRANG_THAI = {
   DANG_CHUAN_BI: 'Đang chuẩn bị',
   DA_DUYET: 'Đã duyệt',
   CHO_DUYET: 'Chờ duyệt',
+  CHO_THU_KY_LANH_DAO: 'Chờ tiếp nhận rà soát',
+  THU_KY_LANH_DAO_XU_LY: 'Đang rà soát',
   CHO_GUI_CAP_TREN: 'Chờ gửi cấp trên',
   TRA_LAI: 'Đã trả lại',
   TU_CHOI: 'Đã từ chối',

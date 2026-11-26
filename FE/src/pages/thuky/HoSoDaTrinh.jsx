@@ -14,7 +14,7 @@ import {
   layChiTietKeHoachHienTai,
   layTaiLieuLanTrinh,
 } from '../../api/cuocHopApi.js'
-import { TEN_PHAM_VI } from './hienThiDeXuat.js'
+import { TEN_PHAM_VI, TEN_TRANG_THAI as TEN_TRANG_THAI_DE_XUAT } from './hienThiDeXuat.js'
 
 const TEN_TRANG_THAI = {
   CHO_DUYET: 'Đang chờ duyệt', DA_DUYET: 'Đã duyệt lần trình',
@@ -42,7 +42,7 @@ function NhomHoSo({ Icon, ten, cacMuc }) {
 
 export default function HoSoDaTrinh({
   yeuCauId, cuocHopId, token, yeuCauDuyet, onDaXuLy, onDangXuLy, children,
-  choVanPhongXepLich, lichHopIdDaDuyet,
+  buocRaSoat, tenNguoiRaSoat, choVanPhongXepLich, lichHopIdDaDuyet,
 }) {
   const phienDongBo = useDongBoDuLieu()
   const [lanTai, setLanTai] = useState(0)
@@ -83,23 +83,39 @@ export default function HoSoDaTrinh({
   if (loi) return <p role="alert" className="text-sm text-red-800">{loi}</p>
   if (hoSo === undefined) return <p role="status" className="text-sm">Đang tải hồ sơ…</p>
   if (!hoSo) return <p className="text-sm text-slate-600">Chưa có lần trình kế hoạch.</p>
-  const duocDuyet = hoSo.trangThai === 'CHO_DUYET'
+  const duocDuyet = hoSo.trangThai === 'CHO_DUYET' && !buocRaSoat
     && yeuCauDuyet?.yeuCauPheDuyetId === lanTrinhId
     && yeuCauDuyet?.cuocHopId === hoSo.cuocHopId
   const gio = (moc) => moc ? dinhDangNgayGio(moc) : null
   const dangCho = hoSo.trangThai === 'CHO_DUYET'
   const tenNguoiDuyet = hoSo.quyetDinh?.hoTenNguoiDuyet || hoSo.tenNguoiDuyet || hoSo.tenNguoiDuocChiDinhDuyet
+  const nhanTrangThai = (dangCho && TEN_TRANG_THAI_DE_XUAT[buocRaSoat])
+    || TEN_TRANG_THAI[hoSo.trangThai] || hoSo.trangThai
+  const nguoiRaSoat = tenNguoiRaSoat || (hoSo.thanhPhanHopNhom ? 'Văn phòng' : 'Người được phân công')
+  let thongBaoCho
+  if (buocRaSoat === 'CHO_THU_KY_LANH_DAO') {
+    thongBaoCho = `Đang chờ ${nguoiRaSoat} tiếp nhận hồ sơ để rà soát.`
+  } else if (buocRaSoat === 'THU_KY_LANH_DAO_XU_LY') {
+    thongBaoCho = `${nguoiRaSoat} đang rà soát hồ sơ.`
+  } else if (duocDuyet) {
+    thongBaoCho = 'Hồ sơ đang chờ bạn quyết định.'
+  } else {
+    thongBaoCho = tenNguoiDuyet ? `Đang chờ ${tenNguoiDuyet} duyệt.` : 'Hồ sơ đang chờ người được phân công duyệt.'
+  }
+
   const lich = [hoSo.tenPhongHop, hoSo.viTriPhongHop].filter(Boolean).join(' · ')
 
   return (
     <section className="space-y-4 rounded-2xl border border-slate-200 bg-slate-50 p-3 sm:p-5">
       <TieuDeHoSo Icon={FileCheck} phu={hoSo.tieuDe} thaoTac={
-        <NhanHoSo mau={MAU_TRANG_THAI[hoSo.trangThai]}>{TEN_TRANG_THAI[hoSo.trangThai] || hoSo.trangThai}</NhanHoSo>
+        <NhanHoSo mau={MAU_TRANG_THAI[hoSo.trangThai]}>{nhanTrangThai}</NhanHoSo>
       }>Hồ sơ kế hoạch đã trình</TieuDeHoSo>
       {dangCho && (
         <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-950">
-          {duocDuyet ? 'Hồ sơ đang chờ bạn quyết định.'
-            : tenNguoiDuyet ? `Đang chờ ${tenNguoiDuyet} duyệt.` : 'Hồ sơ đang chờ người được phân công duyệt.'}
+          {thongBaoCho}
+          {buocRaSoat && tenNguoiDuyet && (
+            <span className="mt-1 block">Sau khi rà soát, hồ sơ sẽ được trình {tenNguoiDuyet} duyệt.</span>
+          )}
         </p>
       )}
       <div className="grid items-start gap-3 xl:grid-cols-2">
@@ -115,7 +131,7 @@ export default function HoSoDaTrinh({
           ['Chủ trì', hoSo.tenChuTri],
           ['Thư ký cuộc họp', hoSo.tenThuKyCuocHop],
           ['Cấp duyệt', TEN_CAP[hoSo.capPheDuyet]],
-          ['Người duyệt', tenNguoiDuyet],
+          [buocRaSoat ? 'Người duyệt sau rà soát' : 'Người duyệt', tenNguoiDuyet],
           ['Thời điểm trình', gio(hoSo.thoiGianTrinh)],
           ...(hoSo.yeuCauTruocId == null ? [] : [['Lần trình trước', 'Xem trong lịch sử trình duyệt']]),
         ]} />
