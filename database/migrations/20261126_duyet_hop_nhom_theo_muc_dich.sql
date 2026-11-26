@@ -1,5 +1,6 @@
 -- MySQL 8. Áp dụng một lần sau các migration ngày 20261125,
 -- hoặc trực tiếp trên bản sao lưu quan_ly_cuoc_hop (20).sql.
+-- Chạy 20261126_cap_nhat_rang_buoc_duyet_hop_nhom.sql trước file này.
 ALTER TABLE nhom_lien_phong_de_xuat
     ADD COLUMN muc_dich_hop VARCHAR(25) NOT NULL DEFAULT 'HOP_THUONG',
     ADD COLUMN thanh_vien_moi_them JSON NULL,
