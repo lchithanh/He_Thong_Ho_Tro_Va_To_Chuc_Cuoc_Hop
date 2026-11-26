@@ -10,7 +10,7 @@ const TRANG_THAI = {
   HOAT_DONG: 'Đang hoạt động',
   DA_DONG: 'Đã đóng',
 }
-const TEN_CAP_DUYET = { TRUONG_NHOM: 'Tổ trưởng', LANH_DAO: 'Chủ tịch hoặc Phó Chủ tịch phụ trách', VAN_PHONG: 'Văn phòng (luồng cũ)' }
+const TEN_CAP_DUYET = { TRUONG_NHOM: 'Tổ trưởng', LANH_DAO: 'Chủ tịch hoặc Phó Chủ tịch phụ trách' }
 const TEN_DOI_NGUOI = { CHO_XU_LY: 'Chờ xử lý', DA_CAP_NHAT: 'Đã cập nhật', TU_CHOI: 'Từ chối', DA_HUY: 'Đã hủy' }
 const KHUNG = 'space-y-3 rounded-xl border border-slate-200 bg-white p-4'
 const TRUONG = 'block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm'

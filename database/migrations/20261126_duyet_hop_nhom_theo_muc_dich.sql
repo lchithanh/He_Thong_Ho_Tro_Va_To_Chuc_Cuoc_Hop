@@ -54,12 +54,6 @@ WHERE ch.trang_thai = 'DANG_CHUAN_BI'
       ('CHO_TRUONG_NHOM', 'CHO_GUI_CAP_TREN', 'CHO_VAN_PHONG_DUYET',
        'CHO_LANH_DAO', 'CHO_THU_KY_LANH_DAO', 'THU_KY_LANH_DAO_XU_LY');
 
-UPDATE nhom_lien_phong_de_xuat dx
-JOIN cuoc_hop ch ON ch.cuoc_hop_id = dx.cuoc_hop_id
-JOIN nhom_lien_phong n ON n.nhom_id = dx.nhom_id
-SET dx.cap_duyet = 'TRUONG_NHOM', dx.nguoi_duyet_id = n.truong_nhom_id
-WHERE dx.cap_duyet = 'VAN_PHONG' AND ch.trang_thai IN ('DANG_CHUAN_BI', 'NHAP');
-
 COMMIT;
 
 DROP TABLE IF EXISTS thu_ky_van_phong;
