@@ -93,10 +93,7 @@ public class BauChonService {
             throw loi(HttpStatus.CONFLICT, "Chỉ mở vòng ở trạng thái nháp");
         }
         var cuTri = chonNguoiCoMat(cuocHopId, cuTriIds, "người bỏ phiếu");
-        for (Nguoi nguoi : cuTri) {
-            jdbc.sql("INSERT INTO cu_tri_vong_bau VALUES (?, ?)")
-                    .params(vongId, nguoi.nguoiDungId()).update();
-        }
+        ganCuTri(vongId, cuTri.stream().map(Nguoi::nguoiDungId).toList());
         capNhatTrangThai(vongId, "DANG_MO");
         realtime.baoCuocHop(hop, nguoiDungId);
     }
@@ -119,10 +116,22 @@ public class BauChonService {
                 || luaChon.stream().anyMatch(Objects::isNull) || !hopLe.containsAll(luaChon)) {
             throw loi(HttpStatus.BAD_REQUEST, "Chọn đúng " + canChon + " ứng viên khác nhau trong vòng này");
         }
+        luuPhieu(vongId, nguoiDungId, luaChon);
+    }
+
+    void ganCuTri(int vongId, List<Integer> cuTriIds) {
+        for (Integer id : cuTriIds) {
+            jdbc.sql("INSERT INTO cu_tri_vong_bau (vong_bau_id, nguoi_dung_id) VALUES (?, ?)")
+                    .params(vongId, id).update();
+        }
+    }
+
+    void luuPhieu(int vongId, int nguoiDungId, List<Integer> luaChon) {
         jdbc.sql("INSERT INTO phieu_bau (vong_bau_id, nguoi_bo_phieu_id) VALUES (?, ?)")
                 .params(vongId, nguoiDungId).update();
         for (Integer id : luaChon) {
-            jdbc.sql("INSERT INTO lua_chon_phieu_bau VALUES (?, ?, ?)").params(vongId, nguoiDungId, id).update();
+            jdbc.sql("INSERT INTO lua_chon_phieu_bau (vong_bau_id, nguoi_bo_phieu_id, ung_vien_id) VALUES (?, ?, ?)")
+                    .params(vongId, nguoiDungId, id).update();
         }
     }
 
@@ -175,9 +184,14 @@ public class BauChonService {
 
     boolean coVongDangMo(Integer cuocHopId) {
         return jdbc.sql("""
-                SELECT EXISTS(SELECT 1 FROM vong_bau v JOIN cuoc_bau b ON b.cuoc_bau_id = v.cuoc_bau_id
-                    WHERE b.cuoc_hop_id = ? AND v.trang_thai = 'DANG_MO')
-                """).param(cuocHopId).query(Boolean.class).single();
+                SELECT EXISTS (
+                    SELECT 1 FROM vong_bau v
+                    JOIN cuoc_bau b ON b.cuoc_bau_id = v.cuoc_bau_id
+                    LEFT JOIN nhom_bau_lai hs ON hs.yeu_cau_id = b.bau_lai_yeu_cau_id
+                    WHERE v.trang_thai = 'DANG_MO'
+                      AND (b.cuoc_hop_id = :hop OR hs.cuoc_hop_id = :hop)
+                )
+                """).param("hop", cuocHopId).query(Boolean.class).single();
     }
 
     private void chotVongGoc(Integer cuocHopId, Vong vongDaChot) {
@@ -223,7 +237,7 @@ public class BauChonService {
         }
     }
 
-    private void taoVong(Integer cuocBauId, Integer vongTruocId, int soVong, CauHinhVong cauHinh, List<Nguoi> ungVien) {
+    void taoVong(Integer cuocBauId, Integer vongTruocId, int soVong, CauHinhVong cauHinh, List<Nguoi> ungVien) {
         var khoa = new GeneratedKeyHolder();
         jdbc.sql("""
                 INSERT INTO vong_bau (cuoc_bau_id, vong_truoc_id, so_vong, so_lua_chon_moi_phieu, so_nguoi_duoc_chon)

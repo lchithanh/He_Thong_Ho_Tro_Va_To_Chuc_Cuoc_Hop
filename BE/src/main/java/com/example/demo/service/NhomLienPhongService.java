@@ -48,7 +48,8 @@ public class NhomLienPhongService {
     public record Phong(Integer phongBanId, String tenPhongBan, Integer nguoiCuId, LocalDateTime ngayCu) {}
     public record NhanSu(Integer nguoiDungId, String hoTen, Integer phongBanId) {}
     public record DoiNguoi(Integer doiNguoiId, Integer phongBanId, Integer nguoiCuId, Integer nguoiMoiId,
-            Integer nguoiYeuCauId, String lyDo, String trangThai, Integer truongPhongXacNhanId, boolean duocXuLy) {}
+            Integer nguoiYeuCauId, String lyDo, String trangThai, Integer truongPhongXacNhanId, boolean duocXuLy,
+            String tenNguoiCu, String tenNguoiMoi, String tenNguoiYeuCau) {}
     public record DeXuat(Integer cuocHopId, String tieuDe, String trangThai, String capDuyet, String tenNguoiDuyet,
             Integer nguoiGuiId) {}
     public record Quyen(boolean lanhDao, Integer phongTruongPhong) {
@@ -154,24 +155,29 @@ public class NhomLienPhongService {
                 || tv.stream().anyMatch(v -> v.nguoiDungId().equals(id))
                 || pb.stream().anyMatch(p -> p.phongBanId().equals(q.phongTruongPhong())),
                 "Bạn không có quyền xem nhóm này");
-        List<NhanSu> nguon = q.phongTruongPhong() != null ? jdbc.sql("""
+        boolean gui = duocGui(n, q, id);
+        List<NhanSu> nguon = gui || q.phongTruongPhong() != null ? jdbc.sql("""
                 SELECT nd.nguoi_dung_id, nd.ho_ten, nd.phong_ban_id
                 FROM nguoi_dung nd JOIN nhom_lien_phong_phong_ban pb ON pb.phong_ban_id = nd.phong_ban_id
                 WHERE pb.nhom_id = :id AND nd.trang_thai = 'HOAT_DONG'
-                  AND pb.phong_ban_id = :phong
+                  AND (:tatCaPhong OR pb.phong_ban_id = :phong)
                 ORDER BY nd.ho_ten
-                """).param("id", nhomId)
+                """).param("id", nhomId).param("tatCaPhong", gui)
                 .param("phong", q.phongTruongPhong(), java.sql.Types.INTEGER).query(NhanSu.class).list() : List.of();
-        boolean gui = duocGui(n, q, id);
         List<DoiNguoi> doiNguoi = jdbc.sql("""
                 SELECT d.doi_nguoi_id, d.phong_ban_id, d.nguoi_cu_id, d.nguoi_moi_id, d.nguoi_yeu_cau_id,
                     d.ly_do, d.trang_thai, IF(d.truong_phong_xac_nhan_id = pb.truong_phong_id,
                         d.truong_phong_xac_nhan_id, NULL) AS truong_phong_xac_nhan_id,
                     (d.trang_thai = 'CHO_XU_LY' AND CASE
+                        WHEN d.nguoi_moi_id IS NULL THEN :nguoi = :toTruong
                         WHEN d.truong_phong_xac_nhan_id = pb.truong_phong_id THEN :nguoi = :toTruong
                         ELSE COALESCE(d.phong_ban_id = :phong, FALSE)
-                    END) AS duoc_xu_ly
+                    END) AS duoc_xu_ly, cu.ho_ten AS ten_nguoi_cu,
+                    moi.ho_ten AS ten_nguoi_moi, yc.ho_ten AS ten_nguoi_yeu_cau
                 FROM nhom_lien_phong_doi_nguoi d JOIN phong_ban pb ON pb.phong_ban_id = d.phong_ban_id
+                LEFT JOIN nguoi_dung cu ON cu.nguoi_dung_id = d.nguoi_cu_id
+                LEFT JOIN nguoi_dung moi ON moi.nguoi_dung_id = d.nguoi_moi_id
+                LEFT JOIN nguoi_dung yc ON yc.nguoi_dung_id = d.nguoi_yeu_cau_id
                 WHERE d.nhom_id = :id ORDER BY d.doi_nguoi_id DESC
                 """).param("id", nhomId).param("nguoi", id).param("toTruong", n.truongNhomId(), java.sql.Types.INTEGER)
                 .param("phong", q.phongTruongPhong(), java.sql.Types.INTEGER).query(DoiNguoi.class).list();
@@ -234,20 +240,33 @@ public class NhomLienPhongService {
         phaiOTrangThai(n, HOAT_DONG);
         var q = quyen(id);
         hopLe(request.phongBanId() != null, "Chọn phòng ban cần đổi người");
+        boolean rutThanhVien = request.nguoiCuId() != null && request.nguoiMoiId() == null;
         boolean laTruongPhongLienQuan = request.phongBanId().equals(q.phongTruongPhong());
-        choPhep(laTruongPhongLienQuan || duocGui(n, q, id),
-                "Chỉ tổ trưởng, thư ký nhóm hoặc trưởng phòng liên quan được đề xuất đổi người");
+        if (rutThanhVien) {
+            kiemTraQuyenRutThanhVien(n, id);
+        } else {
+            choPhep(laTruongPhongLienQuan || duocGui(n, q, id),
+                    "Chỉ tổ trưởng, thư ký nhóm hoặc trưởng phòng liên quan được đề xuất đổi người");
+        }
         String lyDo = vanBan(request.lyDo(), 500);
         kiemTraThayNguoi(n, request.phongBanId(), request.nguoiCuId(), request.nguoiMoiId());
         jdbc.sql("""
                 INSERT INTO nhom_lien_phong_doi_nguoi
-                    (nhom_id, phong_ban_id, nguoi_cu_id, nguoi_moi_id, nguoi_yeu_cau_id, ly_do, truong_phong_xac_nhan_id)
-                VALUES (:nhom, :phong, :cu, :moi, :id, :lyDo, :xacNhan)
+                    (nhom_id, phong_ban_id, nguoi_cu_id, nguoi_moi_id, nguoi_yeu_cau_id, ly_do,
+                     truong_phong_xac_nhan_id, trang_thai, nguoi_xu_ly_id, ngay_xu_ly)
+                VALUES (:nhom, :phong, :cu, :moi, :id, :lyDo, :xacNhan, :tt, :xuLy,
+                        CASE WHEN :rut THEN CURRENT_TIMESTAMP END)
                 """).param("nhom", nhomId).param("phong", request.phongBanId())
                 .param("cu", request.nguoiCuId(), java.sql.Types.INTEGER)
                 .param("moi", request.nguoiMoiId(), java.sql.Types.INTEGER)
                 .param("id", id).param("lyDo", lyDo)
-                .param("xacNhan", laTruongPhongLienQuan ? id : null, java.sql.Types.INTEGER).update();
+                .param("xacNhan", !rutThanhVien && laTruongPhongLienQuan ? id : null, java.sql.Types.INTEGER)
+                .param("tt", rutThanhVien ? "DA_CAP_NHAT" : "CHO_XU_LY")
+                .param("xuLy", rutThanhVien ? id : null, java.sql.Types.INTEGER).param("rut", rutThanhVien).update();
+        if (rutThanhVien) {
+            capNhatThanhVien(n, request.phongBanId(), request.nguoiCuId(), null);
+            huyYeuCauCuaThanhVienDaRut(nhomId, request.nguoiCuId(), id);
+        }
         realtime.baoDanhMucNhomThayDoi();
     }
 
@@ -257,7 +276,8 @@ public class NhomLienPhongService {
         phaiOTrangThai(n, HOAT_DONG);
         var doi = jdbc.sql("""
                 SELECT doi_nguoi_id, phong_ban_id, nguoi_cu_id, nguoi_moi_id, nguoi_yeu_cau_id, ly_do, trang_thai,
-                    truong_phong_xac_nhan_id, FALSE AS duoc_xu_ly
+                    truong_phong_xac_nhan_id, FALSE AS duoc_xu_ly,
+                    NULL AS ten_nguoi_cu, NULL AS ten_nguoi_moi, NULL AS ten_nguoi_yeu_cau
                 FROM nhom_lien_phong_doi_nguoi WHERE nhom_id = :nhom AND doi_nguoi_id = :doi
                 """).param("nhom", nhomId).param("doi", doiId).query(DoiNguoi.class).optional()
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy yêu cầu đổi người"));
@@ -266,10 +286,15 @@ public class NhomLienPhongService {
         boolean daXacNhan = truongPhongId != null && truongPhongId.equals(doi.truongPhongXacNhanId());
         boolean laTruongPhong = doi.phongBanId().equals(q.phongTruongPhong());
         boolean laToTruong = id.equals(n.truongNhomId());
-        choPhep(daXacNhan ? laToTruong : laTruongPhong,
-                daXacNhan ? "Chỉ tổ trưởng được xử lý yêu cầu đã xác nhận"
-                        : "Trưởng phòng có nhân sự thay đổi cần xác nhận trước");
-        if (!daXacNhan && request.dongY()) {
+        boolean rutThanhVien = doi.nguoiMoiId() == null;
+        if (rutThanhVien) {
+            kiemTraQuyenRutThanhVien(n, id);
+        } else {
+            choPhep(daXacNhan ? laToTruong : laTruongPhong,
+                    daXacNhan ? "Chỉ tổ trưởng được xử lý yêu cầu đã xác nhận"
+                            : "Trưởng phòng có nhân sự thay đổi cần xác nhận trước");
+        }
+        if (!rutThanhVien && !daXacNhan && request.dongY()) {
             kiemTraThayNguoi(n, doi.phongBanId(), doi.nguoiCuId(), doi.nguoiMoiId());
             jdbc.sql("""
                     UPDATE nhom_lien_phong_doi_nguoi SET truong_phong_xac_nhan_id = :id WHERE doi_nguoi_id = :doi
@@ -290,6 +315,7 @@ public class NhomLienPhongService {
                     ngay_xu_ly = CURRENT_TIMESTAMP, y_kien_xu_ly = :yKien WHERE doi_nguoi_id = :doi
                 """).param("tt", request.dongY() ? "DA_CAP_NHAT" : "TU_CHOI")
                 .param("id", id).param("yKien", yKien, java.sql.Types.VARCHAR).param("doi", doiId).update();
+        if (rutThanhVien && request.dongY()) huyYeuCauCuaThanhVienDaRut(nhomId, doi.nguoiCuId(), id);
         realtime.baoDanhMucNhomThayDoi();
     }
 
@@ -297,6 +323,15 @@ public class NhomLienPhongService {
         var n = tim(nhomId, true);
         choPhep(duocDong(n, quyen(id), id), "Bạn không có quyền đóng nhóm này");
         xungDot(!DA_DONG.equals(n.trangThai()), "Nhóm đã đóng");
+        boolean conLuotBauDangMo = jdbc.sql("""
+                SELECT EXISTS (
+                    SELECT 1 FROM nhom_bau_lai hs
+                    JOIN cuoc_bau b ON b.bau_lai_yeu_cau_id = hs.yeu_cau_id
+                    JOIN vong_bau v ON v.cuoc_bau_id = b.cuoc_bau_id
+                    WHERE hs.nhom_id = :nhom AND v.trang_thai = 'DANG_MO'
+                )
+                """).param("nhom", nhomId).query(Boolean.class).single();
+        xungDot(!conLuotBauDangMo, "Thư ký nhóm cần đóng lượt bầu đang nhận phiếu trước khi đóng nhóm");
         jdbc.sql("""
                 UPDATE nhom_lien_phong SET trang_thai = 'DA_DONG', ly_do_dong = :lyDo,
                     nguoi_dong_id = :id, ngay_dong = CURRENT_TIMESTAMP WHERE nhom_id = :nhom
@@ -361,13 +396,13 @@ public class NhomLienPhongService {
         Integer hopId = deXuatService.guiDeXuatTuNhom(duLieu, timTaiKhoan(id), phong, taiKhoanChuTri, thuKy);
         jdbc.sql("""
                 INSERT INTO nhom_lien_phong_de_xuat (cuoc_hop_id, nhom_id, nguoi_gui_id,
-                    thanh_vien_khi_gui, nguoi_duyet_id, cap_duyet, muc_dich_hop, thanh_vien_moi_them, email_khach_ngoai)
-                VALUES (:hop, :nhom, :id, :tv, :duyet, :cap, :mucDich, :moi, :emailKhach)
+                    thanh_vien_khi_gui, nguoi_duyet_id, cap_duyet, muc_dich_hop, thanh_vien_moi_them, email_khach_ngoai, to_truong_khi_gui_id)
+                VALUES (:hop, :nhom, :id, :tv, :duyet, :cap, :mucDich, :moi, :emailKhach, :toTruong)
                 """).param("hop", hopId).param("nhom", nhomId).param("id", id)
                 .param("tv", objectMapper.writeValueAsString(thanhVien)).param("duyet", duyetId, java.sql.Types.INTEGER)
                 .param("cap", canLanhDao ? "LANH_DAO" : "TRUONG_NHOM").param("mucDich", mucDich)
                 .param("moi", objectMapper.writeValueAsString(moiThem))
-                .param("emailKhach", objectMapper.writeValueAsString(emailKhach)).update();
+                .param("emailKhach", objectMapper.writeValueAsString(emailKhach)).param("toTruong", chuTri).update();
         realtime.baoDanhMucNhomThayDoi();
         return hopId;
     }
@@ -454,7 +489,7 @@ public class NhomLienPhongService {
                 """).param("nhom", nhom).param("phong", phong).param("id", nguoi).update();
     }
 
-    private void ganVaiTro(Integer nhomId, Integer truong, Integer thuKy) {
+    void ganVaiTro(Integer nhomId, Integer truong, Integer thuKy) {
         var tv = thanhVien(nhomId);
         hopLe(truong != null && thuKy != null && !truong.equals(thuKy)
                 && tv.stream().anyMatch(v -> v.nguoiDungId().equals(truong))
@@ -467,9 +502,23 @@ public class NhomLienPhongService {
                 """).param("truong", truong).param("thuKy", thuKy).param("nhom", nhomId).update();
     }
 
+    private void kiemTraQuyenRutThanhVien(Nhom nhom, Integer id) {
+        choPhep(id.equals(nhom.truongNhomId()), "Chỉ tổ trưởng được rút thành viên khỏi nhóm");
+    }
+
+    private void huyYeuCauCuaThanhVienDaRut(Integer nhomId, Integer nguoiCuId, Integer id) {
+        jdbc.sql("""
+                UPDATE nhom_lien_phong_doi_nguoi SET trang_thai = 'DA_HUY', nguoi_xu_ly_id = :id,
+                    ngay_xu_ly = CURRENT_TIMESTAMP, y_kien_xu_ly = 'Thành viên đã rời nhóm'
+                WHERE nhom_id = :nhom AND nguoi_cu_id = :cu AND trang_thai = 'CHO_XU_LY'
+                """).param("nhom", nhomId).param("cu", nguoiCuId).param("id", id).update();
+    }
+
     private void kiemTraThayNguoi(Nhom n, Integer phong, Integer cu, Integer moi) {
         kiemTraPhong(n.nhomId(), phong);
         hopLe(!Objects.equals(cu, moi), "Chọn người cần thêm, bớt hoặc thay thế");
+        hopLe(cu == null || (!Objects.equals(cu, n.truongNhomId()) && !Objects.equals(cu, n.thuKyNhomId())),
+                "Cần xác nhận kết quả bầu lại chức danh trước khi thay hoặc rút người đang giữ chức danh");
         var tv = thanhVien(n.nhomId());
         hopLe(cu == null || tv.stream().anyMatch(v -> v.nguoiDungId().equals(cu) && v.phongBanId().equals(phong)),
                 "Người cần thay không còn thuộc phòng này trong nhóm");
@@ -477,8 +526,6 @@ public class NhomLienPhongService {
             kiemTraNguoiCuaPhong(moi, phong);
             hopLe(tv.stream().noneMatch(v -> v.nguoiDungId().equals(moi)), "Người mới đã có trong nhóm");
         } else {
-            hopLe(!Objects.equals(cu, n.truongNhomId()) && !Objects.equals(cu, n.thuKyNhomId()),
-                    "Cần chọn người thay thế trưởng nhóm hoặc thư ký nhóm");
             hopLe(tv.stream().filter(v -> v.phongBanId().equals(phong)).count() > 1, "Phòng phải còn ít nhất một thành viên");
         }
     }
@@ -486,8 +533,6 @@ public class NhomLienPhongService {
     private void capNhatThanhVien(Nhom n, Integer phong, Integer cu, Integer moi) {
         if (moi != null) themThanhVien(n.nhomId(), phong, moi);
         if (cu == null) return;
-        if (Objects.equals(cu, n.truongNhomId())) ganVaiTro(n.nhomId(), moi, n.thuKyNhomId());
-        if (Objects.equals(cu, n.thuKyNhomId())) ganVaiTro(n.nhomId(), n.truongNhomId(), moi);
         jdbc.sql("DELETE FROM nhom_lien_phong_thanh_vien WHERE nhom_id = :nhom AND nguoi_dung_id = :cu")
                 .param("nhom", n.nhomId()).param("cu", cu).update();
     }

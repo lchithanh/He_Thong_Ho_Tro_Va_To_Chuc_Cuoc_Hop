@@ -31,7 +31,7 @@ public class NhomThamDuCuocHopService {
     static final String CHU_TICH_CHU_TRI = "CHU_TICH_CHU_TRI";
     static final String XIN_CHU_TICH_KET_LUAN = "XIN_CHU_TICH_KET_LUAN";
 
-    record TuyenDuyet(Integer nhomId, String mucDichHop, Integer nguoiDuyetId, String thanhVienMoiThem, String emailKhachNgoai) {}
+    record TuyenDuyet(Integer nhomId, String mucDichHop, Integer nguoiDuyetId, String thanhVienMoiThem, String emailKhachNgoai, Integer toTruongKhiGuiId) {}
 
     public record LanhDaoPhuTrach(Integer nguoiDungId, String hoTen, String chucVu, boolean chuTich) {}
 
@@ -53,7 +53,7 @@ public class NhomThamDuCuocHopService {
 
     TuyenDuyet layTuyenDuyet(Integer cuocHopId) {
         return jdbc.sql("""
-                SELECT nhom_id, muc_dich_hop, nguoi_duyet_id, thanh_vien_moi_them, email_khach_ngoai
+                SELECT nhom_id, muc_dich_hop, nguoi_duyet_id, thanh_vien_moi_them, email_khach_ngoai, to_truong_khi_gui_id
                 FROM nhom_lien_phong_de_xuat WHERE cuoc_hop_id = :id
                 """).param("id", cuocHopId).query(TuyenDuyet.class).optional().orElse(null);
     }
@@ -188,3 +188,6 @@ public class NhomThamDuCuocHopService {
         return ids;
     }
 }
+
+
+

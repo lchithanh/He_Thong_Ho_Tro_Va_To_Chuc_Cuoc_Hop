@@ -23,7 +23,6 @@ public class DeXuatLichHopService {
     private final LichHopRepository lichHopRepository;
     private final LichHopService lichHopService;
     private final CuocHopRepository cuocHopRepository;
-    private final QuyTrinhKeHoachService quyTrinhKeHoachService;
 
     public LichHopResponse taoLichHop(TaoLichHopRequest request, Integer nguoiDeXuatId) {
         if (request == null) throw loi(HttpStatus.BAD_REQUEST, "Thiếu thông tin lịch");
@@ -53,19 +52,12 @@ public class DeXuatLichHopService {
         LichHop lich = lichHopService.timLichHop(lichHopId);
         CuocHop ch = khoaCuocHop(lich.getCuocHop().getCuocHopId());
         lich = lichHopService.timLichHopVaKhoa(lichHopId);
-        var yeuCauRaSoat = quyTrinhKeHoachService.timYeuCauXepLichNhom(ch, nguoiDungId);
-        boolean vanPhongXepLich = yeuCauRaSoat != null && lichHopId.equals(yeuCauRaSoat.getLichHop().getLichHopId());
-        if (!vanPhongXepLich) {
-            lichHopService.kiemTraQuyenDeXuatLich(ch, nguoiDungId);
-            kiemTraDuocLapLich(ch);
-            lichHopService.kiemTraNguoiTaoLich(lich, nguoiDungId);
-            lichHopService.kiemTraLichKhongChoDuyetKeHoach(lichHopId);
-        } else if (request.phongHopId() == null || request.lyDoThayDoi() == null
-                || request.lyDoThayDoi().isBlank() || request.lyDoThayDoi().length() > 500) {
-            throw loi(HttpStatus.BAD_REQUEST, "Chọn phòng họp và nhập lý do xếp lịch tối đa 500 ký tự");
-        }
+        lichHopService.kiemTraQuyenDeXuatLich(ch, nguoiDungId);
+        kiemTraDuocLapLich(ch);
         if (lich.isLaLichDoi()) throw loi(HttpStatus.CONFLICT, "Lịch dời đã gửi thông báo");
         if (!ThaoTacLichHop.coTheCapNhat(lich)) throw loi(HttpStatus.CONFLICT, "Chỉ sửa lịch đang đề xuất");
+        lichHopService.kiemTraNguoiTaoLich(lich, nguoiDungId);
+        lichHopService.kiemTraLichKhongChoDuyetKeHoach(lichHopId);
         lichHopService.kiemTraThoiGian(request.thoiGianBatDau(), request.thoiGianKetThuc());
         PhongHop phong = null;
         if (request.phongHopId() != null) {
@@ -78,9 +70,6 @@ public class DeXuatLichHopService {
         ThaoTacCuocHop.thucHien(() -> ThaoTacLichHop.capNhatLich(lichDaKhoa, phongDaChon,
                 request.thoiGianBatDau(), request.thoiGianKetThuc(), request.lyDoThayDoi()));
         LichHop daLuu = lichHopRepository.save(lich);
-        if (vanPhongXepLich) {
-            quyTrinhKeHoachService.ghiNhanVanPhongXepLich(yeuCauRaSoat, nguoiDungId, request.lyDoThayDoi().trim());
-        }
         capNhatRealtime.baoNguoiPhuTrach(ch, nguoiDungId);
         return lichHopService.chuyenDoiResponse(daLuu);
     }

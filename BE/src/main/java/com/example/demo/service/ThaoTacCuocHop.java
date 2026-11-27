@@ -305,8 +305,12 @@ final class ThaoTacCuocHop {
     }
 
     static void guiKeHoachCapTren(CuocHop cuocHop) {
+        guiKeHoachCapTren(cuocHop, false);
+    }
+
+    static void guiKeHoachCapTren(CuocHop cuocHop, boolean guiThangChoLanhDao) {
         kiemTraBuocKeHoach(cuocHop, "CHO_GUI_CAP_TREN");
-        cuocHop.setBuocXuLyHienTai("CHO_THU_KY_LANH_DAO");
+        cuocHop.setBuocXuLyHienTai(guiThangChoLanhDao ? "CHO_LANH_DAO" : "CHO_THU_KY_LANH_DAO");
     }
 
     static void tiepNhanHoSoLanhDao(CuocHop cuocHop) {

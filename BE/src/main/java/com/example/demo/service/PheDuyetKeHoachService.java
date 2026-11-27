@@ -3,7 +3,6 @@ package com.example.demo.service;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Objects;
 import java.util.Map;
 
 import org.springframework.http.HttpStatus;
@@ -289,14 +288,12 @@ public List<LichSuKeHoachResponse> layLichSuPheDuyetKeHoach(
     @Transactional(readOnly = true)
     public List<KeHoachPheDuyetResponse> layHoSoCuaThuKyLanhDao(Integer nguoiDungId) {
         nguoiDungHienTaiService.layTaiKhoanHoatDong(nguoiDungId);
-        boolean laThuKy = phanQuyenCuocHopService.coVaiTro(nguoiDungId, "THU_KY");
-        boolean laTruongVanPhong = Objects.equals(nguoiDungId, nhomThamDu.layTruongVanPhong());
-        if (!laThuKy && !laTruongVanPhong) return List.of();
+        if (!phanQuyenCuocHopService.coVaiTro(nguoiDungId, "THU_KY")) return List.of();
         return yeuCauPheDuyetRepository
                 .timTheoThuKyTiepNhan(LoaiYeuCau.KE_HOACH_CUOC_HOP, TrangThai.CHO_DUYET,
                         nguoiDungId, List.of("CHO_THU_KY_LANH_DAO", "THU_KY_LANH_DAO_XU_LY"))
                 .stream()
-                .filter(yc -> nhomThamDu.laDeXuatTuNhom(yc.getCuocHop().getCuocHopId()) ? laTruongVanPhong : laThuKy)
+                .filter(yc -> !nhomThamDu.laDeXuatTuNhom(yc.getCuocHop().getCuocHopId()))
                 .map(this::chuyenDanhSachResponse)
                 .toList();
     }
@@ -316,7 +313,7 @@ public List<LichSuKeHoachResponse> layLichSuPheDuyetKeHoach(
     }
 
     private boolean laDuyetCapTrungGian(YeuCauPheDuyet yc) {
-        return ("TRUONG_PHONG".equals(yc.getCapPheDuyet())
+        return quyTrinhKeHoachService.laDuyetNhomTrungGian(yc) || ("TRUONG_PHONG".equals(yc.getCapPheDuyet())
                 && QuyTacDuyetKeHoach.canTrinhCapTren(
                         phanQuyenCuocHopService.coVaiTro(
                                 yc.getCuocHop().getNguoiDeXuat().getNguoiDungId(), "LANH_DAO"),
