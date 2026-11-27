@@ -7,7 +7,6 @@ import {
   layKeHoachChoToiDuyet,
   layHoSoThuKyLanhDao,
   layLuaChonKeHoach,
-  layTrangThaiHienThiCuocHop,
   tiepNhanDeXuat,
 } from '../../api/cuocHopApi.js'
 import TaiLieuKeHoachThuKy from './TaiLieuKeHoachThuKy.jsx'
@@ -20,6 +19,7 @@ import KhachNgoaiCuocHop from './KhachNgoaiCuocHop.jsx'
 import DanhSachBieuQuyetChuTri from '../pheduyet/DanhSachBieuQuyetChuTri.jsx'
 import TaoBieuQuyet from '../pheduyet/TaoBieuQuyet.jsx'
 import NhanTrangThai from './NhanTrangThaiDeXuat.jsx'
+import { layNhanTrangThaiHoSo } from './hienThiDeXuat.js'
 import NoiDungPhanHoi from './NoiDungPhanHoi.jsx'
 import ThongTinCuocHop from './ThongTinCuocHop.jsx'
 import TaiLieuTongQuanCuocHop from './TaiLieuTongQuanCuocHop.jsx'
@@ -329,7 +329,7 @@ export default function ChiTietDeXuat({ cuocHopId, token, nguoiDung, onQuayLai, 
                       </dl>
                     )}
                   </div>
-                  <NhanTrangThai trangThai={buocThuKyLanhDao ? buocXuLy : layTrangThaiHienThiCuocHop(chiTiet)} />
+                  <NhanTrangThai trangThai={layNhanTrangThaiHoSo(chiTiet)} />
                 </div>
               </div>
 

@@ -10,7 +10,7 @@ import Inbox from 'lucide-react/dist/esm/icons/inbox.mjs'
 import { layDanhSachDeXuat, layHoSoThuKyLanhDao, layTrangThaiHienThiCuocHop } from '../../api/cuocHopApi.js'
 import NhanTrangThai from './NhanTrangThaiDeXuat.jsx'
 import NoiDungPhanHoi from './NoiDungPhanHoi.jsx'
-import { TEN_PHAM_VI, TEN_TRANG_THAI } from './hienThiDeXuat.js'
+import { canChinhSuaKeHoach, canChuanBiCuocHopDuocGiao, khopTrangThaiHoSo, layNhanTrangThaiHoSo, TEN_PHAM_VI, TEN_TRANG_THAI } from './hienThiDeXuat.js'
 import ChiTietDeXuat from './ChiTietDeXuat.jsx'
 
 export { ChiTietDeXuat }
@@ -19,7 +19,7 @@ export { default as HoSoDaTrinh } from './HoSoDaTrinh.jsx'
 
 import LichCongTacNhom from '../nhom/LichCongTacNhom.jsx'
 
-export default function DanhSachDeXuatThuKy({ token, nguoiDung, onLapLich, onMoPhongHop, viecDaChon, chiXemPhanHoi = false, chiXemBanGiao = false, chiXemRaSoat = false, chiXemChuyenCap = false, hienLichCongTacNhom = false }) {
+export default function DanhSachDeXuatThuKy({ token, nguoiDung, onLapLich, onMoPhongHop, tuViecChoXuLy, chiXemPhanHoi = false, chiXemBanGiao = false, chiXemRaSoat = false, chiXemChuyenCap = false, hienLichCongTacNhom = false }) {
   const phienDongBo = useDongBoDuLieu()
   const [danhSach, setDanhSach] = useState(null)
   const [loi, setLoi] = useState('')
@@ -55,10 +55,6 @@ export default function DanhSachDeXuatThuKy({ token, nguoiDung, onLapLich, onMoP
     return () => controller.abort()
   }, [token, lanTai, chiXemRaSoat, phienDongBo])
 
-  const khoa = chiXemRaSoat ? 'yeuCauPheDuyetId' : chiXemChuyenCap ? 'yeuCauChoGuiCapTrenId' : 'cuocHopId'
-  const idsChoXuLy = viecDaChon && new Set(viecDaChon.map((muc) => muc[khoa]))
-  const danhSachTheoViec = idsChoXuLy ? danhSach?.filter((muc) => idsChoXuLy.has(muc[khoa])) : danhSach
-
   if (cuocHopDangXem !== null) {
     return (
       <ChiTietDeXuat
@@ -91,8 +87,8 @@ export default function DanhSachDeXuatThuKy({ token, nguoiDung, onLapLich, onMoP
         <h1 className="text-2xl font-bold">Hồ sơ chờ rà soát</h1>
         {hienLichCongTacNhom && <LichCongTacNhom token={token} />}
         {loi ? <p role="alert">{loi}</p> : !danhSach ? <p role="status">Đang tải hồ sơ…</p>
-          : !danhSachTheoViec?.length && <p>Chưa có hồ sơ chờ rà soát.</p>}
-        {danhSachTheoViec?.map((muc) => (
+          : !danhSach.length && <p>Chưa có hồ sơ chờ rà soát.</p>}
+        {danhSach?.map((muc) => (
           <article key={muc.yeuCauPheDuyetId} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4">
             <div><h2 className="font-semibold">{muc.tieuDe}</h2>
               <p className="text-sm text-slate-600">Đã trình {dinhDangNgayGio(muc.thoiGianTrinh)}</p></div>
@@ -105,18 +101,18 @@ export default function DanhSachDeXuatThuKy({ token, nguoiDung, onLapLich, onMoP
   }
 
   if (chiXemPhanHoi) {
-    const phanHoi = danhSachTheoViec?.filter((muc) => muc.phanHoiKeHoach && (!viecDaChon || (muc.duocLapKeHoach && muc.phanHoiKeHoach.trangThai === 'TRA_LAI')))
+    const phanHoi = danhSach?.filter((muc) => tuViecChoXuLy ? canChinhSuaKeHoach(muc) : Boolean(muc.phanHoiKeHoach))
       .sort((a, b) => (b.phanHoiKeHoach.thoiGian ?? '').localeCompare(a.phanHoiKeHoach.thoiGian ?? ''))
     return (
       <section className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-2xl font-bold">Phản hồi kế hoạch</h1>
+          <h1 className="text-2xl font-bold">{tuViecChoXuLy ? 'Kế hoạch cần chỉnh sửa' : 'Phản hồi kế hoạch'}</h1>
           <button type="button" onClick={() => setLanTai((lan) => lan + 1)}
             className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold">Tải lại</button>
         </div>
         {loi ? <p role="alert" className="text-sm text-red-800">{loi}</p>
           : phanHoi == null ? <p role="status">Đang tải phản hồi…</p>
-            : !phanHoi.length && <p className="text-sm text-slate-600">Chưa có kế hoạch bị trả lại hoặc từ chối.</p>}
+            : !phanHoi.length && <p className="text-sm text-slate-600">{tuViecChoXuLy ? 'Chưa có kế hoạch cần chỉnh sửa.' : 'Chưa có kế hoạch bị trả lại hoặc từ chối.'}</p>}
         {phanHoi?.map((muc) => (
           <article key={muc.cuocHopId} className="space-y-2 rounded-xl border border-slate-200 bg-white p-4">
             <div className="flex flex-wrap items-center gap-2">
@@ -135,7 +131,7 @@ export default function DanhSachDeXuatThuKy({ token, nguoiDung, onLapLich, onMoP
   }
 
   if (chiXemChuyenCap) {
-    const choChuyenCap = danhSachTheoViec?.filter((muc) => muc.yeuCauChoGuiCapTrenId != null)
+    const choChuyenCap = danhSach?.filter((muc) => muc.yeuCauChoGuiCapTrenId != null)
     return (
       <section className="space-y-4">
         <h1 className="text-2xl font-bold">Hồ sơ chờ chuyển cấp</h1>
@@ -158,12 +154,12 @@ export default function DanhSachDeXuatThuKy({ token, nguoiDung, onLapLich, onMoP
   }
 
   if (chiXemBanGiao) {
-    const daGiao = danhSachTheoViec?.filter((muc) => muc.yeuCauBanGiaoId != null)
+    const daGiao = danhSach?.filter((muc) => tuViecChoXuLy ? canChuanBiCuocHopDuocGiao(muc) : muc.yeuCauBanGiaoId != null)
     return (
       <section className="space-y-4">
-        <h1 className="text-2xl font-bold">Cuộc họp được giao</h1>
+        <h1 className="text-2xl font-bold">{tuViecChoXuLy ? 'Cuộc họp cần chuẩn bị' : 'Cuộc họp được giao'}</h1>
         {loi ? <p role="alert">{loi}</p> : !daGiao ? <p role="status">Đang tải hồ sơ…</p>
-          : !daGiao.length && <p>Chưa có hồ sơ được bàn giao.</p>}
+          : !daGiao.length && <p>{tuViecChoXuLy ? 'Chưa có cuộc họp cần chuẩn bị.' : 'Chưa có hồ sơ được bàn giao.'}</p>}
         {daGiao?.map((muc) => (
           <article key={muc.cuocHopId} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4">
             <div><h2 className="font-semibold">{muc.tieuDe}</h2>
@@ -181,7 +177,7 @@ export default function DanhSachDeXuatThuKy({ token, nguoiDung, onLapLich, onMoP
   const danhSachHienThi = danhSach?.filter((deXuat) => {
     const thongTin = `${deXuat.tieuDe ?? ''} ${deXuat.maCuocHop || deXuat.cuocHopId}`
     return (!phamVi || deXuat.phamViCuocHop === phamVi)
-      && (!trangThai || layTrangThaiHienThiCuocHop(deXuat) === trangThai)
+      && khopTrangThaiHoSo(deXuat, trangThai)
       && thongTin.toLocaleLowerCase('vi').includes(timKiem)
   })
 
@@ -313,7 +309,7 @@ export default function DanhSachDeXuatThuKy({ token, nguoiDung, onLapLich, onMoP
                     {TEN_PHAM_VI[deXuat.phamViCuocHop] ?? deXuat.phamViCuocHop ?? '—'}
                   </td>
                   <td className="px-3 py-3">
-                    <NhanTrangThai trangThai={layTrangThaiHienThiCuocHop(deXuat)} />
+                    <NhanTrangThai trangThai={layNhanTrangThaiHoSo(deXuat)} />
                   </td>
                   <td className="px-3 py-3">
                     <button
