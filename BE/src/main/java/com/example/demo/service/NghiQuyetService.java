@@ -34,6 +34,7 @@ public class NghiQuyetService {
     private final ThanhVienCuocHopRepository thanhVienRepository;
     private final NguoiDungHienTaiService nguoiDungHienTaiService;
     private final CapNhatHoSoRealtime realtime;
+    private final ThongBaoService thongBao;
 
     public record NoiDung(Integer nghiQuyetChaId, String tieuDe, String noiDung) {}
     public record Muc(Integer nghiQuyetId, Integer nghiQuyetChaId, int cap,
@@ -117,6 +118,8 @@ public class NghiQuyetService {
             throw loi(HttpStatus.CONFLICT, "Chỉ công bố nghị quyết nháp đã có tệp");
         }
         jdbc.sql("UPDATE nghi_quyet SET ngay_cong_bo = CURRENT_TIMESTAMP WHERE nghi_quyet_id = ?").param(id).update();
+        thongBao.gui(hop, nguoiDungId, "NGHI_QUYET_CONG_BO", "Đã công bố nghị quyết",
+                muc.tieuDe(), realtime.nguoiDocVanBan(hop));
         realtime.baoCuocHop(hop, nguoiDungId);
     }
 

@@ -35,6 +35,7 @@ import lombok.RequiredArgsConstructor;
 @Transactional
 public class DeXuatCuocHopService {
     private final CapNhatHoSoRealtime capNhatRealtime;
+    private final ThongBaoService thongBaoService;
     private final CuocHopRepository cuocHopRepository;
     private final HuyCuocHopService huyCuocHopService;
     private final NguoiDungRepository nguoiDungRepository;
@@ -152,7 +153,7 @@ public class DeXuatCuocHopService {
             ganThuKy(daLuu, thuKy);
         }
         if (request.isGuiNgay()) {
-            capNhatRealtime.baoBuocDeXuat(daLuu, nguoiDangNhapId);
+            thongBaoDeXuatMoi(daLuu, nguoiDangNhapId, thuKy);
         } else {
             capNhatRealtime.baoCho(nguoiDangNhapId);
         }
@@ -169,7 +170,7 @@ public class DeXuatCuocHopService {
         daLuu.setThuKyCuocHop(thuKy);
         ThaoTacCuocHop.thucHien(() -> ThaoTacCuocHop.guiDeXuat(daLuu));
         daLuu.getDeXuat().ghiNhanBuocXuLy(daLuu);
-        capNhatRealtime.baoBuocDeXuat(daLuu, nguoiGui.getNguoiDungId());
+        thongBaoDeXuatMoi(daLuu, nguoiGui.getNguoiDungId(), thuKy);
         return daLuu.getCuocHopId();
     }
 
@@ -324,7 +325,7 @@ public class DeXuatCuocHopService {
             cuocHop.getDeXuat().ghiNhanBuocXuLy(cuocHop);
         }
         cuocHopRepository.save(cuocHop);
-        capNhatRealtime.baoBuocDeXuat(cuocHop, nguoiDangNhapId);
+        thongBaoDeXuatMoi(cuocHop, nguoiDangNhapId, thuKy);
     }
     // TIẾP NHẬN ĐỀ XUẤT
     public void tiepNhanDeXuat(
@@ -353,7 +354,15 @@ public class DeXuatCuocHopService {
         }
         ThaoTacCuocHop.thucHien(() -> ThaoTacCuocHop.tiepNhanDeXuat(cuocHop));
         cuocHopRepository.save(cuocHop);
+        thongBaoService.gui(cuocHop, nguoiDangNhapId, "KE_HOACH_TIEP_NHAN", "Đề xuất đã được tiếp nhận",
+                cuocHop.getTieuDe(), cuocHop.getNguoiDeXuat());
         capNhatRealtime.baoBuocDeXuat(cuocHop, nguoiDangNhapId);
+    }
+
+    private void thongBaoDeXuatMoi(CuocHop hop, Integer nguoiGui, NguoiDung thuKy) {
+        thongBaoService.gui(hop, nguoiGui, "KE_HOACH_DE_XUAT_MOI", "Có đề xuất cuộc họp cần tiếp nhận",
+                hop.getTieuDe(), thuKy);
+        capNhatRealtime.baoBuocDeXuat(hop, nguoiGui);
     }
 
     @Transactional(readOnly = true)

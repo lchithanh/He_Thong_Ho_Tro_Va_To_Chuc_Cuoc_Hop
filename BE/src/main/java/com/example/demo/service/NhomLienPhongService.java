@@ -46,6 +46,7 @@ public class NhomLienPhongService {
     private final PhanCongXuLyKeHoachService phanCong;
     private final ObjectMapper objectMapper;
     private final CapNhatHoSoRealtime realtime;
+    private final ThongBaoService thongBao;
     private final NhomThamDuCuocHopService nhomThamDu;
 
     public record Nhom(Integer nhomId, String tenNhom, String mucDich, Integer phongBanChuTriId,
@@ -133,9 +134,10 @@ public class NhomLienPhongService {
         choPhep(quyen.lanhDao() || Objects.equals(chuTri, quyen.phongTruongPhong()),
                 "Trưởng phòng chỉ được lập nhóm do phòng mình chủ trì");
         hopLe("THUONG".equals(request.capNhom()) || "CAP_CAO".equals(request.capNhom()), "Cấp nhóm không hợp lệ");
-        long soPhong = phongBanRepository.findAllById(phongIds).stream()
-                .filter(p -> HOAT_DONG.equals(p.getTrangThai()) && p.getTruongPhongId() != null).count();
-        hopLe(soPhong == phongIds.size(), "Mỗi phòng tham gia cần đang hoạt động và có trưởng phòng");
+        var truongPhong = phongBanRepository.findAllById(phongIds).stream()
+                .filter(p -> HOAT_DONG.equals(p.getTrangThai()) && p.getTruongPhongId() != null)
+                .map(phong -> phong.getTruongPhongId()).toList();
+        hopLe(truongPhong.size() == phongIds.size(), "Mỗi phòng tham gia cần đang hoạt động và có trưởng phòng");
         var key = new GeneratedKeyHolder();
         jdbc.sql("""
                 INSERT INTO nhom_lien_phong (ten_nhom, muc_dich, phong_ban_chu_tri_id, nguoi_lap_id, cap_nhom)
@@ -147,6 +149,8 @@ public class NhomLienPhongService {
             jdbc.sql("INSERT INTO nhom_lien_phong_phong_ban (nhom_id, phong_ban_id) VALUES (:nhom, :phong)")
                     .param("nhom", nhomId).param("phong", phong).update();
         }
+        thongBao.guiTheoId(null, id, "NHOM_THANH_VIEN", "Có nhóm liên phòng cần cử nhân sự",
+                request.tenNhom().strip(), truongPhong);
         realtime.baoDanhMucNhomThayDoi();
         return nhomId;
     }
@@ -244,6 +248,8 @@ public class NhomLienPhongService {
                 UPDATE nhom_lien_phong SET trang_thai = 'HOAT_DONG',
                     nguoi_kich_hoat_id = :id, ngay_kich_hoat = CURRENT_TIMESTAMP WHERE nhom_id = :nhom
                 """).param("id", id).param("nhom", nhomId).update();
+        thongBao.guiTheoId(null, id, "NHOM_THANH_VIEN", "Nhóm liên phòng đã được kích hoạt",
+                n.tenNhom(), thanhVien(nhomId).stream().map(NhanSu::nguoiDungId).toList());
         realtime.baoDanhMucNhomThayDoi();
     }
 
@@ -278,6 +284,13 @@ public class NhomLienPhongService {
         if (rutThanhVien) {
             capNhatThanhVien(n, request.phongBanId(), request.nguoiCuId(), null);
             huyYeuCauCuaThanhVienDaRut(nhomId, request.nguoiCuId(), id);
+            thongBao.guiTheoId(null, id, "NHOM_THANH_VIEN", "Bạn đã được rút khỏi nhóm",
+                    n.tenNhom() + " · " + lyDo, List.of(request.nguoiCuId()));
+        } else {
+            Integer nguoiXuLy = laTruongPhongLienQuan ? n.truongNhomId()
+                    : phongBanRepository.findById(request.phongBanId()).orElseThrow().getTruongPhongId();
+            thongBao.guiTheoId(null, id, "NHOM_THANH_VIEN", "Có yêu cầu thay đổi nhân sự nhóm",
+                    n.tenNhom() + " · " + lyDo, java.util.Collections.singletonList(nguoiXuLy));
         }
         realtime.baoDanhMucNhomThayDoi();
     }
@@ -312,6 +325,8 @@ public class NhomLienPhongService {
                     UPDATE nhom_lien_phong_doi_nguoi SET truong_phong_xac_nhan_id = :id WHERE doi_nguoi_id = :doi
                     """).param("id", id).param("doi", doiId).update();
             if (!laToTruong) {
+                thongBao.guiTheoId(null, id, "NHOM_THANH_VIEN", "Trưởng phòng đã xác nhận thay đổi nhân sự",
+                        n.tenNhom(), List.of(n.truongNhomId()));
                 realtime.baoDanhMucNhomThayDoi();
                 return;
             }
@@ -328,6 +343,10 @@ public class NhomLienPhongService {
                 """).param("tt", request.dongY() ? "DA_CAP_NHAT" : "TU_CHOI")
                 .param("id", id).param("yKien", yKien, java.sql.Types.VARCHAR).param("doi", doiId).update();
         if (rutThanhVien && request.dongY()) huyYeuCauCuaThanhVienDaRut(nhomId, doi.nguoiCuId(), id);
+        thongBao.guiTheoId(null, id, "NHOM_THANH_VIEN",
+                request.dongY() ? "Đã cập nhật nhân sự nhóm" : "Yêu cầu đổi nhân sự đã bị từ chối",
+                n.tenNhom(), request.dongY() ? java.util.Arrays.asList(doi.nguoiYeuCauId(), doi.nguoiCuId(), doi.nguoiMoiId())
+                        : List.of(doi.nguoiYeuCauId()));
         realtime.baoDanhMucNhomThayDoi();
     }
 
@@ -353,6 +372,8 @@ public class NhomLienPhongService {
                     ngay_xu_ly = CURRENT_TIMESTAMP, y_kien_xu_ly = 'Nhóm đã đóng'
                 WHERE nhom_id = :nhom AND trang_thai = 'CHO_XU_LY'
                 """).param("id", id).param("nhom", nhomId).update();
+        thongBao.guiTheoId(null, id, "NHOM_THANH_VIEN", "Nhóm liên phòng đã đóng",
+                n.tenNhom(), thanhVien(nhomId).stream().map(NhanSu::nguoiDungId).toList());
         realtime.baoDanhMucNhomThayDoi();
     }
 
@@ -531,6 +552,17 @@ public class NhomLienPhongService {
         hopLe(!Objects.equals(cu, moi), "Chọn người cần thêm, bớt hoặc thay thế");
         hopLe(cu == null || (!Objects.equals(cu, n.truongNhomId()) && !Objects.equals(cu, n.thuKyNhomId())),
                 "Cần xác nhận kết quả bầu lại chức danh trước khi thay hoặc rút người đang giữ chức danh");
+        if (cu != null) {
+            boolean choBanGiao = jdbc.sql("""
+                    SELECT EXISTS (
+                        SELECT 1 FROM nhom_ban_giao_chuc_danh bg
+                        JOIN nhom_bau_lai hs ON hs.yeu_cau_id = bg.yeu_cau_id
+                        WHERE hs.nhom_id = ? AND bg.ngay_nhan IS NULL
+                            AND ? IN (bg.nguoi_ban_giao_id, bg.nguoi_nhan_id)
+                    )
+                    """).params(n.nhomId(), cu).query(Boolean.class).single();
+            xungDot(!choBanGiao, "Hoàn tất bàn giao chức danh trước khi thay hoặc rút người này");
+        }
         var tv = thanhVien(n.nhomId());
         hopLe(cu == null || tv.stream().anyMatch(v -> v.nguoiDungId().equals(cu) && v.phongBanId().equals(phong)),
                 "Người cần thay không còn thuộc phòng này trong nhóm");

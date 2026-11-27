@@ -1,3 +1,4 @@
+import HopThongBao from '../components/HopThongBao.jsx'
 import { useState } from 'react'
 import CalendarDays from 'lucide-react/dist/esm/icons/calendar-days.mjs'
 import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right.mjs'
@@ -110,6 +111,7 @@ export default function BoCucChung({
             <p className="mt-0.5 truncate text-xs capitalize text-slate-500 phong-toi:text-phong-chu-phu">{ngayHienTai}</p>
           </div>
           <div className="flex shrink-0 items-center gap-2.5">
+              <HopThongBao token={nguoiDung.token} />
             <span aria-hidden="true" className="grid size-9 place-items-center rounded-full bg-blue-100 phong-toi:bg-phong-nhan-xanh text-sm font-bold text-blue-900 phong-toi:text-phong-xanh">
               {chuCaiDau.toLocaleUpperCase('vi')}
             </span>

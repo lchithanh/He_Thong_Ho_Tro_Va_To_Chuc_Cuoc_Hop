@@ -32,6 +32,7 @@ public class CuocHopService {
     private final PhanCongXuLyKeHoachService phanCongXuLyKeHoachService;
     private final KhachMoiCuocHopRepository khachMoiCuocHopRepository;
     private final NhomThamDuCuocHopService nhomThamDu;
+    private final ThongBaoService thongBao;
 
     public record LuaChonKeHoach(
             List<NguoiCoTheMoiResponse> nguoiChuTri,
@@ -234,6 +235,9 @@ public class CuocHopService {
                     ex.getMessage(),
                     ex);
         }
+        thongBao.gui(cuocHop, nguoiDangNhapId, "CUOC_HOP_KET_THUC", "Cuộc họp đã kết thúc",
+                cuocHop.getTieuDe() + " · Có thể soạn biên bản và kết luận.",
+                cuocHop.getNguoiChuTri(), cuocHop.getThuKyCuocHop());
         capNhatRealtime.baoCuocHop(cuocHop, nguoiDangNhapId);
     }
 

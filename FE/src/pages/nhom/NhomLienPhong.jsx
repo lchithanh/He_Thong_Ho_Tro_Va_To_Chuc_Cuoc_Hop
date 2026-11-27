@@ -211,7 +211,7 @@ function QuanLyThanhVien({ chiTiet, quyen, nguoiDungId, dangGui, gui }) {
         lyDo: form.get('lyDo'),
       })
       setThaoTac(null)
-      setThongBao(dangRut ? `Đã gửi yêu cầu rút ${thaoTac.nguoi.hoTen} khỏi nhóm.`
+      setThongBao(dangRut ? `Đã rút ${thaoTac.nguoi.hoTen} khỏi nhóm.`
         : 'Đã gửi đề xuất. Theo dõi và xử lý tại mục Yêu cầu đổi nhân sự.')
     } catch (error) {
       setLoi(error.message)
@@ -381,7 +381,7 @@ function DanhSachNhomDialog({ tieuDe, Icon, danhSach, dangGui, khoa, tenMuc, nha
 function TrangThaiDoiNguoi({ muc }) {
   const dangCho = muc.trangThai === 'CHO_XU_LY'
   const nhan = dangCho
-    ? muc.truongPhongXacNhanId ? 'Chờ Tổ trưởng xử lý' : 'Chờ Trưởng phòng xác nhận'
+    ? (muc.nguoiMoiId == null || muc.truongPhongXacNhanId) ? 'Chờ Tổ trưởng xử lý' : 'Chờ Trưởng phòng xác nhận'
     : TEN_DOI_NGUOI[muc.trangThai] || muc.trangThai
   const mau = dangCho ? 'bg-amber-50 text-amber-900 phong-toi:bg-phong-nhan-vang phong-toi:text-phong-vang'
     : muc.trangThai === 'DA_CAP_NHAT' ? 'bg-emerald-50 text-emerald-900 phong-toi:bg-phong-nhan-xanh phong-toi:text-phong-xanh'
@@ -428,7 +428,7 @@ function ChiTietDoiNhanSu({ muc, ten, tenPhong, duocXuLy, dangGui, gui }) {
       </Truong>
       <div className="flex flex-wrap gap-2">
         <button className={LOP_NUT_CHINH} disabled={dangGui} type="submit" name="quyetDinh" value="dong-y">
-          {muc.truongPhongXacNhanId ? 'Đồng ý cập nhật' : 'Xác nhận thay đổi'}
+          {muc.nguoiMoiId == null ? 'Rút khỏi nhóm' : muc.truongPhongXacNhanId ? 'Đồng ý cập nhật' : 'Xác nhận thay đổi'}
         </button>
         <button className={LOP_NUT_PHU} disabled={dangGui} type="submit" name="quyetDinh" value="tu-choi">Từ chối</button>
       </div>
@@ -574,7 +574,7 @@ export default function NhomLienPhong({ token, nguoiDung, onMoMuc, onLapLich, on
       const ketQua = await goiNhomLienPhong(goc + duongDan, token, { method, duLieu })
       if (ketQua?.nhomId) chonNhom(ketQua.nhomId)
       setThongBao(ketQua?.cuocHopId ? 'Đã gửi đề xuất tới thư ký nhóm.'
-        : method === 'POST' && duongDan === '/doi-nguoi'
+        : method === 'POST' && duongDan === '/doi-nguoi' && duLieu.nguoiMoiId != null
           ? 'Đã gửi yêu cầu thay đổi nhân sự.' : 'Đã cập nhật nhóm.')
       setLanTai((lan) => lan + 1)
       return true

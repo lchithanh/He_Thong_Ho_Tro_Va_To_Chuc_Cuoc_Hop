@@ -61,6 +61,7 @@ public class BieuQuyetService {
     private final PhieuBieuQuyetRepository phieuBieuQuyetRepository;
     private final ThanhVienCuocHopRepository thanhVienCuocHopRepository;
     private final ThanhVienBieuQuyetRepository thanhVienBieuQuyetRepository;
+    private final ThongBaoService thongBao;
     
     @Value("${app.bieu-quyet.khoa-phieu:}")
     private String khoaPhieuBase64;
@@ -270,8 +271,8 @@ public class BieuQuyetService {
         }
         bieuQuyet.setTrangThai("DANG_MO");
         var nguoiNhan = new HashSet<>(thanhVienBieuQuyetRepository.timNguoiDuocBieuQuyet(bieuQuyetId));
-        nguoiNhan.add(nguoiDangNhapId);
-        capNhatRealtime.baoCho(nguoiNhan, false);
+        thongBao.guiTheoId(bieuQuyet.getCuocHop(), nguoiDangNhapId, "BIEU_QUYET_MO", "Đã mở phiên biểu quyết",
+                bieuQuyet.getTieuDe(), nguoiNhan);
     }
     
     

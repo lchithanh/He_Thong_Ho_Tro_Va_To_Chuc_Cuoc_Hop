@@ -58,10 +58,12 @@ public class BauLaiNhomService {
     public record ChiTietVong(int vongId, String chucDanh, String trangThai, List<UngVien> ungVien,
             int soCuTri, int soDaBoPhieu, boolean duocBoPhieu, boolean daBoPhieu, Integer nguoiTrungCuId,
             String tenNguoiXacNhan, LocalDateTime ngayXacNhan) {}
+    public record BanGiao(int vongId, String chucDanh, String nguoiBanGiao, String nguoiNhan,
+            String noiDung, LocalDateTime ngayGui, LocalDateTime ngayNhan, boolean duocGui, boolean duocNhan) {}
     public record ChiTiet(int yeuCauId, int nguoiDeXuatId, String tenNguoiDeXuat, String lyDo, boolean bauToTruong,
             boolean bauThuKy, String trangThai, LocalDateTime gioDuKien, List<Integer> ungVienToTruong,
             List<Integer> ungVienThuKy, String phanHoi, LocalDateTime ngayTao, String tenNguoiDuyet,
-            LocalDateTime ngayDuyet, Integer cuocHopId, String trangThaiCuocHop, List<ChiTietVong> cacVong) {}
+            LocalDateTime ngayDuyet, Integer cuocHopId, String trangThaiCuocHop, List<ChiTietVong> cacVong, List<BanGiao> banGiao) {}
     public record TrangBauLai(boolean thanhVien, boolean thuKy, boolean toTruong, boolean lanhDaoPhuTrach,
             boolean dangHoatDong, List<ThanhVien> thanhVienHoatDong, List<ChiTiet> hoSo) {}
     public record TrangTrongHop(Integer nhomId, TrangBauLai trang, List<ThanhVien> cuTriCoMat) {}
@@ -114,14 +116,20 @@ public class BauLaiNhomService {
                 INSERT INTO nhom_bau_lai (nhom_id, nguoi_de_xuat_id, ly_do, bau_to_truong, bau_thu_ky)
                 VALUES (?, ?, ?, ?, ?)
                 """).params(nhomId, id, lyDo(request.lyDo()), request.bauToTruong(), request.bauThuKy()).update();
+        thongBao.guiTheoId(null, id, "NHOM_BAU_LAI", "Có yêu cầu bầu lại cần tiếp nhận",
+                lyDo(request.lyDo()), java.util.Collections.singletonList(nhom.thuKyNhomId()));
         realtime.baoDanhMucNhomThayDoi();
     }
 
     public void xuLy(int nhomId, int yeuCauId, String thaoTac, int id, XuLy request) {
-        Nhom nhom = chuanBiThaoTac(nhomId, id);
+        boolean banGiao = List.of("gui-ban-giao", "nhan-ban-giao").contains(thaoTac);
+        hienTai.layTaiKhoanHoatDong(id);
+        Nhom nhom = timNhom(nhomId, true);
+        if (!banGiao) xungDot(dangHoatDong(nhom), "Chỉ xử lý bầu lại trong nhóm đang hoạt động");
         HoSo hs = layHoSo(nhomId).stream().filter(h -> h.yeuCauId() == yeuCauId).findFirst()
                 .orElseThrow(() -> loi(HttpStatus.NOT_FOUND, "Không tìm thấy hồ sơ bầu lại của nhóm"));
         switch (thaoTac) {
+            case "gui-ban-giao", "nhan-ban-giao" -> xuLyBanGiao(hs, id, request, "gui-ban-giao".equals(thaoTac));
             case "tiep-nhan" -> {
                 laThuKy(nhom, id);
                 oTrangThai(hs.trangThai(), "CHO_TIEP_NHAN");
@@ -194,6 +202,17 @@ public class BauLaiNhomService {
                 }
             }
             default -> throw loi(HttpStatus.BAD_REQUEST, "Thao tác bầu lại không hợp lệ");
+        }
+        switch (thaoTac) {
+            case "tiep-nhan" -> thongBao.guiTheoId(null, id, "NHOM_BAU_LAI", "Yêu cầu bầu lại đã được tiếp nhận",
+                    hs.lyDo(), List.of(hs.nguoiDeXuatId()));
+            case "trinh" -> thongBao.guiTheoId(null, id, "NHOM_BAU_LAI", "Kế hoạch bầu lại chờ duyệt",
+                    hs.lyDo(), java.util.Collections.singletonList(nhom.truongNhomId()));
+            case "duyet", "tra-lai" -> thongBao.guiTheoId(null, id, "NHOM_BAU_LAI",
+                    "duyet".equals(thaoTac) ? "Đã duyệt kế hoạch bầu lại" : "Kế hoạch bầu lại cần chỉnh sửa",
+                    "duyet".equals(thaoTac) ? hs.lyDo() : request.lyDo(),
+                    java.util.Arrays.asList(hs.nguoiDeXuatId(), nhom.thuKyNhomId()));
+            default -> { }
         }
         realtime.baoDanhMucNhomThayDoi();
     }
@@ -338,7 +357,66 @@ public class BauLaiNhomService {
                 && (!hs.bauThuKy() || daXacNhan.stream().anyMatch(v -> THU_KY.equals(v.chucDanh())))) {
             jdbc.sql("UPDATE nhom_bau_lai SET trang_thai='HOAN_TAT' WHERE yeu_cau_id=?").param(hs.yeuCauId()).update();
         }
+        Integer nguoiCu = bauTruong ? nhom.truongNhomId() : nhom.thuKyNhomId();
+        if (nguoiCu != null && !nguoiCu.equals(ungVien)) {
+            jdbc.sql("""
+                    INSERT INTO nhom_ban_giao_chuc_danh
+                        (vong_bau_id, yeu_cau_id, nguoi_ban_giao_id, nguoi_nhan_id)
+                    VALUES (?, ?, ?, ?)
+                    """).params(vong.vongId(), hs.yeuCauId(), nguoiCu, ungVien).update();
+            thongBao.gui(null, id, "NHOM_BAN_GIAO", "Cần bàn giao chức danh",
+                    "Mở hồ sơ bầu lại của nhóm để ghi nội dung bàn giao cho " + hoTen(ungVien) + ".",
+                    nguoiDungRepository.findById(nguoiCu).orElse(null));
+        }
         thongBaoKetQuaChoNhom(nhom.nhomId(), id, ungVien, bauTruong);
+    }
+
+    private List<BanGiao> layBanGiao(int yeuCauId, int id) {
+        return jdbc.sql("""
+                SELECT bg.vong_bau_id AS vong_id, cb.chuc_danh_nhom AS chuc_danh,
+                    cu.ho_ten AS nguoi_ban_giao, moi.ho_ten AS nguoi_nhan,
+                    CASE WHEN :id IN (bg.nguoi_ban_giao_id, bg.nguoi_nhan_id) THEN bg.noi_dung END AS noi_dung,
+                    bg.ngay_gui, bg.ngay_nhan,
+                    (bg.nguoi_ban_giao_id = :id AND bg.ngay_gui IS NULL) AS duoc_gui,
+                    (bg.nguoi_nhan_id = :id AND bg.ngay_gui IS NOT NULL AND bg.ngay_nhan IS NULL) AS duoc_nhan
+                FROM nhom_ban_giao_chuc_danh bg
+                JOIN vong_bau v ON v.vong_bau_id = bg.vong_bau_id
+                JOIN cuoc_bau cb ON cb.cuoc_bau_id = v.cuoc_bau_id
+                JOIN nguoi_dung cu ON cu.nguoi_dung_id = bg.nguoi_ban_giao_id
+                JOIN nguoi_dung moi ON moi.nguoi_dung_id = bg.nguoi_nhan_id
+                WHERE bg.yeu_cau_id = :yeuCau
+                ORDER BY bg.vong_bau_id
+                """).param("id", id).param("yeuCau", yeuCauId).query(BanGiao.class).list();
+    }
+
+    private void xuLyBanGiao(HoSo hs, int id, XuLy request, boolean gui) {
+        hopLe(request.vongId() != null, "Thiếu lượt bầu cần bàn giao");
+        record HaiBen(int nguoiBanGiaoId, int nguoiNhanId) {}
+        var ben = jdbc.sql("""
+                SELECT nguoi_ban_giao_id, nguoi_nhan_id FROM nhom_ban_giao_chuc_danh
+                WHERE yeu_cau_id = ? AND vong_bau_id = ? FOR UPDATE
+                """).params(hs.yeuCauId(), request.vongId()).query(HaiBen.class).optional()
+                .orElseThrow(() -> loi(HttpStatus.NOT_FOUND, "Không tìm thấy phiếu bàn giao"));
+        choPhep(id == (gui ? ben.nguoiBanGiaoId() : ben.nguoiNhanId()),
+                "Bạn không được giao thực hiện bước bàn giao này");
+        int soDong;
+        if (gui) {
+            String noiDung = request.lyDo() == null ? "" : request.lyDo().strip();
+            hopLe(!noiDung.isEmpty() && noiDung.length() <= 2000, "Nhập nội dung bàn giao tối đa 2.000 ký tự");
+            soDong = jdbc.sql("""
+                    UPDATE nhom_ban_giao_chuc_danh SET noi_dung = ?, ngay_gui = CURRENT_TIMESTAMP
+                    WHERE vong_bau_id = ? AND ngay_gui IS NULL
+                    """).params(noiDung, request.vongId()).update();
+        } else {
+            soDong = jdbc.sql("""
+                    UPDATE nhom_ban_giao_chuc_danh SET ngay_nhan = CURRENT_TIMESTAMP
+                    WHERE vong_bau_id = ? AND ngay_gui IS NOT NULL AND ngay_nhan IS NULL
+                    """).param(request.vongId()).update();
+        }
+        xungDot(soDong == 1, "Phiếu bàn giao không còn ở bước này");
+        thongBao.gui(null, id, "NHOM_BAN_GIAO", gui ? "Có hồ sơ bàn giao cần tiếp nhận" : "Đã xác nhận tiếp nhận bàn giao",
+                "Xem nội dung và thời gian xác nhận trong hồ sơ bầu lại của nhóm.",
+                nguoiDungRepository.findById(gui ? ben.nguoiNhanId() : ben.nguoiBanGiaoId()).orElse(null));
     }
 
     private void thongBaoKetQuaChoNhom(int nhomId, int nguoiXacNhan, int nguoiTrungCu, boolean bauTruong) {
@@ -419,7 +497,8 @@ public class BauLaiNhomService {
                 hs.phanHoi(), hs.ngayTao(), hoTen(hs.nguoiDuyetId()), hs.ngayDuyet(), hs.cuocHopId(),
                 hs.cuocHopId() == null ? null : jdbc.sql("SELECT trang_thai FROM cuoc_hop WHERE cuoc_hop_id=?")
                         .param(hs.cuocHopId()).query(String.class).optional().orElse(null),
-                cacVong(hs.yeuCauId()).stream().map(v -> chiTietVong(hs, v, id)).toList());
+                cacVong(hs.yeuCauId()).stream().map(v -> chiTietVong(hs, v, id)).toList(),
+                layBanGiao(hs.yeuCauId(), id));
     }
 
     private ChiTietVong chiTietVong(HoSo hs, Vong v, int id) {

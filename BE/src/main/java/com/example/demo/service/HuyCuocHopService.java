@@ -34,6 +34,7 @@ public class HuyCuocHopService {
     private final PhanCongXuLyKeHoachService phanCongXuLyKeHoachService;
     private final CapNhatHoSoRealtime capNhatRealtime;
     private final ThongBaoEmailCuocHop thongBaoEmail;
+    private final ThongBaoService thongBao;
 
     boolean duocHuy(CuocHop cuocHop, Integer nguoiDungId) {
         return coTheHuy(cuocHop) && coQuyenHuy(cuocHop, nguoiDungId);
@@ -92,6 +93,8 @@ public class HuyCuocHopService {
         }
         ThaoTacCuocHop.huyCuocHop(cuocHop);
         lichSuService.ghiNhan(cuocHopId, null, null, nguoiDungId, "CUOC_HOP", "HUY", lyDoHuy);
+        thongBao.gui(cuocHop, nguoiDungId, "CUOC_HOP_HUY", "Cuộc họp đã bị hủy",
+                cuocHop.getTieuDe() + " · " + lyDoHuy, capNhatRealtime.nguoiDocVanBan(cuocHop));
         capNhatRealtime.baoCuocHop(cuocHop, nguoiDungId);
         if (lichDaCongBo != null) {
             thongBaoEmail.huyCuocHop(lichDaCongBo, lyDoHuy);
