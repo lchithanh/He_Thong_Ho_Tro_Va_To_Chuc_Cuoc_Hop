@@ -64,6 +64,11 @@ const BUOC_TU_TRANG_THAI = {
 }
 
 const TRANG_THAI_DUNG = new Set(['TRA_LAI', 'TU_CHOI', 'DA_HUY'])
+const NOI_DUNG_KHI_DUNG = {
+  TRA_LAI: 'Kế hoạch cần chỉnh sửa trước khi trình lại.',
+  TU_CHOI: 'Hồ sơ đã bị từ chối.',
+  DA_HUY: 'Cuộc họp đã bị hủy.',
+}
 
 function layBuocHienTai(chiTiet, trangThai) {
   const buocTuQuyTrinh = BUOC_THEO_GIAI_DOAN[chiTiet.buocXuLyHienTai]
@@ -94,10 +99,11 @@ export default function TienDoCuocHop({ chiTiet, viecTiepTheo }) {
   const daHoanTatHoSo = chiTiet.daHoanTatHoSo === true
   const noiDungBuoc = daHoanTatHoSo
     ? 'Hồ sơ đã hoàn tất. Biên bản và kết luận đã được phát hành.'
-    : NOI_DUNG_BUOC[chiTiet.buocXuLyHienTai]
+    : NOI_DUNG_KHI_DUNG[trangThai] || NOI_DUNG_BUOC[chiTiet.buocXuLyHienTai]
   const nguoiDangXuLy = chiTiet.tenNguoiDangXuLy
     || TEN_VAI_TRO_XU_LY[chiTiet.buocXuLyHienTai]
-  const thongTinTiepTheo = viecTiepTheo || layViecTiepTheo(chiTiet, trangThai)
+  const daDung = trangThai === 'TU_CHOI' || trangThai === 'DA_HUY'
+  const thongTinTiepTheo = daDung ? null : viecTiepTheo || layViecTiepTheo(chiTiet, trangThai)
   const dungQuyTrinh = TRANG_THAI_DUNG.has(trangThai)
 
   return (
@@ -111,16 +117,10 @@ export default function TienDoCuocHop({ chiTiet, viecTiepTheo }) {
             Tiến độ hồ sơ{!daHoanTatHoSo && ` · Bước ${buocHienTai + 1}/${CAC_BUOC.length}`}
           </p>
           <p className="mt-1 text-sm font-bold text-[#102a43]" aria-live="polite">
-            {noiDungBuoc || (trangThai === 'TRA_LAI'
-              ? 'Kế hoạch cần chỉnh sửa trước khi trình lại.'
-              : trangThai === 'TU_CHOI'
-                ? 'Hồ sơ đã bị từ chối.'
-                : trangThai === 'DA_HUY'
-                  ? 'Cuộc họp đã bị hủy.'
-                  : 'Chưa có thông tin bước xử lý.')}
+            {noiDungBuoc || 'Chưa có thông tin bước xử lý.'}
           </p>
         </div>
-        {!daHoanTatHoSo && nguoiDangXuLy && (
+        {!daHoanTatHoSo && !daDung && nguoiDangXuLy && (
           <p className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700">
             Đang chờ: {nguoiDangXuLy}
           </p>

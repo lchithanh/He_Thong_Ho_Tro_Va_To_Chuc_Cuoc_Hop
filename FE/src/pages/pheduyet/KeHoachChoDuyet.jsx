@@ -7,10 +7,10 @@ import { useDongBoDuLieu } from '../../services/useDongBoDuLieu.js'
 import { layKeHoachChoToiDuyet } from '../../api/cuocHopApi.js'
 import ChiTietKeHoachChoDuyet from './ChiTietKeHoachChoDuyet.jsx'
 
-const CAC_CAP = [['tat-ca', 'Tất cả'], ['TRUONG_PHONG', 'Cấp trưởng phòng'], ['TRUONG_NHOM', 'Trưởng nhóm'], ['LANH_DAO', 'Cấp lãnh đạo']]
-const TEN_CAP = { TRUONG_PHONG: 'Cấp trưởng phòng', TRUONG_NHOM: 'Trưởng nhóm', LANH_DAO: 'Cấp lãnh đạo' }
+const TEN_CAP = { TRUONG_PHONG: 'Trưởng phòng', TRUONG_NHOM: 'Tổ trưởng', LANH_DAO: 'Lãnh đạo' }
+const CAC_CAP = [['tat-ca', 'Tất cả'], ...Object.entries(TEN_CAP)]
 
-export default function KeHoachChoDuyet({ token, cuocHopCanDuyet, viecDaChon }) {
+export default function KeHoachChoDuyet({ token, cuocHopCanDuyet }) {
   const phienDongBo = useDongBoDuLieu()
   const [danhSach, setDanhSach] = useState(null)
   const [loi, setLoi] = useState('')
@@ -29,15 +29,14 @@ export default function KeHoachChoDuyet({ token, cuocHopCanDuyet, viecDaChon }) 
     layKeHoachChoToiDuyet(token, controller.signal)
       .then((duLieu) => {
         if (controller.signal.aborted) return
-        const ids = viecDaChon && new Set(viecDaChon.map((muc) => muc.yeuCauPheDuyetId))
-        setDanhSach(ids ? duLieu.filter((muc) => ids.has(muc.yeuCauPheDuyetId)) : duLieu)
+        setDanhSach(duLieu)
         setLoi('')
       })
       .catch((error) => {
         if (!controller.signal.aborted) setLoi(error.message)
       })
     return () => controller.abort()
-  }, [token, phienDongBo, viecDaChon, lanTai])
+  }, [token, phienDongBo, lanTai])
 
   function moChiTiet(keHoach) {
     setYeuCauDaChon(keHoach)

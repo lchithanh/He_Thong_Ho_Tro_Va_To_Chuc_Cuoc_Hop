@@ -10,6 +10,8 @@ import X from 'lucide-react/dist/esm/icons/x.mjs'
 import { HopThoaiHoSo } from '../../components/GiaoDienPhongHop.jsx'
 import { LOP_CHU_PHU, LOP_NUT_CHINH, LOP_NUT_PHU, LOP_THE } from '../../components/giaoDienPhongHop.js'
 import NhanTrangThai from '../thuky/NhanTrangThaiDeXuat.jsx'
+import ChiTietDeXuat from '../thuky/ChiTietDeXuat.jsx'
+import { dangPheDuyetKeHoach, layNhanTrangThaiHoSo } from '../thuky/hienThiDeXuat.js'
 
 const TRANG_THAI = {
   CHO_CU_NHAN_SU: 'Chờ các phòng cử người',
@@ -209,7 +211,7 @@ function QuanLyThanhVien({ chiTiet, quyen, nguoiDungId, dangGui, gui }) {
         lyDo: form.get('lyDo'),
       })
       setThaoTac(null)
-      setThongBao(dangRut ? `Đã rút ${thaoTac.nguoi.hoTen} khỏi nhóm.`
+      setThongBao(dangRut ? `Đã gửi yêu cầu rút ${thaoTac.nguoi.hoTen} khỏi nhóm.`
         : 'Đã gửi đề xuất. Theo dõi và xử lý tại mục Yêu cầu đổi nhân sự.')
     } catch (error) {
       setLoi(error.message)
@@ -379,7 +381,7 @@ function DanhSachNhomDialog({ tieuDe, Icon, danhSach, dangGui, khoa, tenMuc, nha
 function TrangThaiDoiNguoi({ muc }) {
   const dangCho = muc.trangThai === 'CHO_XU_LY'
   const nhan = dangCho
-    ? (muc.nguoiMoiId == null || muc.truongPhongXacNhanId) ? 'Chờ Tổ trưởng xử lý' : 'Chờ Trưởng phòng xác nhận'
+    ? muc.truongPhongXacNhanId ? 'Chờ Tổ trưởng xử lý' : 'Chờ Trưởng phòng xác nhận'
     : TEN_DOI_NGUOI[muc.trangThai] || muc.trangThai
   const mau = dangCho ? 'bg-amber-50 text-amber-900 phong-toi:bg-phong-nhan-vang phong-toi:text-phong-vang'
     : muc.trangThai === 'DA_CAP_NHAT' ? 'bg-emerald-50 text-emerald-900 phong-toi:bg-phong-nhan-xanh phong-toi:text-phong-xanh'
@@ -404,7 +406,7 @@ function ChiTietDoiNhanSu({ muc, ten, tenPhong, duocXuLy, dangGui, gui }) {
     }
     try {
       await gui(`/doi-nguoi/${muc.doiNguoiId}`, 'PUT', { dongY, yKien })
-      setThongBao(dongY ? 'Đã xử lý yêu cầu.' : 'Đã từ chối yêu cầu.')
+      setThongBao(dongY ? 'Đã ghi nhận xác nhận của bạn.' : 'Đã từ chối yêu cầu.')
     } catch (error) {
       setLoi(error.message)
     }
@@ -426,7 +428,7 @@ function ChiTietDoiNhanSu({ muc, ten, tenPhong, duocXuLy, dangGui, gui }) {
       </Truong>
       <div className="flex flex-wrap gap-2">
         <button className={LOP_NUT_CHINH} disabled={dangGui} type="submit" name="quyetDinh" value="dong-y">
-          {muc.nguoiMoiId == null ? 'Rút khỏi nhóm' : muc.truongPhongXacNhanId ? 'Đồng ý cập nhật' : 'Xác nhận thay đổi'}
+          {muc.truongPhongXacNhanId ? 'Đồng ý cập nhật' : 'Xác nhận thay đổi'}
         </button>
         <button className={LOP_NUT_PHU} disabled={dangGui} type="submit" name="quyetDinh" value="tu-choi">Từ chối</button>
       </div>
@@ -434,7 +436,7 @@ function ChiTietDoiNhanSu({ muc, ten, tenPhong, duocXuLy, dangGui, gui }) {
   </div>
 }
 
-function ChiTietNhom({ chiTiet, quyen, dangGui, gui, laLanhDao, token, nguoiDungId }) {
+function ChiTietNhom({ chiTiet, quyen, dangGui, gui, laLanhDao, token, nguoiDungId, onMoHoSo }) {
   const { nhom, phongBan, thanhVien, nguonNhanSu, doiNguoi, deXuat } = chiTiet
   const conCuNguoi = ['CHO_CU_NHAN_SU', 'CHO_KICH_HOAT'].includes(nhom.trangThai)
   const phongCuaToi = phongBan.find((p) => p.phongBanId === quyen.phongTruongPhong)
@@ -501,13 +503,18 @@ function ChiTietNhom({ chiTiet, quyen, dangGui, gui, laLanhDao, token, nguoiDung
     {!laLanhDao && chiTiet.duocGui && <DeXuatNhom chiTiet={chiTiet} dangGui={dangGui} gui={gui} />}
     {deXuat.length > 0 && <DanhSachNhomDialog tieuDe="Đề xuất họp đã gửi" Icon={FileText}
       danhSach={deXuat} khoa={(muc) => muc.cuocHopId} tenMuc={(muc) => muc.tieuDe}
-      nhanTrangThai={(muc) => <NhanTrangThai trangThai={muc.trangThai} />}
+      nhanTrangThai={(muc) => <NhanTrangThai trangThai={layNhanTrangThaiHoSo(muc)} />}
       moTa={(muc) => muc.tenNguoiDuyet || TEN_CAP_DUYET[muc.capDuyet]}>
-      {(muc) => <dl className={LOP_THE + ' grid gap-3 sm:grid-cols-2'}>
-        <div><dt className={LOP_CHU_PHU}>Người gửi đề xuất</dt><dd>{ten(muc.nguoiGuiId)}</dd></div>
-        <div><dt className={LOP_CHU_PHU}>Cấp duyệt</dt><dd>{TEN_CAP_DUYET[muc.capDuyet] || 'Chưa xác định'}</dd></div>
-        <div><dt className={LOP_CHU_PHU}>Người được chỉ định duyệt</dt><dd>{muc.tenNguoiDuyet || 'Chưa phân công'}</dd></div>
-      </dl>}
+      {(muc) => <div className="space-y-3">
+        <dl className={LOP_THE + ' grid gap-3 sm:grid-cols-2'}>
+          <div><dt className={LOP_CHU_PHU}>Người gửi đề xuất</dt><dd>{ten(muc.nguoiGuiId)}</dd></div>
+          <div><dt className={LOP_CHU_PHU}>Cấp duyệt</dt><dd>{TEN_CAP_DUYET[muc.capDuyet] || 'Chưa xác định'}</dd></div>
+          <div><dt className={LOP_CHU_PHU}>Người được chỉ định duyệt</dt><dd>{muc.tenNguoiDuyet || 'Chưa phân công'}</dd></div>
+        </dl>
+        {chiTiet.hoSoCoQuyenXem?.includes(muc.cuocHopId) && (
+          <button type="button" className={LOP_NUT_CHINH} onClick={() => onMoHoSo(muc)}>Mở hồ sơ cuộc họp</button>
+        )}
+      </div>}
     </DanhSachNhomDialog>}
 
     {chiTiet.duocDong && <Phieu tieuDe="Đóng nhóm" nut="Đóng nhóm" dangGui={dangGui}
@@ -517,12 +524,13 @@ function ChiTietNhom({ chiTiet, quyen, dangGui, gui, laLanhDao, token, nguoiDung
   </div>
 }
 
-export default function NhomLienPhong({ token, nguoiDung, onMoMuc }) {
+export default function NhomLienPhong({ token, nguoiDung, onMoMuc, onLapLich, onMoPhongHop }) {
   const phienDongBo = useDongBoDuLieu()
   const laLanhDao = nguoiDung.maVaiTro === 'LANH_DAO'
   const [trang, setTrang] = useState(null)
   const [chiTiet, setChiTiet] = useState(null)
   const [nhomId, setNhomId] = useState(null)
+  const [hoSoDangXem, setHoSoDangXem] = useState(null)
   const [muc, setMuc] = useState('nhom')
   const [lanTai, setLanTai] = useState(0)
   const [loi, setLoi] = useState('')
@@ -566,13 +574,22 @@ export default function NhomLienPhong({ token, nguoiDung, onMoMuc }) {
       const ketQua = await goiNhomLienPhong(goc + duongDan, token, { method, duLieu })
       if (ketQua?.nhomId) chonNhom(ketQua.nhomId)
       setThongBao(ketQua?.cuocHopId ? 'Đã gửi đề xuất tới thư ký nhóm.'
-        : method === 'POST' && duongDan === '/doi-nguoi' && duLieu.nguoiMoiId != null
-          ? 'Đã gửi đề xuất đổi nhân sự.' : 'Đã cập nhật nhóm.')
+        : method === 'POST' && duongDan === '/doi-nguoi'
+          ? 'Đã gửi yêu cầu thay đổi nhân sự.' : 'Đã cập nhật nhóm.')
       setLanTai((lan) => lan + 1)
       return true
     } finally {
       setDangGui(false)
     }
+  }
+
+  if (hoSoDangXem) {
+    return <ChiTietDeXuat cuocHopId={hoSoDangXem.cuocHopId} token={token} nguoiDung={nguoiDung}
+      tabBanDau={dangPheDuyetKeHoach(hoSoDangXem) ? 'ke-hoach' : 'thong-tin'}
+      onMoPhongHop={onMoPhongHop} onLapLich={onLapLich} onQuayLai={() => {
+        setHoSoDangXem(null)
+        setLanTai((lan) => lan + 1)
+      }} />
   }
 
   return <div className="space-y-4">
@@ -606,7 +623,7 @@ export default function NhomLienPhong({ token, nguoiDung, onMoMuc }) {
       </section>
       {nhomId && !chiTiet && !loi && <p role="status">Đang tải chi tiết nhóm…</p>}
       {chiTiet && <ChiTietNhom key={nhomId} chiTiet={chiTiet} quyen={trang.quyen} dangGui={dangGui}
-        gui={gui} laLanhDao={laLanhDao} token={token} nguoiDungId={nguoiDung.nguoiDungId} />}
+        gui={gui} laLanhDao={laLanhDao} token={token} nguoiDungId={nguoiDung.nguoiDungId} onMoHoSo={setHoSoDangXem} />}
     </div>}
   </div>
 }

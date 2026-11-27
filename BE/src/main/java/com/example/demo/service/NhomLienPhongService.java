@@ -8,6 +8,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -18,7 +20,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.example.demo.dto.request.TaoDeXuatCuocHopRequest;
+import com.example.demo.entity.CuocHop;
 import com.example.demo.entity.NguoiDung;
+import com.example.demo.repository.CuocHopRepository;
 import com.example.demo.repository.PhongBanRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -37,6 +41,7 @@ public class NhomLienPhongService {
     private final NguoiDungHienTaiService hienTai;
     private final PhanQuyenCuocHopService phanQuyen;
     private final PhongBanRepository phongBanRepository;
+    private final CuocHopRepository cuocHopRepository;
     private final DeXuatCuocHopService deXuatService;
     private final PhanCongXuLyKeHoachService phanCong;
     private final ObjectMapper objectMapper;
@@ -51,13 +56,14 @@ public class NhomLienPhongService {
             Integer nguoiYeuCauId, String lyDo, String trangThai, Integer truongPhongXacNhanId, boolean duocXuLy,
             String tenNguoiCu, String tenNguoiMoi, String tenNguoiYeuCau) {}
     public record DeXuat(Integer cuocHopId, String tieuDe, String trangThai, String capDuyet, String tenNguoiDuyet,
-            Integer nguoiGuiId) {}
+            Integer nguoiGuiId, String buocXuLyHienTai) {}
     public record Quyen(boolean lanhDao, Integer phongTruongPhong) {
         public boolean duocTao() { return lanhDao || phongTruongPhong != null; }
     }
     public record TrangNhom(Quyen quyen, List<Nhom> danhSach, List<Phong> phongBanTao) {}
     public record ChiTiet(Nhom nhom, List<Phong> phongBan, List<NhanSu> thanhVien, List<NhanSu> nguonNhanSu,
-            List<DoiNguoi> doiNguoi, List<DeXuat> deXuat, List<NhomThamDuCuocHopService.LanhDaoPhuTrach> lanhDaoDuyet,
+            List<DoiNguoi> doiNguoi, List<DeXuat> deXuat, Set<Integer> hoSoCoQuyenXem,
+            List<NhomThamDuCuocHopService.LanhDaoPhuTrach> lanhDaoDuyet,
             List<NhanSu> nguoiMoiThem,
             boolean duocKichHoat, boolean duocDong, boolean duocGui) {}
 
@@ -183,12 +189,18 @@ public class NhomLienPhongService {
                 .param("phong", q.phongTruongPhong(), java.sql.Types.INTEGER).query(DoiNguoi.class).list();
         List<DeXuat> deXuat = jdbc.sql("""
                 SELECT ch.cuoc_hop_id, ch.tieu_de, ch.trang_thai, dx.cap_duyet,
-                    nd.ho_ten AS ten_nguoi_duyet, dx.nguoi_gui_id
+                    nd.ho_ten AS ten_nguoi_duyet, dx.nguoi_gui_id, ch.buoc_xu_ly_hien_tai
                 FROM nhom_lien_phong_de_xuat dx JOIN cuoc_hop ch ON ch.cuoc_hop_id = dx.cuoc_hop_id
                 LEFT JOIN nguoi_dung nd ON nd.nguoi_dung_id = dx.nguoi_duyet_id
                 WHERE dx.nhom_id = :id ORDER BY ch.cuoc_hop_id DESC
                 """).param("id", nhomId).query(DeXuat.class).list();
-        return new ChiTiet(n, pb, tv, nguon, doiNguoi, deXuat, nhomThamDu.layLanhDaoCoThamQuyen(nhomId, false),
+        Set<Integer> hoSoCoQuyenXem = cuocHopRepository.findAllById(deXuat.stream().map(DeXuat::cuocHopId).toList())
+                .stream()
+                .filter(cuocHop -> phanQuyen.coQuyenXemChiTietDeXuat(cuocHop, id))
+                .map(CuocHop::getCuocHopId)
+                .collect(Collectors.toSet());
+        return new ChiTiet(n, pb, tv, nguon, doiNguoi, deXuat, hoSoCoQuyenXem,
+                nhomThamDu.layLanhDaoCoThamQuyen(nhomId, false),
                 gui ? layNguoiNgoaiNhom(nhomId) : List.of(),
                 CHO_KICH_HOAT.equals(n.trangThai()) && q.lanhDao(),
                 !DA_DONG.equals(n.trangThai()) && duocDong(n, q, id), gui);
