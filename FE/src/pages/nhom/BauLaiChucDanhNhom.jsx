@@ -14,7 +14,8 @@ import { dinhDangNgayGio } from '../../utils/thoiGianCuocHop.js'
 const CHUC_DANH = { TO_TRUONG: 'Tổ trưởng', THU_KY: 'Thư ký nhóm' }
 const TRANG_THAI = {
   CHO_TIEP_NHAN: 'Chờ thư ký tiếp nhận', LAP_KE_HOACH: 'Thư ký lập kế hoạch',
-  CHO_DUYET: 'Chờ Tổ trưởng duyệt', DA_DUYET: 'Đã duyệt kế hoạch', HOAN_TAT: 'Đã bàn giao chức danh',
+  CHO_DUYET: 'Chờ Tổ trưởng duyệt', DA_DUYET: 'Đã duyệt kế hoạch', HOAN_TAT: 'Đã xác nhận kết quả bầu',
+  CHO_BAN_GIAO: 'Chờ hoàn tất bàn giao', DA_BAN_GIAO: 'Đã bàn giao chức danh',
   DA_HUY: 'Đã hủy', NHAP: 'Chưa mở', DANG_MO: 'Đang nhận phiếu', BAU_LAI: 'Cần bầu lại',
   CHO_XAC_NHAN: 'Chờ xác nhận kết quả', DA_XAC_NHAN: 'Đã xác nhận',
 }
@@ -41,6 +42,9 @@ function tenHoSo(hs) {
 }
 
 function trangThaiHienThi(hs) {
+  if (hs.trangThai === 'HOAN_TAT' && hs.banGiao?.length) {
+    return hs.banGiao.every((muc) => muc.ngayNhan) ? 'DA_BAN_GIAO' : 'CHO_BAN_GIAO'
+  }
   if (hs.trangThai !== 'DA_DUYET') return hs.trangThai
   const cacVong = Object.keys(CHUC_DANH).map((cd) => hs.cacVong.find((v) => v.chucDanh === cd))
   return ['DANG_MO', 'CHO_XAC_NHAN', 'NHAP', 'BAU_LAI'].find(
@@ -309,6 +313,28 @@ function HoSoBauLai({ hs, trang, nguoiDungId, goi, dangGui, cuocHopTrongNhom }) 
       {vongCu.map((vong) => <VongBauLai key={vong.vongId} vong={vong} hs={hs} trang={trang}
         goi={thaoTac} dangGui={dangGui} />)}
     </details>}
+    {hs.banGiao?.length > 0 && <section className="space-y-3">
+      <h3 className="font-semibold">Bàn giao chức danh</h3>
+      {hs.banGiao.map((muc) => <section key={muc.vongId} className={LOP_THE + ' space-y-2'}>
+        <h4 className="font-semibold">{CHUC_DANH[muc.chucDanh]}</h4>
+        <p>{muc.nguoiBanGiao} → {muc.nguoiNhan}</p>
+        <p className={LOP_CHU_PHU}>{muc.ngayNhan
+          ? `Đã tiếp nhận · ${dinhDangNgayGio(muc.ngayNhan)}`
+          : muc.ngayGui ? `Chờ tiếp nhận · Đã gửi ${dinhDangNgayGio(muc.ngayGui)}` : 'Chờ người giữ chức danh trước gửi bàn giao'}</p>
+        {muc.noiDung && <p className="whitespace-pre-wrap wrap-anywhere">{muc.noiDung}</p>}
+        {muc.duocGui && <form className="space-y-2" onSubmit={(event) => {
+          event.preventDefault()
+          thaoTac('gui-ban-giao', { vongId: muc.vongId, lyDo: new FormData(event.currentTarget).get('noiDung') })
+        }}>
+          <label className="block">Công việc đang xử lý, tài liệu và lưu ý
+            <textarea name="noiDung" className="mt-1 block w-full rounded-lg border p-2" required maxLength={2000} rows={4} />
+          </label>
+          <button className={LOP_NUT_CHINH} disabled={dangGui}>Gửi bàn giao</button>
+        </form>}
+        {muc.duocNhan && <button type="button" className={LOP_NUT_CHINH} disabled={dangGui}
+          onClick={() => thaoTac('nhan-ban-giao', { vongId: muc.vongId })}>Xác nhận tiếp nhận</button>}
+      </section>)}
+    </section>}
     {conXuLy && !hs.cacVong.some((v) => v.trangThai === 'DANG_MO')
       && (trang.toTruong || (trangThai === 'CHO_TIEP_NHAN' && hs.nguoiDeXuatId === nguoiDungId)) && (
       <details>

@@ -1,3 +1,4 @@
+import HopThongBao from '../components/HopThongBao.jsx'
 import { useState } from 'react'
 import { useKetNoiHoSo } from '../services/useKetNoiHoSo.js'
 import Building2 from 'lucide-react/dist/esm/icons/building-2.mjs'
@@ -82,6 +83,7 @@ export default function KhongGianQuanTri({ nguoiDung, loi, onDangXuat }) {
         <header className="adm-topbar">
           <p><BieuTuongMuc size={17} aria-hidden="true" /><span>Quản trị</span><span aria-hidden="true">/</span><strong>{tenMuc}</strong></p>
           <div className="adm-profile">
+              <HopThongBao token={nguoiDung.token} />
             <span className="adm-avatar" aria-hidden="true">{chuDau}</span>
             <div><strong>{hoTen || 'Quản trị viên'}</strong><span>Quản trị viên</span></div>
             <button type="button" className="adm-icon-btn" onClick={onDangXuat} aria-label="Đăng xuất" title="Đăng xuất">

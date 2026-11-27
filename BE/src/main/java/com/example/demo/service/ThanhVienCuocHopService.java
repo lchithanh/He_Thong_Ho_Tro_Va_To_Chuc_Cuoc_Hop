@@ -65,6 +65,8 @@ public class ThanhVienCuocHopService {
             nguoiNhan.add(themThanhVienDuocMoi(ch, nguoiDuocMoiId));
         }
         thongBaoEmail.moiHop(keHoachMoi, nguoiNhan, thuMoi);
+        thongBaoService.gui(ch, thuKyId, "LOI_MOI_HOP", "Bạn có lời mời họp", ch.getTieuDe(),
+                nguoiNhan.toArray(NguoiDung[]::new));
         capNhatRealtime.baoCuocHop(ch, thuKyId);
     }
 
@@ -203,6 +205,9 @@ public class ThanhVienCuocHopService {
         }
         if (!"CHO_PHAN_HOI".equals(tv.getTrangThaiMoi())) throw loi(HttpStatus.CONFLICT, "Lời mời đã được phản hồi");
         tv.setTrangThaiMoi(thamDu ? "DA_XAC_NHAN" : "TU_CHOI");
+        thongBaoService.gui(ch, nguoiDungId, "PHAN_HOI_LOI_MOI", "Có phản hồi lời mời họp",
+                tv.getNguoiDung().getHoTen() + (thamDu ? " đã xác nhận tham dự " : " đã từ chối tham dự ") + ch.getTieuDe(),
+                ch.getThuKyCuocHop());
         capNhatRealtime.baoCuocHop(ch, nguoiDungId);
     }
 

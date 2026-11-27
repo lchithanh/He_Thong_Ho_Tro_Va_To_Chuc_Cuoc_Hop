@@ -43,7 +43,7 @@ class BieuQuyetPhuongAnServiceTest {
     private final ThanhVienBieuQuyetRepository cuTriRepository = mock(ThanhVienBieuQuyetRepository.class);
     private final BieuQuyetService service = new BieuQuyetService(mock(CapNhatHoSoRealtime.class),
             mock(NghiQuyetService.class), cuocHopRepository, bieuQuyetRepository, luaChonRepository,
-            nguoiDungService, phieuRepository, thanhVienRepository, cuTriRepository);
+            nguoiDungService, phieuRepository, thanhVienRepository, cuTriRepository, mock(ThongBaoService.class));
 
     private final NguoiDung chuTri = new NguoiDung();
     private final CuocHop cuocHop = new CuocHop();

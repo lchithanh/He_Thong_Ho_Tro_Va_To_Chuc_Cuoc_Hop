@@ -27,6 +27,7 @@ public class BauChonService {
     private final ThanhVienCuocHopRepository thanhVienRepository;
     private final NguoiDungHienTaiService nguoiDungHienTaiService;
     private final CapNhatHoSoRealtime realtime;
+    private final ThongBaoService thongBao;
 
     public record Nguoi(Integer nguoiDungId, String hoTen) {}
     public record UngVien(Integer nguoiDungId, String hoTen, Integer soLuotChon, String ketQua) {}
@@ -95,6 +96,8 @@ public class BauChonService {
         var cuTri = chonNguoiCoMat(cuocHopId, cuTriIds, "người bỏ phiếu");
         ganCuTri(vongId, cuTri.stream().map(Nguoi::nguoiDungId).toList());
         capNhatTrangThai(vongId, "DANG_MO");
+        thongBao.guiTheoId(hop, nguoiDungId, "BAU_CHON_MO", "Đã mở lượt bầu chọn",
+                hop.getTieuDe(), cuTri.stream().map(Nguoi::nguoiDungId).toList());
         realtime.baoCuocHop(hop, nguoiDungId);
     }
 
