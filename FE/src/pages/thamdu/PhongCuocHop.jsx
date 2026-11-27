@@ -1,3 +1,4 @@
+import HopThongBao from '../../components/HopThongBao.jsx'
 import { BauLaiTrongCuocHop } from '../nhom/BauLaiChucDanhNhom.jsx'
 import { useEffect, useState } from 'react'
 import ArrowLeft from 'lucide-react/dist/esm/icons/arrow-left.mjs'
@@ -244,6 +245,7 @@ export default function PhongCuocHop({ cuocHopId, nguoiDung, onQuayLai, onDaKetT
               <h1 className="mt-1 break-words text-xl font-bold leading-snug tracking-tight sm:text-2xl">{hop?.tieuDe || 'Phòng họp'}</h1>
             </div>
             <div className="flex min-w-0 items-center gap-2.5 rounded-xl border border-slate-200 phong-toi:border-phong-vien bg-slate-50 phong-toi:bg-phong-mat-noi px-3 py-2">
+              <HopThongBao token={token} />
               <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-blue-100 phong-toi:bg-phong-nhan-xanh text-sm font-bold text-blue-900 phong-toi:text-phong-xanh" aria-hidden="true">
                 {nguoiDung.hoTen?.trim().split(/\s+/).at(-1)?.slice(0, 1).toLocaleUpperCase('vi')}
               </span>

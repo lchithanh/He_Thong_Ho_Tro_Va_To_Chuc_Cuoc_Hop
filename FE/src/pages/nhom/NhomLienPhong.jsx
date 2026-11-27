@@ -107,12 +107,11 @@ function DeXuatNhom({ chiTiet, dangGui, gui }) {
   const [coKhachNgoai, setCoKhachNgoai] = useState(false)
   const [moiThem, setMoiThem] = useState([])
   const [tuKhoa, setTuKhoa] = useState('')
-  const canChuTich = mucDichHop !== 'HOP_THUONG'
-  const canLanhDao = canChuTich || coKhachNgoai || moiThem.length > 0
-  const lanhDao = chiTiet.lanhDaoDuyet.filter((nguoi) => !canChuTich || nguoi.chuTich)
+  const canLanhDao = mucDichHop !== 'HOP_THUONG' || coKhachNgoai
+  const [chuTichLapNhom] = chiTiet.lanhDaoDuyet
   const tenToTruong = chiTiet.thanhVien.find((nguoi) => nguoi.nguoiDungId === chiTiet.nhom.truongNhomId)?.hoTen
   const tenThuKy = chiTiet.thanhVien.find((nguoi) => nguoi.nguoiDungId === chiTiet.nhom.thuKyNhomId)?.hoTen
-  const thieuLanhDao = canLanhDao && !lanhDao.length
+  const thieuLanhDao = canLanhDao && !chuTichLapNhom
   const nhanSuHienThi = chiTiet.nguoiMoiThem.filter((nguoi) => moiThem.includes(nguoi.nguoiDungId)
     || nguoi.hoTen.toLocaleLowerCase('vi').includes(tuKhoa.trim().toLocaleLowerCase('vi')))
   return <Phieu tieuDe="Gửi đề xuất họp từ nhóm" nut={thieuLanhDao ? null : 'Gửi đề xuất'} dangGui={dangGui}
@@ -120,7 +119,7 @@ function DeXuatNhom({ chiTiet, dangGui, gui }) {
       tieuDe: f.get('tieuDe'), mucTieu: f.get('mucTieu'), noiDung: f.get('noiDung'), loaiHinh: f.get('loaiHinh'),
       mucDichHop, coKhachNgoai, nguoiMoiThemIds: moiThem,
       emailKhachNgoai: (f.get('emailKhachNgoai') || '').split(/[,\s]+/).filter(Boolean),
-      lanhDaoDuyetId: Number(f.get('lanhDaoDuyetId')) || null,
+      lanhDaoDuyetId: canLanhDao ? chuTichLapNhom.nguoiDungId : null,
     })}>
     <Truong ten="Tiêu đề"><input name="tieuDe" required maxLength={255} className={TRUONG} /></Truong>
     <Truong ten="Mục tiêu"><input name="mucTieu" required maxLength={3000} className={TRUONG} /></Truong>
@@ -153,18 +152,14 @@ function DeXuatNhom({ chiTiet, dangGui, gui }) {
       onChange={(e) => setCoKhachNgoai(e.target.checked)} /> Có khách mời ngoài cơ quan</label>
     {coKhachNgoai && <Truong ten="Email khách ngoài"><textarea name="emailKhachNgoai" required rows={2}
       className={TRUONG} placeholder="Mỗi dòng một email" /></Truong>}
-    {canLanhDao && <Truong ten={canChuTich ? 'Chủ tịch duyệt' : 'Chủ tịch hoặc Phó Chủ tịch phụ trách duyệt'}>
-      <select key={String(canChuTich)} name="lanhDaoDuyetId" className={TRUONG} required
-        defaultValue={lanhDao.length === 1 ? lanhDao[0].nguoiDungId : ''}>
-        <option value="">Chọn người duyệt</option>
-        {lanhDao.map((nguoi) => <option key={nguoi.nguoiDungId} value={nguoi.nguoiDungId}>{nguoi.hoTen} · {nguoi.chucVu}</option>)}
-      </select>
+    {canLanhDao && chuTichLapNhom && <Truong ten="Chủ tịch duyệt cuối">
+      <span className="text-sm text-slate-700">{chuTichLapNhom.hoTen} · {chuTichLapNhom.chucVu}</span>
     </Truong>}
     <p className="text-sm text-slate-700">Thư ký lập kế hoạch và tổ chức · {tenThuKy || 'Thư ký nhóm'}</p>
     <p className="text-sm text-slate-700">{canLanhDao
-      ? 'Thư ký nhóm trình Tổ trưởng trước, sau đó chuyển hồ sơ đến lãnh đạo đã chọn.'
+      ? 'Thư ký nhóm trình Tổ trưởng trước, sau đó chuyển hồ sơ đến Chủ tịch đã lập nhóm.'
       : `Tổ trưởng ${tenToTruong || ''} duyệt kế hoạch và lịch.`}</p>
-    {thieuLanhDao && <p role="alert" className="text-sm text-amber-800">Chưa có tài khoản lãnh đạo đúng chức vụ để nhận hồ sơ này.</p>}
+    {thieuLanhDao && <p role="alert" className="text-sm text-amber-800">Người lập nhóm phải là Chủ tịch có vai trò Lãnh đạo và đang hoạt động để nhận hồ sơ này.</p>}
   </Phieu>
 }
 
@@ -211,7 +206,7 @@ function QuanLyThanhVien({ chiTiet, quyen, nguoiDungId, dangGui, gui }) {
         lyDo: form.get('lyDo'),
       })
       setThaoTac(null)
-      setThongBao(dangRut ? `Đã gửi yêu cầu rút ${thaoTac.nguoi.hoTen} khỏi nhóm.`
+      setThongBao(dangRut ? `Đã rút ${thaoTac.nguoi.hoTen} khỏi nhóm.`
         : 'Đã gửi đề xuất. Theo dõi và xử lý tại mục Yêu cầu đổi nhân sự.')
     } catch (error) {
       setLoi(error.message)
@@ -381,7 +376,7 @@ function DanhSachNhomDialog({ tieuDe, Icon, danhSach, dangGui, khoa, tenMuc, nha
 function TrangThaiDoiNguoi({ muc }) {
   const dangCho = muc.trangThai === 'CHO_XU_LY'
   const nhan = dangCho
-    ? muc.truongPhongXacNhanId ? 'Chờ Tổ trưởng xử lý' : 'Chờ Trưởng phòng xác nhận'
+    ? (muc.nguoiMoiId == null || muc.truongPhongXacNhanId) ? 'Chờ Tổ trưởng xử lý' : 'Chờ Trưởng phòng xác nhận'
     : TEN_DOI_NGUOI[muc.trangThai] || muc.trangThai
   const mau = dangCho ? 'bg-amber-50 text-amber-900 phong-toi:bg-phong-nhan-vang phong-toi:text-phong-vang'
     : muc.trangThai === 'DA_CAP_NHAT' ? 'bg-emerald-50 text-emerald-900 phong-toi:bg-phong-nhan-xanh phong-toi:text-phong-xanh'
@@ -428,7 +423,7 @@ function ChiTietDoiNhanSu({ muc, ten, tenPhong, duocXuLy, dangGui, gui }) {
       </Truong>
       <div className="flex flex-wrap gap-2">
         <button className={LOP_NUT_CHINH} disabled={dangGui} type="submit" name="quyetDinh" value="dong-y">
-          {muc.truongPhongXacNhanId ? 'Đồng ý cập nhật' : 'Xác nhận thay đổi'}
+          {muc.nguoiMoiId == null ? 'Rút khỏi nhóm' : muc.truongPhongXacNhanId ? 'Đồng ý cập nhật' : 'Xác nhận thay đổi'}
         </button>
         <button className={LOP_NUT_PHU} disabled={dangGui} type="submit" name="quyetDinh" value="tu-choi">Từ chối</button>
       </div>
@@ -574,7 +569,7 @@ export default function NhomLienPhong({ token, nguoiDung, onMoMuc, onLapLich, on
       const ketQua = await goiNhomLienPhong(goc + duongDan, token, { method, duLieu })
       if (ketQua?.nhomId) chonNhom(ketQua.nhomId)
       setThongBao(ketQua?.cuocHopId ? 'Đã gửi đề xuất tới thư ký nhóm.'
-        : method === 'POST' && duongDan === '/doi-nguoi'
+        : method === 'POST' && duongDan === '/doi-nguoi' && duLieu.nguoiMoiId != null
           ? 'Đã gửi yêu cầu thay đổi nhân sự.' : 'Đã cập nhật nhóm.')
       setLanTai((lan) => lan + 1)
       return true
@@ -627,3 +622,6 @@ export default function NhomLienPhong({ token, nguoiDung, onMoMuc, onLapLich, on
     </div>}
   </div>
 }
+
+
+
