@@ -359,8 +359,16 @@ export default function BauLaiChucDanhNhom({ nhomId, nguoiDungId, token, cuocHop
     if (!mo) return
     const controller = new AbortController()
     goiNhomLienPhong(goc, token, { signal: controller.signal })
-      .then((duLieu) => { if (!controller.signal.aborted) setTrang(duLieu) })
-      .catch((error) => { if (!controller.signal.aborted) setLoi(error.message) })
+      .then((duLieu) => {
+        if (controller.signal.aborted) return
+        setTrang(duLieu)
+        setLoi('')
+      })
+      .catch((error) => {
+        if (controller.signal.aborted) return
+        setTrang(null)
+        setLoi(error.status === 404 ? 'Phiên bản máy chủ hiện chưa có hồ sơ bầu lại.' : error.message)
+      })
     return () => controller.abort()
   }, [goc, mo, token, phienDongBo, lanTai])
 
@@ -481,9 +489,17 @@ export function BauLaiTrongCuocHop({ cuocHopId, token }) {
   useEffect(() => {
     const controller = new AbortController()
     goiApi(`/api/cuoc-hop/${cuocHopId}/bau-lai-nhom`, { token, signal: controller.signal })
-      .then((response) => docPhanHoiJson(response, 'Không thể tải lượt bầu của nhóm.'))
-      .then((data) => { if (!controller.signal.aborted) setDuLieu(data) })
-      .catch((error) => { if (!controller.signal.aborted) setLoi(error.message) })
+      .then((response) => response.status === 404 ? null : docPhanHoiJson(response, 'Không thể tải lượt bầu của nhóm.'))
+      .then((data) => {
+        if (controller.signal.aborted) return
+        setDuLieu(data)
+        setLoi('')
+      })
+      .catch((error) => {
+        if (controller.signal.aborted) return
+        setDuLieu(null)
+        setLoi(error.message)
+      })
     return () => controller.abort()
   }, [cuocHopId, token, phienDongBo, lanTai])
 

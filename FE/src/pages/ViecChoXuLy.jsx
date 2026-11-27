@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import { layHoSoThuKyLanhDao, layKeHoachChoToiDuyet } from '../api/cuocHopApi.js'
 import { useDongBoDuLieu } from '../services/useDongBoDuLieu.js'
+import { canChinhSuaKeHoach, canChuanBiCuocHopDuocGiao } from './thuky/hienThiDeXuat.js'
 
-export default function ViecChoXuLy({ token, danhSach, loiDanhSach, cacMucXuLy = [], coQuyenDuyetKeHoach, onMoMuc }) {
+export default function ViecChoXuLy({ token, danhSach, loiDanhSach, cacMucXuLy = [], onMoMuc }) {
   const coRaSoat = cacMucXuLy.includes('ho-so-ra-soat')
-  const coDuyet = coQuyenDuyetKeHoach && cacMucXuLy.includes('ho-so-cho-duyet')
+  const coDuyet = cacMucXuLy.includes('ho-so-cho-duyet')
   const phienDongBo = useDongBoDuLieu()
   const [raSoat, setRaSoat] = useState(null)
   const [choDuyet, setChoDuyet] = useState(null)
@@ -34,15 +35,13 @@ export default function ViecChoXuLy({ token, danhSach, loiDanhSach, cacMucXuLy =
     { id: 'ho-so-cho-duyet', ten: 'Chờ bạn duyệt kế hoạch', ketQua: choDuyet },
     {
       id: 'phan-hoi-ke-hoach', ten: 'Kế hoạch cần chỉnh sửa',
-      ketQua: tuDanhSach((muc) => muc.duocLapKeHoach && muc.phanHoiKeHoach?.trangThai === 'TRA_LAI'),
+      ketQua: tuDanhSach(canChinhSuaKeHoach),
     },
     {
       id: 'cuoc-hop-duoc-giao', ten: 'Cuộc họp cần chuẩn bị',
-      ketQua: tuDanhSach((muc) => muc.yeuCauBanGiaoId != null && (
-        (muc.duocToChuc && muc.buocXuLyHienTai === 'THU_KY_TO_CHUC') || muc.duocLapKeHoach
-      )),
+      ketQua: tuDanhSach(canChuanBiCuocHopDuocGiao),
     },
-  ].filter((muc) => cacMucXuLy.includes(muc.id) && (muc.id !== 'ho-so-cho-duyet' || coDuyet))
+  ].filter((muc) => cacMucXuLy.includes(muc.id))
 
   if (!mucXuLy.length) return null
 
@@ -52,7 +51,7 @@ export default function ViecChoXuLy({ token, danhSach, loiDanhSach, cacMucXuLy =
       <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
         {mucXuLy.map(({ id, ten, ketQua }) => (
           <li key={id} className="min-w-0">
-            <button type="button" disabled={!ketQua?.hoSo} onClick={() => onMoMuc(id, ketQua.hoSo)}
+            <button type="button" onClick={() => onMoMuc(id, true)}
               className="flex h-full w-full items-center justify-between gap-3 rounded-lg border border-slate-200 phong-toi:border-phong-vien p-3 text-left text-sm hover:border-emerald-400 hover:bg-emerald-50 phong-toi:hover:bg-phong-mat-noi">
               <span className="font-semibold text-slate-800 phong-toi:text-phong-chu">{ten}</span>
               <span className={ketQua?.loi ? 'text-xs text-amber-800 phong-toi:text-phong-vang' : 'font-semibold text-emerald-800 phong-toi:text-phong-xanh'}>

@@ -7,20 +7,7 @@ import CircleDot from 'lucide-react/dist/esm/icons/circle-dot.mjs'
 import ViecChoXuLy from './ViecChoXuLy.jsx'
 import { useDongBoDuLieu } from '../services/useDongBoDuLieu.js'
 import { layDanhSachDeXuat, layTrangThaiHienThiCuocHop } from '../api/cuocHopApi.js'
-
-const TRANG_THAI = {
-  NHAP: 'Bản nháp',
-  CHO_TIEP_NHAN: 'Chờ tiếp nhận',
-  DANG_CHUAN_BI: 'Đang chuẩn bị',
-  CHO_DUYET: 'Chờ duyệt',
-  CHO_GUI_CAP_TREN: 'Chờ gửi cấp trên',
-  DA_DUYET: 'Đã duyệt',
-  DANG_DIEN_RA: 'Đang diễn ra',
-  DA_KET_THUC: 'Đã kết thúc',
-  TRA_LAI: 'Đã trả lại',
-  TU_CHOI: 'Đã từ chối',
-  DA_HUY: 'Đã hủy',
-}
+import { khopTrangThaiHoSo, layNhanTrangThaiHoSo, TEN_TRANG_THAI } from './thuky/hienThiDeXuat.js'
 
 const THE_THONG_KE = [
   { ten: 'Tổng số hồ sơ', ma: '', BieuTuong: CalendarDays, mau: 'bg-sky-50 phong-toi:bg-phong-nhan-xanh text-sky-700 phong-toi:text-phong-xanh' },
@@ -49,7 +36,6 @@ export default function TongQuanCuocHop({
   onMoDanhSach,
   onXemCuocHop,
   cacMucXuLy,
-  coQuyenDuyetKeHoach,
   onMoMuc,
 }) {
   const phienDongBo = useDongBoDuLieu()
@@ -87,7 +73,7 @@ export default function TongQuanCuocHop({
 
   const danhSachDaLoc = useMemo(
     () => (danhSach ?? [])
-      .filter((hop) => !locTrangThai || layTrangThaiHienThiCuocHop(hop) === locTrangThai)
+      .filter((hop) => khopTrangThaiHoSo(hop, locTrangThai))
       .sort((a, b) => new Date(b.ngayTao || 0) - new Date(a.ngayTao || 0)),
     [danhSach, locTrangThai],
   )
@@ -168,7 +154,7 @@ export default function TongQuanCuocHop({
             <select value={locTrangThai} onChange={(event) => chonTrangThai(event.target.value)}
               className="rounded-lg border border-slate-300 px-3 py-2 phong-toi:truong-phong-hop">
               <option value="">Tất cả</option>
-              {Object.entries(TRANG_THAI).map(([ma, ten]) => <option key={ma} value={ma}>{ten}</option>)}
+              {Object.entries(TEN_TRANG_THAI).map(([ma, ten]) => <option key={ma} value={ma}>{ten}</option>)}
             </select>
           </label>
           {danhSachDaLoc.length > 5 && (
@@ -210,7 +196,7 @@ export default function TongQuanCuocHop({
                     </p>
                   </div>
                   <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${THE_NHAN_TRANG_THAI[trangThai] || 'bg-slate-100 phong-toi:bg-phong-mat-noi text-slate-700 phong-toi:text-phong-chu-phu'}`}>
-                    {TRANG_THAI[trangThai] || trangThai}
+                    {TEN_TRANG_THAI[layNhanTrangThaiHoSo(cuocHop)] || trangThai}
                   </span>
                   {onXemCuocHop && (
                     <button type="button" className="rounded-lg border border-slate-200 phong-toi:border-phong-vien px-3 py-2 text-sm font-semibold text-emerald-800 phong-toi:text-phong-xanh hover:bg-emerald-50 phong-toi:hover:bg-phong-mat-noi"
@@ -226,7 +212,7 @@ export default function TongQuanCuocHop({
       </section>
 
       <ViecChoXuLy token={token} danhSach={danhSach} loiDanhSach={loi}
-        cacMucXuLy={cacMucXuLy} coQuyenDuyetKeHoach={coQuyenDuyetKeHoach} onMoMuc={onMoMuc} />
+        cacMucXuLy={cacMucXuLy} onMoMuc={onMoMuc} />
     </div>
   )
 }

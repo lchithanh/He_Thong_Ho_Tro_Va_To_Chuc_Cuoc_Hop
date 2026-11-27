@@ -111,7 +111,6 @@ public class QuyTrinhKeHoachService {
         NguoiDung nguoiDuyet = nguoiDeXuat;
         String cap;
         String buoc;
-        NguoiDung nguoiRaSoat = null;
         if (theoNhom != null) {
             boolean canLanhDao = nhomThamDu.canLanhDao(theoNhom, coKhachNgoai(ch));
             if (canLanhDao) {
@@ -131,14 +130,6 @@ public class QuyTrinhKeHoachService {
                 nguoiDuyet = ch.getNguoiChuTri();
                 cap = "TRUONG_NHOM";
                 buoc = "CHO_TRUONG_NHOM";
-            }
-            if (canLanhDao || lich.getPhongHop() != null) {
-                Integer truongVanPhong = nhomThamDu.layTruongVanPhong();
-                if (truongVanPhong == null) {
-                    throw loi(HttpStatus.CONFLICT, "Cần phân công Trưởng phòng đang hoạt động cho phòng ban Văn phòng");
-                }
-                nguoiRaSoat = nguoiDungHienTaiService.layTaiKhoanHoatDong(truongVanPhong);
-                buoc = "CHO_THU_KY_LANH_DAO";
             }
             nhomThamDu.ganNguoiDuyetCuoi(cuocHopId, nguoiDuyet.getNguoiDungId(), cap);
         } else {
@@ -169,11 +160,10 @@ public class QuyTrinhKeHoachService {
         YeuCauPheDuyet lanTrinhTruoc = phanCongXuLyKeHoachService
                 .layLanTrinhMoiNhat(cuocHopId);
         NguoiDung nguoiDuyetDaChon = nguoiDuyet;
-        NguoiDung nguoiRaSoatDaChon = nguoiRaSoat;
         String buocNhanHoSo = buoc;
         YeuCauPheDuyet yc = ThaoTacCuocHop.thucHien(() ->
                 ThaoTacYeuCauPheDuyet.taoYeuCauKeHoach(ch, nguoiTrinh,
-                        nguoiDuyetDaChon, nguoiRaSoatDaChon, cap, ghiChuTrinh));
+                        nguoiDuyetDaChon, null, cap, ghiChuTrinh));
         yc.setYeuCauTruoc(lanTrinhTruoc);
         NguoiDung thuKyCuocHop = phanCongXuLyKeHoachService.layThuKyCuocHop(ch);
         if (thuKyCuocHop == null) throw loi(HttpStatus.BAD_REQUEST, "Chưa chọn thư ký cuộc họp");
@@ -186,13 +176,8 @@ public class QuyTrinhKeHoachService {
         taiLieuKeHoachService.ganVaoLanTrinh(daLuu, taiLieuDaChon);
         lichSuPheDuyetService.ghiNhan(cuocHopId, null, null, nguoiTrinhId,
                 "KE_HOACH", "TRINH_DUYET", ghiChuTrinh, daLuu);
-        if (nguoiRaSoat != null) {
-            thongBaoService.gui(ch, nguoiTrinhId, "KE_HOACH_CHUYEN_CAP_TREN",
-                    "Văn phòng có kế hoạch họp nhóm cần rà soát", ch.getTieuDe(), nguoiRaSoat);
-        } else {
-            thongBaoService.gui(ch, nguoiTrinhId, "KE_HOACH_CHO_DUYET",
-                    "Có kế hoạch cuộc họp cần bạn xem xét", ch.getTieuDe(), nguoiDuyet);
-        }
+        thongBaoService.gui(ch, nguoiTrinhId, "KE_HOACH_CHO_DUYET",
+                "Có kế hoạch cuộc họp cần bạn xem xét", ch.getTieuDe(), nguoiDuyet);
         return daLuu.getYeuCauPheDuyetId();
     }
 

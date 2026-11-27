@@ -17,7 +17,7 @@ export default function KhongGianLamViec({ nguoiDung, loi, onDangXuat }) {
   const { maVaiTro, token } = nguoiDung
   useKetNoiHoSo(token)
   const laQuanLy = maVaiTro === 'LANH_DAO' || (maVaiTro === 'CAN_BO' && nguoiDung.truongPhong)
-  const [viecDaChon, setViecDaChon] = useState(null)
+  const [tuViecChoXuLy, setTuViecChoXuLy] = useState(false)
   const [mucDangChon, setMucDangChon] = useState('tong-quan')
   const [lichDangMoTuHoSo, setLichDangMoTuHoSo] = useState(null)
   const [hoSoDangXem, setHoSoDangXem] = useState(null)
@@ -35,8 +35,8 @@ export default function KhongGianLamViec({ nguoiDung, loi, onDangXuat }) {
   const mucHienTai = cacMuc.find((muc) => muc.id === mucDangChon)
   const TrangHienTai = mucHienTai?.Trang
 
-  function chonMuc(id, hoSo) {
-    setViecDaChon(Array.isArray(hoSo) ? hoSo : null)
+  function chonMuc(id, tuViec = false) {
+    setTuViecChoXuLy(tuViec === true)
     setHoSoDangXem(null)
     setLichDangMoTuHoSo(null)
     setMucDangChon(id)
@@ -59,7 +59,7 @@ export default function KhongGianLamViec({ nguoiDung, loi, onDangXuat }) {
     setHoSoDangXem(null)
     setLichDangMoTuHoSo(null)
     setMucDangChon('tong-quan')
-    setViecDaChon(null)
+    setTuViecChoXuLy(false)
     window.scrollTo(0, 0)
   }, [])
 
@@ -142,8 +142,8 @@ export default function KhongGianLamViec({ nguoiDung, loi, onDangXuat }) {
           }} />
       ) : TrangHienTai ? (
         <TrangHienTai
-          key={mucDangChon}
-          viecDaChon={viecDaChon}
+          key={`${mucDangChon}:${tuViecChoXuLy}`}
+          tuViecChoXuLy={tuViecChoXuLy}
           onMoPhongHop={moPhongHop}
           onMoMuc={chonMuc}
           onXemCuocHop={laQuanLy ? xemHoSo : undefined}
@@ -171,7 +171,6 @@ export default function KhongGianLamViec({ nguoiDung, loi, onDangXuat }) {
           coTheMoDanhSach={cacMuc.some((muc) => muc.id === 'de-xuat')}
           onMoDanhSach={() => chonMuc('de-xuat')}
           cacMucXuLy={cacMuc.map((muc) => muc.id)}
-          coQuyenDuyetKeHoach={laQuanLy}
           onMoMuc={chonMuc}
           onXemCuocHop={laQuanLy ? xemHoSo : undefined}
           onSoanVanBan={(id, tab) => setHoSoDangXem({ id, tab, chiXem: false })}
